@@ -36,3 +36,5 @@ build/
 ### SSH Keys ###
 private
 private.pub
+deploy_key
+deploy_key.pub
