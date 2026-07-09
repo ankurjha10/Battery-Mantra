@@ -98,7 +98,7 @@
 	</dependencies>
 
 	<build>
-		<finalName>battery mantra</finalName>
+		<finalName>batterymantra</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
