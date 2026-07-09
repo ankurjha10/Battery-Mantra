@@ -38,3 +38,5 @@ jobs:
           cd /root/battery-mantra/Battery-Mantra
           git pull origin main
           docker compose up -d --build
+          sleep 10
+          docker compose exec redis redis-cli FLUSHALL
