@@ -20,7 +20,8 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        config.setAllowedOrigins(allowedOrigins);
+        // Use patterns to support Vercel wildcard subdomains (e.g., https://*.vercel.app)
+        config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE",
                 "PATCH", "OPTIONS"
