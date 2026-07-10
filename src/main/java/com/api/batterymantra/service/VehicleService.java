@@ -30,6 +30,7 @@ public class VehicleService {
         res.setYearFrom(v.getYearFrom());
         res.setYearTo(v.getYearTo());
         res.setFuelType(v.getFuelType());
+        res.setVehicleType(v.getVehicleType());
         res.setImageUrl(v.getImageUrl());
         return res;
     }
@@ -68,6 +69,7 @@ public class VehicleService {
         vehicle.setYearFrom(dto.getYearFrom());
         vehicle.setYearTo(dto.getYearTo());
         vehicle.setFuelType(dto.getFuelType());
+        vehicle.setVehicleType(dto.getVehicleType());
         vehicle.setImageUrl(dto.getImageUrl());
 
         Vehicle saved = vehicleRepository.save(vehicle);
@@ -95,6 +97,9 @@ public class VehicleService {
 
         if (dto.getFuelType() != null)
             vehicle.setFuelType(dto.getFuelType());
+
+        if (dto.getVehicleType() != null)
+            vehicle.setVehicleType(dto.getVehicleType());
 
         if (dto.getImageUrl() != null)
             vehicle.setImageUrl(dto.getImageUrl());

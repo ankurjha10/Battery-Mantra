@@ -1,6 +1,7 @@
 package com.api.batterymantra.entity;
 
 import com.api.batterymantra.entity.enums.FuelType;
+import com.api.batterymantra.entity.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -28,6 +29,9 @@ public class Vehicle {
 
     @Enumerated(EnumType.STRING)
     private FuelType fuelType;
+
+    @Enumerated(EnumType.STRING)
+    private VehicleType vehicleType;
 
     private String imageUrl;
 }
