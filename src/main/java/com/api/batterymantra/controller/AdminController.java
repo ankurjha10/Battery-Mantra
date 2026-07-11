@@ -26,6 +26,11 @@ import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.dto.order.OrderStatusUpdateRequest;
 import com.api.batterymantra.service.OrderService;
 
+import com.api.batterymantra.dto.banner.BannerResponse;
+import com.api.batterymantra.dto.banner.CreateBannerRequest;
+import com.api.batterymantra.dto.banner.UpdateBannerRequest;
+import com.api.batterymantra.service.BannerService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -48,6 +53,7 @@ public class AdminController {
     private final VehicleService vehicleService;
     private final ProductService productService;
     private final OrderService orderService;
+    private final BannerService bannerService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -160,5 +166,32 @@ public class AdminController {
             @PathVariable UUID orderId,
             @RequestBody @Valid OrderStatusUpdateRequest request) {
         return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getOrderStatus()));
+    }
+
+    // --- Banners ---
+    @GetMapping("/banners")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<BannerResponse>> getAllBanners() {
+        return ResponseEntity.ok(bannerService.getAllBanners());
+    }
+
+    @PostMapping("/banners")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BannerResponse> createBanner(@RequestBody @Valid CreateBannerRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(bannerService.createBanner(request));
+    }
+
+    @PutMapping("/banners/id/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<BannerResponse> updateBanner(@PathVariable UUID id,
+                                                        @RequestBody @Valid UpdateBannerRequest request) {
+        return ResponseEntity.ok(bannerService.updateBanner(id, request));
+    }
+
+    @DeleteMapping("/banners/id/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteBanner(@PathVariable UUID id) {
+        bannerService.deleteBanner(id);
+        return ResponseEntity.noContent().build();
     }
 }
