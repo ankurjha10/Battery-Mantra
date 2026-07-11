@@ -41,6 +41,9 @@ public class SecurityConfig {
                         // Callbacks — public for creation
                         .requestMatchers(HttpMethod.POST, "/api/callbacks").permitAll()
 
+                        // Banners — read public
+                        .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
+
                         // Products — read public, write ADMIN (fine-grained via @PreAuthorize)
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
