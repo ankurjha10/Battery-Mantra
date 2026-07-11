@@ -80,8 +80,6 @@ public class ProductService {
                 vr.setVehicleId(v.getVehicleId());
                 vr.setMake(v.getMake());
                 vr.setModel(v.getModel());
-                vr.setYearFrom(v.getYearFrom());
-                vr.setYearTo(v.getYearTo());
                 vr.setFuelType(v.getFuelType());
                 return vr;
             }).toList());

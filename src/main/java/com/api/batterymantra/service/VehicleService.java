@@ -27,8 +27,6 @@ public class VehicleService {
         res.setVehicleId(v.getVehicleId());
         res.setMake(v.getMake());
         res.setModel(v.getModel());
-        res.setYearFrom(v.getYearFrom());
-        res.setYearTo(v.getYearTo());
         res.setFuelType(v.getFuelType());
         res.setVehicleType(v.getVehicleType());
         res.setImageUrl(v.getImageUrl());
@@ -66,8 +64,6 @@ public class VehicleService {
         Vehicle vehicle = new Vehicle();
         vehicle.setMake(dto.getMake());
         vehicle.setModel(dto.getModel());
-        vehicle.setYearFrom(dto.getYearFrom());
-        vehicle.setYearTo(dto.getYearTo());
         vehicle.setFuelType(dto.getFuelType());
         vehicle.setVehicleType(dto.getVehicleType());
         vehicle.setImageUrl(dto.getImageUrl());
@@ -88,12 +84,6 @@ public class VehicleService {
 
         if (dto.getModel() != null)
             vehicle.setModel(dto.getModel());
-
-        if (dto.getYearFrom() != null)
-            vehicle.setYearFrom(dto.getYearFrom());
-
-        if (dto.getYearTo() != null)
-            vehicle.setYearTo(dto.getYearTo());
 
         if (dto.getFuelType() != null)
             vehicle.setFuelType(dto.getFuelType());

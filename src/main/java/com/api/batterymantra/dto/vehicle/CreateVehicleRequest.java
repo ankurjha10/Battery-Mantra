@@ -8,8 +8,6 @@ import lombok.Data;
 public class CreateVehicleRequest {
     private String make;
     private String model;
-    private Integer yearFrom;
-    private Integer yearTo;
     private FuelType fuelType;
     private VehicleType vehicleType;
     private String imageUrl;
