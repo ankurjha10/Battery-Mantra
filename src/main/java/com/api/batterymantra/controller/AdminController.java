@@ -31,6 +31,10 @@ import com.api.batterymantra.dto.banner.CreateBannerRequest;
 import com.api.batterymantra.dto.banner.UpdateBannerRequest;
 import com.api.batterymantra.service.BannerService;
 
+import com.api.batterymantra.dto.callback.CallbackResponse;
+import com.api.batterymantra.dto.callback.UpdateCallbackStatusRequest;
+import com.api.batterymantra.service.CallbackRequestService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -54,6 +58,7 @@ public class AdminController {
     private final ProductService productService;
     private final OrderService orderService;
     private final BannerService bannerService;
+    private final CallbackRequestService callbackRequestService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -193,5 +198,19 @@ public class AdminController {
     public ResponseEntity<Void> deleteBanner(@PathVariable UUID id) {
         bannerService.deleteBanner(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // --- Callbacks ---
+    @GetMapping("/callbacks")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<CallbackResponse>> getAllCallbacks() {
+        return ResponseEntity.ok(callbackRequestService.getAllCallbackRequests());
+    }
+
+    @PatchMapping("/callbacks/{callbackId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<CallbackResponse> updateCallbackStatus(@PathVariable Long callbackId,
+                                                                  @RequestBody UpdateCallbackStatusRequest request) {
+        return ResponseEntity.ok(callbackRequestService.updateCallbackStatus(callbackId, request.getStatus()));
     }
 }
