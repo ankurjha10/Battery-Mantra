@@ -12,11 +12,13 @@ import com.api.batterymantra.entity.Vehicle;
 import com.api.batterymantra.repository.BrandRepository;
 import com.api.batterymantra.repository.CartItemRepository;
 import com.api.batterymantra.repository.CategoryRepository;
+import com.api.batterymantra.repository.OrderItemRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.VehicleRepository;
 import com.api.batterymantra.repository.specification.ProductSpecification;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
@@ -41,6 +43,7 @@ public class ProductService {
     private final BrandRepository brandRepository;
     private final VehicleRepository vehicleRepository;
     private final CartItemRepository cartItemRepository;
+    private final OrderItemRepository orderItemRepository;
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
@@ -214,8 +217,19 @@ public class ProductService {
         Product product = productRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + id));
 
-        cartItemRepository.deleteByProduct_ProductId(id);
-        productRepository.delete(product);
+        // Check if product is referenced by any order items
+        if (orderItemRepository.existsByProduct_ProductId(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cannot delete: Product is referenced in existing orders. Consider deactivating it instead.");
+        }
+
+        try {
+            cartItemRepository.deleteByProduct_ProductId(id);
+            productRepository.delete(product);
+        } catch (DataIntegrityViolationException ex) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Cannot delete: Product is still referenced by other records.");
+        }
     }
 
     @Transactional

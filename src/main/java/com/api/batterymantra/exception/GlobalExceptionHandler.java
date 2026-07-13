@@ -1,5 +1,6 @@
 package com.api.batterymantra.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -12,6 +13,19 @@ import java.time.LocalDateTime;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(DataIntegrityViolationException.class)
+    public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
+            DataIntegrityViolationException ex,
+            WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                "Cannot perform operation: This record is referenced by other data.",
+                HttpStatus.CONFLICT.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(error, HttpStatus.CONFLICT);
+    }
 
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(

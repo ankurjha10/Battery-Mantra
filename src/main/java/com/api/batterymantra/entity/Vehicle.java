@@ -10,7 +10,7 @@ import lombok.Setter;
 
 import java.util.UUID;
 
-@Entity
+@Entity 
 @Table(name = "vehicle")
 @AllArgsConstructor
 @NoArgsConstructor
