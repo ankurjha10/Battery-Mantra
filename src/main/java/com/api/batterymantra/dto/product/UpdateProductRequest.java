@@ -16,6 +16,7 @@ public class UpdateProductRequest {
     private UUID categoryId;
     private UUID brandId;
     private String productImage;
+    private List<String> additionalImages;
     private Integer productStock;
     private Map<String, Object> specs;
     private List<UUID> compatibleVehicleIds;

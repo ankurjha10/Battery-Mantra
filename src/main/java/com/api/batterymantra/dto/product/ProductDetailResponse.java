@@ -21,6 +21,7 @@ public class ProductDetailResponse {
     private BigDecimal exchangeDiscount;
     private int productStock;
     private String productImage;
+    private List<String> additionalImages;
     private Map<String, Object> specs;
     private List<VehicleResponse> compatibleVehicles;
 }

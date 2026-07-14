@@ -56,6 +56,7 @@ public class ProductService {
         res.setProductImage(p.getProductImage());
         res.setProductCategory(p.getProductCategory().getCategoryName());
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
+        res.setAdditionalImages(p.getAdditionalImages());
         return res;
     }
 
@@ -71,6 +72,7 @@ public class ProductService {
         res.setCategoryName(p.getProductCategory().getCategoryName());
         res.setCategoryId(p.getProductCategory().getCategoryId());
         res.setSpecs(p.getSpec());
+        res.setAdditionalImages(p.getAdditionalImages());
 
         if (p.getBrand() != null) {
             res.setBrandName(p.getBrand().getBrandName());
@@ -183,6 +185,10 @@ public class ProductService {
             product.setExchangeDiscount(dto.getExchangeDiscount());
         }
         product.setProductCategory(category);
+        
+        if (dto.getAdditionalImages() != null) {
+            product.setAdditionalImages(dto.getAdditionalImages());
+        }
 
         // Set brand
         if (dto.getBrandId() != null) {
@@ -255,6 +261,9 @@ public class ProductService {
 
         if (dto.getExchangeDiscount() != null)
             product.setExchangeDiscount(dto.getExchangeDiscount());
+
+        if (dto.getAdditionalImages() != null)
+            product.setAdditionalImages(dto.getAdditionalImages());
 
         if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())

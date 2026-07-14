@@ -15,6 +15,7 @@ public class CreateProductRequest {
     private BigDecimal productPrice;
     private BigDecimal exchangeDiscount;
     private String productImage;
+    private List<String> additionalImages;
     private UUID categoryId;
     private UUID brandId;
     private Map<String, Object> specs;
