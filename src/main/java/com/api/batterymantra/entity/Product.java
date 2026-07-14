@@ -64,7 +64,7 @@ public class Product {
     @NotBlank
     private String productImage;
 
-    @ElementCollection
+    @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(name = "product_additional_images", joinColumns = @JoinColumn(name = "product_id"))
     @Column(name = "image_url")
     private List<String> additionalImages = new ArrayList<>();
