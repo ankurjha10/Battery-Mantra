@@ -20,11 +20,20 @@ public class RefreshTokenService {
     private final UserRepository userRepository;
 
     public RefreshToken createRefreshToken(String userName) {
+        com.api.batterymantra.entity.User user = userRepository.findByUsername(userName);
+        if (user == null) {
+            throw new RuntimeException("User not found");
+        }
+
+        refreshTokenRepository.findByUser(user).ifPresent(existing -> {
+            refreshTokenRepository.delete(existing);
+            refreshTokenRepository.flush();
+        });
 
         RefreshToken token = RefreshToken.builder()
                 .refreshToken(UUID.randomUUID().toString())
                 .expiry(Instant.now().plusMillis(REFRESH_TOKEN_VALIDITY))
-                .user(userRepository.findByUsername(userName))
+                .user(user)
                 .build();
 
         return refreshTokenRepository.save(token);
