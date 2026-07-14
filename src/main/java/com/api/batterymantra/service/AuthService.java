@@ -11,8 +11,11 @@ import org.springframework.stereotype.Service;
 
 import com.api.batterymantra.dto.auth.LoginRequest;
 import com.api.batterymantra.dto.auth.LoginResponse;
+import com.api.batterymantra.dto.auth.RefreshTokenRequest;
+import com.api.batterymantra.dto.auth.RefreshTokenResponse;
 import com.api.batterymantra.dto.auth.RegisterRequest;
 import com.api.batterymantra.dto.auth.RegisterResponse;
+import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.UserRole;
@@ -27,6 +30,7 @@ public class AuthService {
     private final AuthUtil authUtil;
     private final AuthenticationManager authManager;
     private final BCryptPasswordEncoder passwordEncoder;
+    private final RefreshTokenService refreshTokenService;
 
     public RegisterResponse register(RegisterRequest signUpRequest) {
         // Validate input
@@ -105,8 +109,10 @@ public class AuthService {
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             User user = userPrincipal.getUser();
             String token = authUtil.generateAccessToken(user);
+            
+            RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
 
-            return new LoginResponse(token, user.getUserId(), user.getRole().name());
+            return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name());
         } catch (BadCredentialsException e) {
             throw new IllegalArgumentException("Invalid username or password");
         } catch (UsernameNotFoundException e) {
@@ -114,5 +120,16 @@ public class AuthService {
         } catch (Exception e) {
             throw new IllegalArgumentException("Login failed: " + e.getMessage());
         }
+    }
+
+    public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
+        RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
+        User user = refreshToken.getUser();
+        String accessToken = authUtil.generateAccessToken(user);
+        
+        return RefreshTokenResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(refreshToken.getRefreshToken())
+                .build();
     }
 }

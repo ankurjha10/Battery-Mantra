@@ -25,7 +25,7 @@ public class User {
     @UuidGenerator
     private UUID userId;
 
-    @JoinColumn(unique = true)
+    @Column(unique = true)
     private String username;
 
     @NotBlank

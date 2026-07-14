@@ -1,10 +1,13 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.auth.RefreshTokenRequest;
+import com.api.batterymantra.dto.auth.RefreshTokenResponse;
 import com.api.batterymantra.dto.auth.RegisterRequest;
 import com.api.batterymantra.dto.auth.LoginRequest;
 import com.api.batterymantra.dto.auth.LoginResponse;
 import com.api.batterymantra.dto.auth.RegisterResponse;
 import com.api.batterymantra.service.AuthService;
+import com.api.batterymantra.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -29,5 +32,10 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest user){
         return ResponseEntity.ok(authService.login(user));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request){
+        return ResponseEntity.ok(authService.refreshToken(request));
     }
 }
