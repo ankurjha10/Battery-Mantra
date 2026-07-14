@@ -16,7 +16,7 @@ import com.api.batterymantra.repository.OrderItemRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.VehicleRepository;
 import com.api.batterymantra.repository.specification.ProductSpecification;
-import jakarta.transaction.Transactional;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -96,11 +96,13 @@ public class ProductService {
     }
 
     @Cacheable(value = "products")
+    @Transactional(readOnly = true)
     public List<ProductListResponse> getAllProducts() {
         return productRepository.findAll().stream().map(this::toListResponse).toList();
     }
 
     @Cacheable(value = "products", key = "#id")
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductById(UUID id) {
         return productRepository.findById(id)
                 .map(this::toDetailResponse)
@@ -108,6 +110,7 @@ public class ProductService {
     }
 
     @Cacheable(value = "products", key = "#name")
+    @Transactional(readOnly = true)
     public ProductDetailResponse getProductByName(String name) {
         return productRepository.findProductByProductName(name)
                 .map(this::toDetailResponse)
@@ -129,6 +132,7 @@ public class ProductService {
      * Dynamic product filtering with Specification pattern.
      * Supports: category, brand, vehicle compatibility, price range, JSONB specs, keyword search.
      */
+    @Transactional(readOnly = true)
     public Page<ProductListResponse> filterProducts(UUID categoryId, UUID brandId, UUID vehicleId,
                                                      BigDecimal minPrice, BigDecimal maxPrice,
                                                      String specKey, String specValue,
