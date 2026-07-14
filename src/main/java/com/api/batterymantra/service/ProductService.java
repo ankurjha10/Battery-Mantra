@@ -56,7 +56,7 @@ public class ProductService {
         res.setProductImage(p.getProductImage());
         res.setProductCategory(p.getProductCategory().getCategoryName());
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
-        res.setAdditionalImages(p.getAdditionalImages());
+        res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
         return res;
     }
 
@@ -72,7 +72,7 @@ public class ProductService {
         res.setCategoryName(p.getProductCategory().getCategoryName());
         res.setCategoryId(p.getProductCategory().getCategoryId());
         res.setSpecs(p.getSpec());
-        res.setAdditionalImages(p.getAdditionalImages());
+        res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
 
         if (p.getBrand() != null) {
             res.setBrandName(p.getBrand().getBrandName());
