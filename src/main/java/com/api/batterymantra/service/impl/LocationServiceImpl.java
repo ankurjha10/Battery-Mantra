@@ -88,7 +88,8 @@ public class LocationServiceImpl implements LocationService {
                 .orElseThrow(() -> new ResourceNotFoundException("City not found with id: " + cityId));
 
         List<Pincode> newPincodes = new ArrayList<>();
-        for (String code : request.getCodes()) {
+        List<String> uniqueCodes = request.getCodes().stream().distinct().collect(Collectors.toList());
+        for (String code : uniqueCodes) {
             if (pincodeRepository.existsByCode(code)) {
                 throw new IllegalArgumentException("Pincode " + code + " already exists in the system.");
             }
