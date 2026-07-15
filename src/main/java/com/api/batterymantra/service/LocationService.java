@@ -14,4 +14,6 @@ public interface LocationService {
     List<PincodeDto> addPincodes(UUID cityId, AddPincodeRequest request);
     List<PincodeDto> getPincodesByCity(UUID cityId);
     void deletePincode(UUID pincodeId);
+
+    PincodeCheckResponse checkPincode(String code);
 }

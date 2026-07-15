@@ -44,6 +44,9 @@ public class SecurityConfig {
                         // Banners — read public
                         .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
 
+                        // Locations — public
+                        .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
+
                         // Products — read public, write ADMIN (fine-grained via @PreAuthorize)
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")

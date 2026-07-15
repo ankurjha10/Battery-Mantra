@@ -141,4 +141,17 @@ public class LocationServiceImpl implements LocationService {
                 .code(pincode.getCode())
                 .build();
     }
+
+    @Override
+    public PincodeCheckResponse checkPincode(String code) {
+        return pincodeRepository.findByCode(code)
+                .map(pincode -> PincodeCheckResponse.builder()
+                        .isServiceable(true)
+                        .city(mapToCityDto(pincode.getCity()))
+                        .build())
+                .orElseGet(() -> PincodeCheckResponse.builder()
+                        .isServiceable(false)
+                        .city(null)
+                        .build());
+    }
 }
