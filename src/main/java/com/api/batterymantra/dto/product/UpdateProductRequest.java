@@ -19,7 +19,7 @@ public class UpdateProductRequest {
     private List<String> additionalImages;
     private Integer productStock;
     private Map<String, Object> specs;
-    private List<UUID> compatibleVehicleIds;
+    private String capacity;
 
     @jakarta.validation.Valid
     private List<CityPricingDto> cityPrices;

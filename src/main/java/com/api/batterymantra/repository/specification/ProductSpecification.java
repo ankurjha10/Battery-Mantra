@@ -30,11 +30,8 @@ public class ProductSpecification {
                 cb.equal(root.get("brand").get("brandId"), brandId);
     }
 
-    public static Specification<Product> hasCompatibleVehicle(UUID vehicleId) {
-        return (root, query, cb) -> {
-            Join<Product, Vehicle> vehicleJoin = root.join("compatibleVehicle", JoinType.INNER);
-            return cb.equal(vehicleJoin.get("vehicleId"), vehicleId);
-        };
+    public static Specification<Product> hasCapacityIn(java.util.List<String> capacities) {
+        return (root, query, cb) -> root.get("capacity").in(capacities);
     }
 
     public static Specification<Product> hasPriceGreaterThanOrEqual(BigDecimal minPrice) {

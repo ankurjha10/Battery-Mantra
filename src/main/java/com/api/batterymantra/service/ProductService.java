@@ -95,18 +95,7 @@ public class ProductService {
             res.setBrandId(p.getBrand().getBrandId());
         }
 
-        if (p.getCompatibleVehicle() != null) {
-            res.setCompatibleVehicles(p.getCompatibleVehicle().stream().map(v -> {
-                VehicleResponse vr = new VehicleResponse();
-                vr.setVehicleId(v.getVehicleId());
-                vr.setMake(v.getMake());
-                vr.setModel(v.getModel());
-                vr.setFuelType(v.getFuelType());
-                return vr;
-            }).toList());
-        } else {
-            res.setCompatibleVehicles(new ArrayList<>());
-        }
+        res.setCapacity(p.getCapacity());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -187,7 +176,20 @@ public class ProductService {
             spec = spec.and(ProductSpecification.hasBrandId(brandId));
         }
         if (vehicleId != null) {
-            spec = spec.and(ProductSpecification.hasCompatibleVehicle(vehicleId));
+            List<String> vehicleCapacities = new ArrayList<>();
+            vehicleRepository.findById(vehicleId).ifPresent(v -> {
+                if (v.getCapacity() != null && !v.getCapacity().isBlank()) {
+                    vehicleCapacities.addAll(java.util.Arrays.stream(v.getCapacity().split(","))
+                            .map(String::trim)
+                            .filter(c -> !c.isEmpty())
+                            .toList());
+                }
+            });
+            if (!vehicleCapacities.isEmpty()) {
+                spec = spec.and(ProductSpecification.hasCapacityIn(vehicleCapacities));
+            } else {
+                spec = spec.and((root, query, cb) -> cb.disjunction()); // Return empty if vehicle has no capacity
+            }
         }
         if (minPrice != null) {
             spec = spec.and(ProductSpecification.hasPriceGreaterThanOrEqual(minPrice));
@@ -240,14 +242,9 @@ public class ProductService {
             product.setSpec(dto.getSpecs());
         }
 
-        // Set compatible vehicles
-        if (dto.getCompatibleVehicleIds() != null && !dto.getCompatibleVehicleIds().isEmpty()) {
-            List<Vehicle> vehicles = vehicleRepository.findAllById(dto.getCompatibleVehicleIds());
-            if (vehicles.size() != dto.getCompatibleVehicleIds().size()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "One or more vehicle IDs are invalid");
-            }
-            product.setCompatibleVehicle(vehicles);
+        // Set capacity
+        if (dto.getCapacity() != null) {
+            product.setCapacity(dto.getCapacity());
         }
 
         if (dto.getCityPrices() != null) {
@@ -334,9 +331,8 @@ public class ProductService {
             product.setSpec(dto.getSpecs());
         }
 
-        if (dto.getCompatibleVehicleIds() != null) {
-            List<Vehicle> vehicles = vehicleRepository.findAllById(dto.getCompatibleVehicleIds());
-            product.setCompatibleVehicle(vehicles);
+        if (dto.getCapacity() != null) {
+            product.setCapacity(dto.getCapacity());
         }
 
         if (dto.getCityPrices() != null) {

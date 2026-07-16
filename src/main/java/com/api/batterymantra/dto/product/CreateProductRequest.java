@@ -22,7 +22,9 @@ public class CreateProductRequest {
     private UUID categoryId;
     private UUID brandId;
     private Map<String, Object> specs;
-    private List<UUID> compatibleVehicleIds;
+
+    private String capacity;
+
     @Valid
     private List<CityPricingDto> cityPrices;
 }

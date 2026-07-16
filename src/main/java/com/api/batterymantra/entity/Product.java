@@ -44,13 +44,7 @@ public class Product {
     @Column(columnDefinition = "jsonb")
     private Map<String, Object> spec = new HashMap<>();
 
-    @ManyToMany
-    @JoinTable(
-            name = "product_vehicle_compatibility",
-            joinColumns = @JoinColumn(name = "product_id"),
-            inverseJoinColumns = @JoinColumn(name = "vehicle_id")
-    )
-    private List<Vehicle> compatibleVehicle = new ArrayList<>();
+    private String capacity;
 
     @Min(0)
     private int productStock;

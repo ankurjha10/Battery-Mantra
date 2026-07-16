@@ -15,4 +15,5 @@ public class VehicleResponse {
     private FuelType fuelType;
     private VehicleType vehicleType;
     private String imageUrl;
+    private String capacity;
 }

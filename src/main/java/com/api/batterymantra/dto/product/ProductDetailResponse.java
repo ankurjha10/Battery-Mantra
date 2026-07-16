@@ -23,6 +23,6 @@ public class ProductDetailResponse {
     private String productImage;
     private List<String> additionalImages;
     private Map<String, Object> specs;
-    private List<VehicleResponse> compatibleVehicles;
+    private String capacity;
     private List<CityPricingDto> cityPrices;
 }

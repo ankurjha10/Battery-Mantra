@@ -32,4 +32,6 @@ public class Vehicle {
     private VehicleType vehicleType;
 
     private String imageUrl;
+
+    private String capacity;
 }
