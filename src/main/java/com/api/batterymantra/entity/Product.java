@@ -71,4 +71,7 @@ public class Product {
 
     @CreationTimestamp
     private LocalDate productDate;
+
+    @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ProductCityPricing> cityPrices = new ArrayList<>();
 }

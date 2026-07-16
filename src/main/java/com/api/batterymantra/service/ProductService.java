@@ -1,5 +1,6 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.dto.product.CityPricingDto;
 import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.dto.product.ProductListResponse;
@@ -7,11 +8,14 @@ import com.api.batterymantra.dto.product.UpdateProductRequest;
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import com.api.batterymantra.entity.Brand;
 import com.api.batterymantra.entity.Category;
+import com.api.batterymantra.entity.City;
 import com.api.batterymantra.entity.Product;
+import com.api.batterymantra.entity.ProductCityPricing;
 import com.api.batterymantra.entity.Vehicle;
 import com.api.batterymantra.repository.BrandRepository;
 import com.api.batterymantra.repository.CartItemRepository;
 import com.api.batterymantra.repository.CategoryRepository;
+import com.api.batterymantra.repository.CityRepository;
 import com.api.batterymantra.repository.OrderItemRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.VehicleRepository;
@@ -32,6 +36,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -44,10 +49,11 @@ public class ProductService {
     private final VehicleRepository vehicleRepository;
     private final CartItemRepository cartItemRepository;
     private final OrderItemRepository orderItemRepository;
+    private final CityRepository cityRepository;
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
-    private ProductListResponse toListResponse(Product p) {
+    private ProductListResponse toListResponse(Product p, UUID cityId) {
         ProductListResponse res = new ProductListResponse();
         res.setProductId(p.getProductId());
         res.setProductName(p.getProductName());
@@ -57,10 +63,20 @@ public class ProductService {
         res.setProductCategory(p.getProductCategory().getCategoryName());
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
+
+        if (cityId != null && p.getCityPrices() != null) {
+            p.getCityPrices().stream()
+                    .filter(cp -> cp.getCity().getCityId().equals(cityId))
+                    .findFirst()
+                    .ifPresent(cp -> {
+                        res.setProductPrice(cp.getPrice());
+                        res.setExchangeDiscount(cp.getExchangeDiscount());
+                    });
+        }
         return res;
     }
 
-    private ProductDetailResponse toDetailResponse(Product p) {
+    private ProductDetailResponse toDetailResponse(Product p, UUID cityId) {
         ProductDetailResponse res = new ProductDetailResponse();
         res.setProductId(p.getProductId());
         res.setProductName(p.getProductName());
@@ -92,28 +108,49 @@ public class ProductService {
             res.setCompatibleVehicles(new ArrayList<>());
         }
 
+        if (p.getCityPrices() != null) {
+            res.setCityPrices(p.getCityPrices().stream().map(cp -> {
+                CityPricingDto dto = new CityPricingDto();
+                dto.setCityId(cp.getCity().getCityId());
+                dto.setPrice(cp.getPrice());
+                dto.setExchangeDiscount(cp.getExchangeDiscount());
+                dto.setStock(cp.getStock());
+                return dto;
+            }).toList());
+        }
+
+        if (cityId != null && p.getCityPrices() != null) {
+            p.getCityPrices().stream()
+                    .filter(cp -> cp.getCity().getCityId().equals(cityId))
+                    .findFirst()
+                    .ifPresent(cp -> {
+                        res.setProductPrice(cp.getPrice());
+                        res.setExchangeDiscount(cp.getExchangeDiscount());
+                        res.setProductStock(cp.getStock());
+                    });
+        }
         return res;
     }
 
-    @Cacheable(value = "products")
+    @Cacheable(value = "products", key = "{'all', #cityId}")
     @Transactional(readOnly = true)
-    public List<ProductListResponse> getAllProducts() {
-        return productRepository.findAll().stream().map(this::toListResponse).toList();
+    public List<ProductListResponse> getAllProducts(UUID cityId) {
+        return productRepository.findAll().stream().map(p -> toListResponse(p, cityId)).toList();
     }
 
-    @Cacheable(value = "products", key = "#id")
+    @Cacheable(value = "products", key = "{#id, #cityId}")
     @Transactional(readOnly = true)
-    public ProductDetailResponse getProductById(UUID id) {
+    public ProductDetailResponse getProductById(UUID id, UUID cityId) {
         return productRepository.findById(id)
-                .map(this::toDetailResponse)
+                .map(p -> toDetailResponse(p, cityId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + id));
     }
 
-    @Cacheable(value = "products", key = "#name")
+    @Cacheable(value = "products", key = "{#name, #cityId}")
     @Transactional(readOnly = true)
-    public ProductDetailResponse getProductByName(String name) {
+    public ProductDetailResponse getProductByName(String name, UUID cityId) {
         return productRepository.findProductByProductName(name)
-                .map(this::toDetailResponse)
+                .map(p -> toDetailResponse(p, cityId))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Product not found with name: " + name));
     }
@@ -128,15 +165,11 @@ public class ProductService {
         }
     }
 
-    /**
-     * Dynamic product filtering with Specification pattern.
-     * Supports: category, brand, vehicle compatibility, price range, JSONB specs, keyword search.
-     */
     @Transactional(readOnly = true)
     public Page<ProductListResponse> filterProducts(UUID categoryId, UUID brandId, UUID vehicleId,
                                                      BigDecimal minPrice, BigDecimal maxPrice,
                                                      String specKey, String specValue,
-                                                     String keyword, Pageable pageable) {
+                                                     String keyword, Pageable pageable, UUID cityId) {
         Specification<Product> spec = Specification.where(null);
 
         if (categoryId != null) {
@@ -169,7 +202,7 @@ public class ProductService {
             spec = spec.and(ProductSpecification.hasNameContaining(keyword));
         }
 
-        return productRepository.findAll(spec, pageable).map(this::toListResponse);
+        return productRepository.findAll(spec, pageable).map(p -> toListResponse(p, cityId));
     }
 
     @Transactional
@@ -217,8 +250,22 @@ public class ProductService {
             product.setCompatibleVehicle(vehicles);
         }
 
+        if (dto.getCityPrices() != null) {
+            for (CityPricingDto cpd : dto.getCityPrices()) {
+                City city = cityRepository.findById(cpd.getCityId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "City not found with id " + cpd.getCityId()));
+                ProductCityPricing pricing = new ProductCityPricing();
+                pricing.setProduct(product);
+                pricing.setCity(city);
+                pricing.setPrice(cpd.getPrice());
+                pricing.setExchangeDiscount(cpd.getExchangeDiscount() != null ? cpd.getExchangeDiscount() : BigDecimal.ZERO);
+                pricing.setStock(cpd.getStock());
+                product.getCityPrices().add(pricing);
+            }
+        }
+
         Product saved = productRepository.save(product);
-        return toDetailResponse(saved);
+        return toDetailResponse(saved, null);
     }
 
     @Transactional
@@ -292,7 +339,22 @@ public class ProductService {
             product.setCompatibleVehicle(vehicles);
         }
 
+        if (dto.getCityPrices() != null) {
+            product.getCityPrices().clear();
+            for (CityPricingDto cpd : dto.getCityPrices()) {
+                City city = cityRepository.findById(cpd.getCityId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "City not found with id " + cpd.getCityId()));
+                ProductCityPricing pricing = new ProductCityPricing();
+                pricing.setProduct(product);
+                pricing.setCity(city);
+                pricing.setPrice(cpd.getPrice());
+                pricing.setExchangeDiscount(cpd.getExchangeDiscount() != null ? cpd.getExchangeDiscount() : BigDecimal.ZERO);
+                pricing.setStock(cpd.getStock());
+                product.getCityPrices().add(pricing);
+            }
+        }
+
         Product saved = productRepository.save(product);
-        return toDetailResponse(saved);
+        return toDetailResponse(saved, null);
     }
 }

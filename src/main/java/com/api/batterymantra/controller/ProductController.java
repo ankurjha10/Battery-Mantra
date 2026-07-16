@@ -29,8 +29,8 @@ public class ProductController {
     private final ProductService productService;
 
     @GetMapping
-    public ResponseEntity<List<ProductListResponse>> getAllProducts() {
-        return ResponseEntity.ok(productService.getAllProducts());
+    public ResponseEntity<List<ProductListResponse>> getAllProducts(@RequestParam(required = false) UUID cityId) {
+        return ResponseEntity.ok(productService.getAllProducts(cityId));
     }
 
     @GetMapping("/filter")
@@ -46,7 +46,8 @@ public class ProductController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(defaultValue = "productName") String sortBy,
-            @RequestParam(defaultValue = "asc") String sortDir) {
+            @RequestParam(defaultValue = "asc") String sortDir,
+            @RequestParam(required = false) UUID cityId) {
 
         Sort sort = sortDir.equalsIgnoreCase("desc")
                 ? Sort.by(sortBy).descending()
@@ -55,16 +56,16 @@ public class ProductController {
 
         return ResponseEntity.ok(productService.filterProducts(
                 categoryId, brandId, vehicleId, minPrice, maxPrice,
-                specKey, specValue, keyword, pageable));
+                specKey, specValue, keyword, pageable, cityId));
     }
 
     @GetMapping("/id/{id}")
-    public ResponseEntity<ProductDetailResponse> getProductById(@PathVariable UUID id) {
-        return ResponseEntity.ok(productService.getProductById(id));
+    public ResponseEntity<ProductDetailResponse> getProductById(@PathVariable UUID id, @RequestParam(required = false) UUID cityId) {
+        return ResponseEntity.ok(productService.getProductById(id, cityId));
     }
 
     @GetMapping("/name/{name}")
-    public ResponseEntity<ProductDetailResponse> getProductByName(@PathVariable String name) {
-        return ResponseEntity.ok(productService.getProductByName(name));
+    public ResponseEntity<ProductDetailResponse> getProductByName(@PathVariable String name, @RequestParam(required = false) UUID cityId) {
+        return ResponseEntity.ok(productService.getProductByName(name, cityId));
     }
 }

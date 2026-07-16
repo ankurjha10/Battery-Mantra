@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.product;
 
+import jakarta.validation.constraints.*;
+import jakarta.validation.Valid;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -16,8 +18,11 @@ public class CreateProductRequest {
     private BigDecimal exchangeDiscount;
     private String productImage;
     private List<String> additionalImages;
+    @NotNull(message = "Category is required")
     private UUID categoryId;
     private UUID brandId;
     private Map<String, Object> specs;
     private List<UUID> compatibleVehicleIds;
+    @Valid
+    private List<CityPricingDto> cityPrices;
 }
