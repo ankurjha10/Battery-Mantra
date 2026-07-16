@@ -30,6 +30,7 @@ public class VehicleService {
         res.setFuelType(v.getFuelType());
         res.setVehicleType(v.getVehicleType());
         res.setImageUrl(v.getImageUrl());
+        res.setCapacity(v.getCapacity());
         return res;
     }
 
@@ -67,6 +68,7 @@ public class VehicleService {
         vehicle.setFuelType(dto.getFuelType());
         vehicle.setVehicleType(dto.getVehicleType());
         vehicle.setImageUrl(dto.getImageUrl());
+        vehicle.setCapacity(dto.getCapacity());
 
         Vehicle saved = vehicleRepository.save(vehicle);
         return toResponse(saved);
@@ -93,6 +95,9 @@ public class VehicleService {
 
         if (dto.getImageUrl() != null)
             vehicle.setImageUrl(dto.getImageUrl());
+
+        if (dto.getCapacity() != null)
+            vehicle.setCapacity(dto.getCapacity());
 
         Vehicle saved = vehicleRepository.save(vehicle);
         return toResponse(saved);
