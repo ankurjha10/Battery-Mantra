@@ -16,4 +16,5 @@ public class ProductListResponse {
     private String productImage;
     private List<String> additionalImages;
     private String productCategory;
+    private String capacity;
 }

@@ -62,6 +62,7 @@ public class ProductService {
         res.setProductImage(p.getProductImage());
         res.setProductCategory(p.getProductCategory().getCategoryName());
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
+        res.setCapacity(p.getCapacity());
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
 
         if (cityId != null && p.getCityPrices() != null) {
