@@ -65,6 +65,12 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasRole("ADMIN")
 
+                        // Manufacturers — read public, write ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/manufacturers/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/manufacturers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/manufacturers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/manufacturers/**").hasRole("ADMIN")
+
                         // Vehicles — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/vehicles/**").hasRole("ADMIN")
