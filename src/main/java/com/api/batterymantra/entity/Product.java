@@ -68,4 +68,7 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductCityPricing> cityPrices = new ArrayList<>();
+
+    @Embedded
+    private SeoMetadata seo = new SeoMetadata();
 }

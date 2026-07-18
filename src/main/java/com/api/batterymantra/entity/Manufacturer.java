@@ -26,4 +26,7 @@ public class Manufacturer {
     private String logoUrl;
 
     private Integer displayOrder;
+
+    @Embedded
+    private SeoMetadata seo = new SeoMetadata();
 }

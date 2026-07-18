@@ -45,4 +45,7 @@ public class Category {
 
     @OneToMany(mappedBy = "productCategory", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private List<Product> products;
+
+    @Embedded
+    private SeoMetadata seo = new SeoMetadata();
 }

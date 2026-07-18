@@ -34,4 +34,7 @@ public class Vehicle {
     private String imageUrl;
 
     private String capacity;
+
+    @Embedded
+    private SeoMetadata seo = new SeoMetadata();
 }
