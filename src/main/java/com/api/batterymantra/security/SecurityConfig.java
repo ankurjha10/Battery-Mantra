@@ -93,6 +93,9 @@ public class SecurityConfig {
                         // User Profile & Settings
                         .requestMatchers("/api/user/**").authenticated()
 
+                        // SEO - read public
+                        .requestMatchers(HttpMethod.GET, "/api/seo/**").permitAll()
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
