@@ -17,4 +17,5 @@ public class ProductListResponse {
     private List<String> additionalImages;
     private String productCategory;
     private String capacity;
+    private com.api.batterymantra.entity.SeoMetadata seo;
 }

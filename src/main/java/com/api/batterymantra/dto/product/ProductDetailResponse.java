@@ -25,4 +25,5 @@ public class ProductDetailResponse {
     private Map<String, Object> specs;
     private String capacity;
     private List<CityPricingDto> cityPrices;
+    private com.api.batterymantra.entity.SeoMetadata seo;
 }

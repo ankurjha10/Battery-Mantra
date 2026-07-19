@@ -12,6 +12,7 @@ import com.api.batterymantra.entity.City;
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.ProductCityPricing;
 import com.api.batterymantra.entity.Vehicle;
+import com.api.batterymantra.util.SeoUtil;
 import com.api.batterymantra.repository.BrandRepository;
 import com.api.batterymantra.repository.CartItemRepository;
 import com.api.batterymantra.repository.CategoryRepository;
@@ -65,6 +66,11 @@ public class ProductService {
         res.setCapacity(p.getCapacity());
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
 
+        City currentCity = null;
+        if (cityId != null) {
+            currentCity = cityRepository.findById(cityId).orElse(null);
+        }
+
         if (cityId != null && p.getCityPrices() != null) {
             p.getCityPrices().stream()
                     .filter(cp -> cp.getCity().getCityId().equals(cityId))
@@ -74,6 +80,9 @@ public class ProductService {
                         res.setExchangeDiscount(cp.getExchangeDiscount());
                     });
         }
+        
+        res.setSeo(SeoUtil.resolveSeo(p.getSeo(), currentCity, p));
+        
         return res;
     }
 
@@ -109,6 +118,11 @@ public class ProductService {
             }).toList());
         }
 
+        City currentCity = null;
+        if (cityId != null) {
+            currentCity = cityRepository.findById(cityId).orElse(null);
+        }
+
         if (cityId != null && p.getCityPrices() != null) {
             p.getCityPrices().stream()
                     .filter(cp -> cp.getCity().getCityId().equals(cityId))
@@ -119,6 +133,9 @@ public class ProductService {
                         res.setProductStock(cp.getStock());
                     });
         }
+        
+        res.setSeo(SeoUtil.resolveSeo(p.getSeo(), currentCity, p));
+        
         return res;
     }
 

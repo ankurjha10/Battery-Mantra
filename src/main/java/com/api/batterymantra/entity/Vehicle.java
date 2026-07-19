@@ -1,6 +1,5 @@
 package com.api.batterymantra.entity;
 
-import com.api.batterymantra.entity.enums.FuelType;
 import com.api.batterymantra.entity.enums.VehicleType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -25,8 +24,9 @@ public class Vehicle {
     private String make;
     private String model;
 
-    @Enumerated(EnumType.STRING)
-    private FuelType fuelType;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "fuel_id")
+    private Fuel fuel;
 
     @Enumerated(EnumType.STRING)
     private VehicleType vehicleType;
@@ -34,6 +34,23 @@ public class Vehicle {
     private String imageUrl;
 
     private String capacity;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "category_id")
+    private Category category;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "manufacturer_id")
+    private Manufacturer manufacturer;
+
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
+    @Column(columnDefinition = "TEXT")
+    private String shortDescription;
+
+    @Column(columnDefinition = "TEXT")
+    private String shortDescriptionDealer;
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
