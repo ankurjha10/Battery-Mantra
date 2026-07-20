@@ -1,5 +1,7 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
+import com.api.batterymantra.dto.order.AdminOrderItemRequest;
 import com.api.batterymantra.dto.order.CheckoutRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.entity.*;
@@ -9,6 +11,7 @@ import com.api.batterymantra.repository.AddressRepository;
 import com.api.batterymantra.repository.CartRepository;
 import com.api.batterymantra.repository.OrderRepository;
 import com.api.batterymantra.repository.ProductRepository;
+import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.util.OrderMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +32,7 @@ public class OrderService {
     private final AddressRepository addressRepository;
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
+    private final UserRepository userRepository;
     private final OrderMapper orderMapper;
 
 
@@ -128,6 +132,88 @@ public class OrderService {
         return orderMapper.toOrderResponse(placedOrder);
     }
 
+    @Transactional
+    public OrderResponse createAdminOrder(AdminCreateOrderRequest request) {
+        // Fetch User
+        User customer = userRepository.findById(request.getCustomerId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found: " + request.getCustomerId()));
+
+        // Fetch Address
+        Address address;
+        if (request.getAddressId() != null) {
+            address = addressRepository.findById(request.getAddressId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found"));
+        } else {
+            List<Address> addresses = addressRepository.findAllByUserUserIdAndIsDeletedFalse(customer.getUserId());
+            if (addresses.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer has no addresses to use as default");
+            }
+            address = addresses.get(0);
+        }
+
+        com.api.batterymantra.entity.enums.DeliveryMethod deliveryMethod;
+        try {
+            deliveryMethod = com.api.batterymantra.entity.enums.DeliveryMethod.valueOf(request.getDeliveryMethod());
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Delivery Method");
+        }
+
+        com.api.batterymantra.entity.enums.PaymentMethod paymentMethod;
+        try {
+            paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.valueOf(request.getPaymentMethod());
+        } catch (Exception e) {
+            paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.COD;
+        }
+
+        Orders orders = Orders.builder()
+                .customer(customer)
+                .shippingAddress(address)
+                .paymentStatus(PaymentStatus.PENDING)
+                .orderStatus(OrderStatus.PENDING)
+                .deliveryMethod(deliveryMethod)
+                .paymentMethod(paymentMethod)
+                .installationDate(request.getInstallationDate())
+                .build();
+
+        List<OrderItems> orderItems = new ArrayList<>();
+        BigDecimal subTotal = BigDecimal.ZERO;
+        BigDecimal exchangeDiscount = BigDecimal.ZERO;
+
+        for (AdminOrderItemRequest itemReq : request.getItems()) {
+            Product product = productRepository.findById(itemReq.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found: " + itemReq.getProductId()));
+
+            OrderItems item = OrderItems.builder()
+                    .order(orders)
+                    .product(product)
+                    .quantity(itemReq.getQuantity())
+                    .priceAtPurchase(product.getProductPrice())
+                    .build();
+
+            orderItems.add(item);
+            subTotal = subTotal.add(product.getProductPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+
+            if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
+                exchangeDiscount = exchangeDiscount.add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+            }
+        }
+
+        if (request.getDiscount() != null) {
+            exchangeDiscount = exchangeDiscount.add(request.getDiscount());
+        }
+
+        BigDecimal total = subTotal.subtract(exchangeDiscount);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+
+        orders.setOrderItems(orderItems);
+        orders.setTotalAmount(total);
+        orders.setExchangeDiscount(exchangeDiscount);
+
+        Orders placedOrder = orderRepository.save(orders);
+        return orderMapper.toOrderResponse(placedOrder);
+    }
 
     //To Get All the Orders Placed by a Customer
     public List<OrderResponse> getMyOrders(UUID customerId) {

@@ -34,6 +34,8 @@ import com.api.batterymantra.service.BannerService;
 import com.api.batterymantra.dto.callback.CallbackResponse;
 import com.api.batterymantra.dto.callback.UpdateCallbackStatusRequest;
 import com.api.batterymantra.service.CallbackRequestService;
+import com.api.batterymantra.dto.admin.AdminCreateCustomerRequest;
+import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -65,6 +67,12 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+    @PostMapping("/customers")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserResponse> createCustomer(@RequestBody @Valid AdminCreateCustomerRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createCustomer(request));
     }
 
     // --- Categories ---
@@ -163,6 +171,12 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
+    @PostMapping("/orders")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid AdminCreateOrderRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createAdminOrder(request));
     }
 
     @PatchMapping("/orders/{orderId}/status")
