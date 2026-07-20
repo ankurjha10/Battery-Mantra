@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.util.HtmlUtils;
 
 import java.util.List;
 
@@ -19,6 +18,15 @@ public class GoogleFeedService {
     @Value("${app.frontend.url:https://batterymantra.com}")
     private String frontendUrl;
 
+    private String escapeXml(String input) {
+        if (input == null) return "";
+        return input.replace("&", "&amp;")
+                    .replace("<", "&lt;")
+                    .replace(">", "&gt;")
+                    .replace("\"", "&quot;")
+                    .replace("'", "&apos;");
+    }
+
     @Transactional(readOnly = true)
     public String generateGoogleProductsFeed() {
         List<Product> products = productRepository.findAll();
@@ -28,7 +36,7 @@ public class GoogleFeedService {
         xml.append("<rss xmlns:g=\"http://base.google.com/ns/1.0\" version=\"2.0\">\n");
         xml.append("  <channel>\n");
         xml.append("    <title>Battery Mantra Products Feed</title>\n");
-        xml.append("    <link>").append(frontendUrl).append("</link>\n");
+        xml.append("    <link>").append(escapeXml(frontendUrl)).append("</link>\n");
         xml.append("    <description>Product feed for Battery Mantra</description>\n");
 
         for (Product product : products) {
@@ -53,16 +61,16 @@ public class GoogleFeedService {
 
             xml.append("    <item>\n");
             xml.append("      <g:id>").append(product.getProductId()).append("</g:id>\n");
-            xml.append("      <g:title>").append(HtmlUtils.htmlEscape(title)).append("</g:title>\n");
-            xml.append("      <g:description>").append(HtmlUtils.htmlEscape(description)).append("</g:description>\n");
-            xml.append("      <g:link>").append(HtmlUtils.htmlEscape(link)).append("</g:link>\n");
+            xml.append("      <g:title>").append(escapeXml(title)).append("</g:title>\n");
+            xml.append("      <g:description>").append(escapeXml(description)).append("</g:description>\n");
+            xml.append("      <g:link>").append(escapeXml(link)).append("</g:link>\n");
             
             if (imageLink != null) {
-                xml.append("      <g:image_link>").append(HtmlUtils.htmlEscape(imageLink)).append("</g:image_link>\n");
+                xml.append("      <g:image_link>").append(escapeXml(imageLink)).append("</g:image_link>\n");
             }
             
             if (product.getBrand() != null) {
-                xml.append("      <g:brand>").append(HtmlUtils.htmlEscape(product.getBrand().getBrandName())).append("</g:brand>\n");
+                xml.append("      <g:brand>").append(escapeXml(product.getBrand().getBrandName())).append("</g:brand>\n");
             }
             
             xml.append("      <g:condition>new</g:condition>\n");
