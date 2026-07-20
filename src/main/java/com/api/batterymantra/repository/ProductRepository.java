@@ -11,4 +11,6 @@ import java.util.UUID;
 @Repository
 public interface ProductRepository extends JpaRepository<Product, UUID>, JpaSpecificationExecutor<Product> {
     Optional<Product> findProductByProductName(String productName);
+    
+    java.util.List<Product> findByProductCategoryAndBrand(com.api.batterymantra.entity.Category category, com.api.batterymantra.entity.Brand brand);
 }

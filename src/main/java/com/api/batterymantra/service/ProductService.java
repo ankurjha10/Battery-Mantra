@@ -51,6 +51,7 @@ public class ProductService {
     private final CartItemRepository cartItemRepository;
     private final OrderItemRepository orderItemRepository;
     private final CityRepository cityRepository;
+    private final BulkPricingService bulkPricingService;
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
@@ -279,6 +280,7 @@ public class ProductService {
             }
         }
 
+        bulkPricingService.applyBulkPricingToProduct(product);
         Product saved = productRepository.save(product);
         return toDetailResponse(saved, null);
     }
@@ -368,6 +370,7 @@ public class ProductService {
             }
         }
 
+        bulkPricingService.applyBulkPricingToProduct(product);
         Product saved = productRepository.save(product);
         return toDetailResponse(saved, null);
     }
