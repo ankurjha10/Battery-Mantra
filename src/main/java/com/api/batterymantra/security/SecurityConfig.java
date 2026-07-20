@@ -44,6 +44,9 @@ public class SecurityConfig {
                         // Banners — read public
                         .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
 
+                        // Public endpoints (e.g. delivery time)
+                        .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+
                         // Locations — public
                         .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
 
