@@ -16,7 +16,11 @@ import java.util.UUID;
 public class CmsPageDto {
     private UUID pageId;
     private String title;
+    private String subTitle;
+    private String image1;
+    private String image2;
     private String content;
+    private String content2;
     private boolean isActive;
     private SeoMetadata seo;
     private LocalDateTime createdAt;

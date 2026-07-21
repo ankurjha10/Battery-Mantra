@@ -29,8 +29,20 @@ public class CmsPage {
     @Column(name = "title", nullable = false)
     private String title;
 
+    @Column(name = "sub_title")
+    private String subTitle;
+
+    @Column(name = "image1")
+    private String image1;
+
+    @Column(name = "image2")
+    private String image2;
+
     @Column(name = "content", columnDefinition = "TEXT")
     private String content;
+
+    @Column(name = "content2", columnDefinition = "TEXT")
+    private String content2;
 
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;

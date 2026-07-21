@@ -44,7 +44,11 @@ public class CmsPageService {
     public CmsPageDto createPage(CreateCmsPageRequest request) {
         CmsPage page = new CmsPage();
         page.setTitle(request.getTitle());
+        page.setSubTitle(request.getSubTitle());
+        page.setImage1(request.getImage1());
+        page.setImage2(request.getImage2());
         page.setContent(request.getContent());
+        page.setContent2(request.getContent2());
         page.setActive(request.isActive());
         page.setSeo(request.getSeo());
 
@@ -58,7 +62,11 @@ public class CmsPageService {
                 .orElseThrow(() -> new ResourceNotFoundException("CMS Page not found with id: " + id));
 
         page.setTitle(request.getTitle());
+        page.setSubTitle(request.getSubTitle());
+        page.setImage1(request.getImage1());
+        page.setImage2(request.getImage2());
         page.setContent(request.getContent());
+        page.setContent2(request.getContent2());
         page.setActive(request.isActive());
         page.setSeo(request.getSeo());
 
@@ -78,7 +86,11 @@ public class CmsPageService {
         return CmsPageDto.builder()
                 .pageId(page.getPageId())
                 .title(page.getTitle())
+                .subTitle(page.getSubTitle())
+                .image1(page.getImage1())
+                .image2(page.getImage2())
                 .content(page.getContent())
+                .content2(page.getContent2())
                 .isActive(page.isActive())
                 .seo(page.getSeo())
                 .createdAt(page.getCreatedAt())
