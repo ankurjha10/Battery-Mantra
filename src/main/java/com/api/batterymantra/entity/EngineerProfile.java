@@ -27,6 +27,10 @@ public class EngineerProfile {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "partner_id")
+    private PartnerProfile partnerProfile;
+
     private String firstName;
     private String lastName;
 

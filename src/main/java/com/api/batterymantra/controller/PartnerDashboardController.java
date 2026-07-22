@@ -1,11 +1,15 @@
 package com.api.batterymantra.controller;
 
 import com.api.batterymantra.dto.order.OrderResponse;
+import com.api.batterymantra.dto.user.CreateEngineerRequest;
+import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.OrderStatus;
+import com.api.batterymantra.service.EngineerService;
 import com.api.batterymantra.service.OrderService;
 import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.entity.PartnerProfile;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +27,7 @@ import java.util.UUID;
 public class PartnerDashboardController {
 
     private final OrderService orderService;
+    private final EngineerService engineerService;
     private final PartnerProfileRepository partnerProfileRepository;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
@@ -47,5 +52,41 @@ public class PartnerDashboardController {
         PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
         OrderResponse updatedOrder = orderService.updatePartnerOrderStatus(orderId, newStatus, partnerProfile.getId());
         return ResponseEntity.ok(updatedOrder);
+    }
+
+    @GetMapping("/engineers")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<List<EngineerResponse>> getMyEngineers(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(engineerService.getEngineersByPartnerId(partnerProfile.getId()));
+    }
+
+    @PostMapping("/engineers")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<EngineerResponse> createEngineer(
+            @Valid @RequestBody CreateEngineerRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(engineerService.createPartnerEngineer(request, partnerProfile.getId()));
+    }
+
+    @PutMapping("/engineers/{id}")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<EngineerResponse> updateEngineer(
+            @PathVariable UUID id,
+            @Valid @RequestBody CreateEngineerRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        request.setPartnerId(partnerProfile.getId());
+        return ResponseEntity.ok(engineerService.updateEngineer(id, request));
+    }
+
+    @DeleteMapping("/engineers/{id}")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<Void> deleteEngineer(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        engineerService.deleteEngineer(id);
+        return ResponseEntity.noContent().build();
     }
 }

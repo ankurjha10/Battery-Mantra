@@ -3,10 +3,12 @@ package com.api.batterymantra.service;
 import com.api.batterymantra.dto.user.CreateEngineerRequest;
 import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.EngineerProfile;
+import com.api.batterymantra.entity.PartnerProfile;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.exception.ResourceNotFoundException;
 import com.api.batterymantra.repository.EngineerProfileRepository;
+import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -22,6 +24,7 @@ import java.util.stream.Collectors;
 public class EngineerService {
 
     private final EngineerProfileRepository engineerProfileRepository;
+    private final PartnerProfileRepository partnerProfileRepository;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
@@ -40,8 +43,14 @@ public class EngineerService {
         user.setActive(true);
         user = userRepository.save(user);
 
+        PartnerProfile partnerProfile = null;
+        if (request.getPartnerId() != null) {
+            partnerProfile = partnerProfileRepository.findById(request.getPartnerId()).orElse(null);
+        }
+
         EngineerProfile profile = EngineerProfile.builder()
                 .user(user)
+                .partnerProfile(partnerProfile)
                 .firstName(request.getFirstName())
                 .lastName(request.getLastName())
                 .alternatePhone(request.getAlternatePhone())
@@ -54,8 +63,20 @@ public class EngineerService {
         return mapToResponse(profile);
     }
 
+    @Transactional
+    public EngineerResponse createPartnerEngineer(CreateEngineerRequest request, UUID partnerId) {
+        request.setPartnerId(partnerId);
+        return createEngineer(request);
+    }
+
     public List<EngineerResponse> getAllEngineers() {
         return engineerProfileRepository.findAll().stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<EngineerResponse> getEngineersByPartnerId(UUID partnerId) {
+        return engineerProfileRepository.findByPartnerProfileId(partnerId).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -86,6 +107,11 @@ public class EngineerService {
         profile.setAddress(request.getAddress());
         profile.setCity(request.getCity());
         
+        if (request.getPartnerId() != null) {
+            PartnerProfile partnerProfile = partnerProfileRepository.findById(request.getPartnerId()).orElse(null);
+            profile.setPartnerProfile(partnerProfile);
+        }
+
         profile = engineerProfileRepository.save(profile);
         return mapToResponse(profile);
     }
@@ -112,6 +138,8 @@ public class EngineerService {
                 .address(profile.getAddress())
                 .city(profile.getCity())
                 .isActive(profile.isActive())
+                .partnerId(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getId() : null)
+                .partnerBusinessName(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getBusinessName() : null)
                 .createdAt(profile.getCreatedAt())
                 .build();
     }

@@ -10,4 +10,5 @@ import java.util.Optional;
 @Repository
 public interface EngineerProfileRepository extends JpaRepository<EngineerProfile, UUID> {
     Optional<EngineerProfile> findByUserUserId(UUID userId);
+    java.util.List<EngineerProfile> findByPartnerProfileId(UUID partnerId);
 }

@@ -26,4 +26,6 @@ public class CreateEngineerRequest {
 
     @NotBlank
     private String password;
+
+    private java.util.UUID partnerId;
 }

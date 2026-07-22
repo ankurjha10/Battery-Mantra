@@ -18,5 +18,7 @@ public class EngineerResponse {
     private String address;
     private String city;
     private boolean isActive;
+    private UUID partnerId;
+    private String partnerBusinessName;
     private LocalDateTime createdAt;
 }
