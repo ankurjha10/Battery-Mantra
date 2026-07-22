@@ -11,4 +11,6 @@ import java.util.Optional;
 public interface PartnerProfileRepository extends JpaRepository<PartnerProfile, UUID> {
     Optional<PartnerProfile> findByUserUserId(UUID userId);
     Optional<PartnerProfile> findFirstByOperatingCities_CityNameIgnoreCase(String cityName);
+    Optional<PartnerProfile> findFirstByIsActiveTrueAndOperatingCities_CityId(UUID cityId);
+    Optional<PartnerProfile> findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(String cityName);
 }

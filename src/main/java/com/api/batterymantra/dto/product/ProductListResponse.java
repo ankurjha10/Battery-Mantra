@@ -17,5 +17,7 @@ public class ProductListResponse {
     private List<String> additionalImages;
     private String productCategory;
     private String capacity;
+    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    private boolean isAutoAssignToPartner;
     private com.api.batterymantra.entity.SeoMetadata seo;
 }

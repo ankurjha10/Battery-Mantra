@@ -27,4 +27,7 @@ public class CreateProductRequest {
 
     @Valid
     private List<CityPricingDto> cityPrices;
+
+    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    private Boolean isAutoAssignToPartner;
 }

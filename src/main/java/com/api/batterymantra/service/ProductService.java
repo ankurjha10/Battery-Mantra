@@ -66,6 +66,7 @@ public class ProductService {
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
         res.setCapacity(p.getCapacity());
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
+        res.setAutoAssignToPartner(p.isAutoAssignToPartner());
 
         City currentCity = null;
         if (cityId != null) {
@@ -107,6 +108,7 @@ public class ProductService {
         }
 
         res.setCapacity(p.getCapacity());
+        res.setAutoAssignToPartner(p.isAutoAssignToPartner());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -266,6 +268,10 @@ public class ProductService {
             product.setCapacity(dto.getCapacity());
         }
 
+        if (dto.getIsAutoAssignToPartner() != null) {
+            product.setAutoAssignToPartner(dto.getIsAutoAssignToPartner());
+        }
+
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
                 City city = cityRepository.findById(cpd.getCityId())
@@ -353,6 +359,10 @@ public class ProductService {
 
         if (dto.getCapacity() != null) {
             product.setCapacity(dto.getCapacity());
+        }
+
+        if (dto.getIsAutoAssignToPartner() != null) {
+            product.setAutoAssignToPartner(dto.getIsAutoAssignToPartner());
         }
 
         if (dto.getCityPrices() != null) {

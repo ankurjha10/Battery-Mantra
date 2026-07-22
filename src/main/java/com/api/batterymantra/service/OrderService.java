@@ -35,6 +35,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final PartnerProfileRepository partnerProfileRepository;
+    private final com.api.batterymantra.repository.PincodeRepository pincodeRepository;
     private final OrderMapper orderMapper;
 
 
@@ -89,9 +90,9 @@ public class OrderService {
                 .installationDate(request.getInstallationDate())
                 .build();
 
-        //Converting Cart Items to Order Items
+        // Converting Cart Items to Order Items
         List<OrderItems> orderItems = new ArrayList<>();
-        boolean allAutoAssign = true;
+        boolean shouldAutoAssign = false;
         
         for (CartItem cartItem : cartItemList) {
             OrderItems items = OrderItems.builder()
@@ -101,17 +102,36 @@ public class OrderService {
                     .priceAtPurchase(cartItem.getProduct().getProductPrice())
                     .build();
 
-            if (!cartItem.getProduct().isAutoAssignToPartner()) {
-                allAutoAssign = false;
+            if (cartItem.getProduct().isAutoAssignToPartner()) {
+                shouldAutoAssign = true;
             }
 
             orderItems.add(items);
         }
 
-        // Logic for auto-assignment to partner
-        if (allAutoAssign && address.getCity() != null) {
-            partnerProfileRepository.findFirstByOperatingCities_CityNameIgnoreCase(address.getCity())
-                    .ifPresent(orders::setAssignedPartner);
+        // Robust Logic for Auto-assignment to Partner (by Pincode or City)
+        if (shouldAutoAssign && address != null) {
+            PartnerProfile matchedPartner = null;
+
+            // 1. Try matching by Pincode / Postal Code
+            if (address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
+                String cleanPincode = address.getPostalCode().trim();
+                var pincodeOpt = pincodeRepository.findByCode(cleanPincode);
+                if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
+                    UUID cityId = pincodeOpt.get().getCity().getCityId();
+                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId).orElse(null);
+                }
+            }
+
+            // 2. Fallback: Try matching by Shipping Address City Name
+            if (matchedPartner == null && address.getCity() != null && !address.getCity().isBlank()) {
+                String cleanCity = address.getCity().trim();
+                matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
+            }
+
+            if (matchedPartner != null) {
+                orders.setAssignedPartner(matchedPartner);
+            }
         }
 
         //Calculating the Total Amount
@@ -209,6 +229,26 @@ public class OrderService {
 
             if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
                 exchangeDiscount = exchangeDiscount.add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+            }
+        }
+
+        // Auto assign to partner
+        if (address != null) {
+            PartnerProfile matchedPartner = null;
+            if (address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
+                String cleanPincode = address.getPostalCode().trim();
+                var pincodeOpt = pincodeRepository.findByCode(cleanPincode);
+                if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
+                    UUID cityId = pincodeOpt.get().getCity().getCityId();
+                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId).orElse(null);
+                }
+            }
+            if (matchedPartner == null && address.getCity() != null && !address.getCity().isBlank()) {
+                String cleanCity = address.getCity().trim();
+                matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
+            }
+            if (matchedPartner != null) {
+                orders.setAssignedPartner(matchedPartner);
             }
         }
 

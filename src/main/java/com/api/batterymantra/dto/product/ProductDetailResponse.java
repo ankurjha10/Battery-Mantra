@@ -25,5 +25,7 @@ public class ProductDetailResponse {
     private Map<String, Object> specs;
     private String capacity;
     private List<CityPricingDto> cityPrices;
+    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    private boolean isAutoAssignToPartner;
     private com.api.batterymantra.entity.SeoMetadata seo;
 }
