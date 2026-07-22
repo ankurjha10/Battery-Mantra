@@ -17,6 +17,7 @@ public class EngineerResponse {
     private String alternatePhone;
     private String address;
     private String city;
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     private boolean isActive;
     private UUID partnerId;
     private String partnerBusinessName;

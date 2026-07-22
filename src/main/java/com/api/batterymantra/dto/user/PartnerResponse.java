@@ -19,6 +19,7 @@ public class PartnerResponse {
     private String alternatePhone;
     private String address;
     private List<CityDto> operatingCities;
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     private boolean isActive;
     private LocalDateTime createdAt;
 }
