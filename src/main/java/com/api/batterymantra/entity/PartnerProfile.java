@@ -43,8 +43,10 @@ public class PartnerProfile {
         joinColumns = @JoinColumn(name = "partner_id"),
         inverseJoinColumns = @JoinColumn(name = "city_id")
     )
+    @Builder.Default
     private Set<City> operatingCities = new HashSet<>();
 
+    @Builder.Default
     private boolean isActive = true;
 
     @CreationTimestamp

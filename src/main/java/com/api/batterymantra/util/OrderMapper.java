@@ -67,7 +67,8 @@ public class OrderMapper {
         if (order.getAssignedEngineer() != null) {
             com.api.batterymantra.dto.user.EngineerResponse e = com.api.batterymantra.dto.user.EngineerResponse.builder()
                     .id(order.getAssignedEngineer().getId())
-                    .fullName(order.getAssignedEngineer().getFullName())
+                    .firstName(order.getAssignedEngineer().getFirstName())
+                    .lastName(order.getAssignedEngineer().getLastName())
                     .build();
             response.setAssignedEngineer(e);
         }
