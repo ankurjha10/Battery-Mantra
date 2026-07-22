@@ -12,6 +12,7 @@ import com.api.batterymantra.repository.CartRepository;
 import com.api.batterymantra.repository.OrderRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;
+import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.util.OrderMapper;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
+    private final PartnerProfileRepository partnerProfileRepository;
     private final OrderMapper orderMapper;
 
 
@@ -89,6 +91,8 @@ public class OrderService {
 
         //Converting Cart Items to Order Items
         List<OrderItems> orderItems = new ArrayList<>();
+        boolean allAutoAssign = true;
+        
         for (CartItem cartItem : cartItemList) {
             OrderItems items = OrderItems.builder()
                     .order(orders)
@@ -97,7 +101,17 @@ public class OrderService {
                     .priceAtPurchase(cartItem.getProduct().getProductPrice())
                     .build();
 
+            if (!cartItem.getProduct().isAutoAssignToPartner()) {
+                allAutoAssign = false;
+            }
+
             orderItems.add(items);
+        }
+
+        // Logic for auto-assignment to partner
+        if (allAutoAssign && address.getCity() != null) {
+            partnerProfileRepository.findFirstByOperatingCities_CityNameIgnoreCase(address.getCity())
+                    .ifPresent(orders::setAssignedPartner);
         }
 
         //Calculating the Total Amount
@@ -329,5 +343,15 @@ public class OrderService {
             }
         }
         return cartItemList;
+    }
+    public OrderResponse assignPartner(UUID orderId, UUID partnerId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        
+        PartnerProfile partner = partnerProfileRepository.findById(partnerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
+                
+        order.setAssignedPartner(partner);
+        return orderMapper.toOrderResponse(orderRepository.save(order));
     }
 }

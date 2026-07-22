@@ -187,6 +187,14 @@ public class AdminController {
         return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getOrderStatus()));
     }
 
+    @PatchMapping("/orders/{orderId}/assign-partner")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<OrderResponse> assignOrderToPartner(
+            @PathVariable UUID orderId,
+            @RequestParam UUID partnerId) {
+        return ResponseEntity.ok(orderService.assignPartner(orderId, partnerId));
+    }
+
     // --- Banners ---
     @GetMapping("/banners")
     @PreAuthorize("hasRole('ADMIN')")

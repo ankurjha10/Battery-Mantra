@@ -10,6 +10,7 @@ import org.hibernate.annotations.UuidGenerator;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Entity
@@ -68,6 +69,13 @@ public class Product {
 
     @OneToMany(mappedBy = "product", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ProductCityPricing> cityPrices = new ArrayList<>();
+
+    // Assignment flag
+    @Column(name = "is_auto_assign_to_partner", nullable = false)
+    private boolean isAutoAssignToPartner = false;
+
+    @CreationTimestamp
+    private LocalDateTime createdAt;
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
