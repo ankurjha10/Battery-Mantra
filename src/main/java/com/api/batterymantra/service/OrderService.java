@@ -324,6 +324,30 @@ public class OrderService {
         }
     }
 
+    // ===== PARTNER Methods =====
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getPartnerOrders(UUID partnerProfileId) {
+        List<Orders> orders = orderRepository.findByAssignedPartner_IdOrderByPlacedAtDesc(partnerProfileId);
+        return orders.stream().map(orderMapper::toOrderResponse).toList();
+    }
+
+    @Transactional
+    public OrderResponse updatePartnerOrderStatus(UUID orderId, OrderStatus newStatus, UUID partnerProfileId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
+
+        if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this order. It is not assigned to you.");
+        }
+
+        validateStatusTransition(order.getOrderStatus(), newStatus);
+
+        order.setOrderStatus(newStatus);
+        Orders updatedOrder = orderRepository.save(order);
+        return orderMapper.toOrderResponse(updatedOrder);
+    }
+
 
     private List<CartItem> getCartItems(UUID customerId, Cart cart) {
         List<CartItem> cartItemList = cart.getCartItems();
