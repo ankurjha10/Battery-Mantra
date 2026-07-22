@@ -29,7 +29,7 @@ public class CreateEngineerRequest {
     private String password;
     
     @com.fasterxml.jackson.annotation.JsonProperty("isActive")
-    private Boolean isActive;
+    private Boolean active;
 
     private UUID partnerId;
 }

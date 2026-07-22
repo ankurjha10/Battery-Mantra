@@ -105,9 +105,9 @@ public class PartnerService {
         profile.setAddress(request.getAddress());
         profile.setOperatingCities(cities);
         
-        if (request.getIsActive() != null) {
-            profile.setActive(request.getIsActive());
-            user.setActive(request.getIsActive());
+        if (request.getActive() != null) {
+            profile.setActive(request.getActive());
+            user.setActive(request.getActive());
             userRepository.save(user);
         }
         
