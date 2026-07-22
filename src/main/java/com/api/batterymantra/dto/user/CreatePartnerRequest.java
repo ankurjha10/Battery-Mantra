@@ -25,7 +25,6 @@ public class CreatePartnerRequest {
     
     private String address;
 
-    @NotBlank
     private String password;
     
     private List<UUID> operatingCityIds;

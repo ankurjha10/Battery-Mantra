@@ -26,7 +26,6 @@ public class CreateEngineerRequest {
     private String address;
     private String city;
 
-    @NotBlank
     private String password;
 
     private UUID partnerId;

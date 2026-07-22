@@ -33,6 +33,9 @@ public class EngineerService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already in use");
         }
+        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
+            throw new IllegalArgumentException("Password is required for new engineers");
+        }
 
         User user = new User();
         user.setUsername(request.getEmail()); // Use email as username
