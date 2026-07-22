@@ -110,6 +110,12 @@ public class EngineerService {
         profile.setAddress(request.getAddress());
         profile.setCity(request.getCity());
         
+        if (request.getIsActive() != null) {
+            profile.setActive(request.getIsActive());
+            user.setActive(request.getIsActive());
+            userRepository.save(user);
+        }
+        
         if (request.getPartnerId() != null) {
             PartnerProfile partnerProfile = partnerProfileRepository.findById(request.getPartnerId()).orElse(null);
             profile.setPartnerProfile(partnerProfile);

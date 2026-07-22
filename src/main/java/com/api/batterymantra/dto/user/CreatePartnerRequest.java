@@ -27,5 +27,7 @@ public class CreatePartnerRequest {
 
     private String password;
     
+    private Boolean isActive;
+    
     private List<UUID> operatingCityIds;
 }
