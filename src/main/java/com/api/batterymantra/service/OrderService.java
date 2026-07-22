@@ -230,6 +230,7 @@ public class OrderService {
     }
 
     //To Get All the Orders Placed by a Customer
+    @Transactional(readOnly = true)
     public List<OrderResponse> getMyOrders(UUID customerId) {
         List<Orders> orders = orderRepository.findByCustomer_UserIdOrderByPlacedAtDesc(customerId);
 
@@ -240,6 +241,7 @@ public class OrderService {
     }
 
     //To Get a Particular Order by ID
+    @Transactional(readOnly = true)
     public OrderResponse getOrderById(UUID orderId, UUID customerId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
@@ -281,6 +283,7 @@ public class OrderService {
     /**
      * Get all orders in the system (ADMIN only)
      */
+    @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()
                 .map(orderMapper::toOrderResponse)

@@ -56,6 +56,22 @@ public class OrderMapper {
             itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
             return itemResponse;
         }).toList());
+        if (order.getAssignedPartner() != null) {
+            com.api.batterymantra.dto.user.PartnerResponse p = com.api.batterymantra.dto.user.PartnerResponse.builder()
+                    .id(order.getAssignedPartner().getId())
+                    .businessName(order.getAssignedPartner().getBusinessName())
+                    .build();
+            response.setAssignedPartner(p);
+        }
+        
+        if (order.getAssignedEngineer() != null) {
+            com.api.batterymantra.dto.user.EngineerResponse e = com.api.batterymantra.dto.user.EngineerResponse.builder()
+                    .id(order.getAssignedEngineer().getId())
+                    .fullName(order.getAssignedEngineer().getFullName())
+                    .build();
+            response.setAssignedEngineer(e);
+        }
+
         return response;
     }
 }

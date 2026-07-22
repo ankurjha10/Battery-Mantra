@@ -28,4 +28,6 @@ public class OrderResponse {
     private String customerEmail;
     private String customerPhone;
     private List<OrderItemResponse> orderItems;
+    private com.api.batterymantra.dto.user.PartnerResponse assignedPartner;
+    private com.api.batterymantra.dto.user.EngineerResponse assignedEngineer;
 }
