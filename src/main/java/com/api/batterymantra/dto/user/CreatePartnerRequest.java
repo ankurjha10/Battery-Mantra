@@ -27,6 +27,7 @@ public class CreatePartnerRequest {
 
     private String password;
     
+    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
     private Boolean isActive;
     
     private List<UUID> operatingCityIds;
