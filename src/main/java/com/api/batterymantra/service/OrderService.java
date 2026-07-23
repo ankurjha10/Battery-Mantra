@@ -339,6 +339,10 @@ public class OrderService {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
+        if (order.getAssignedPartner() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName() + "'. Status updates must be managed by the assigned partner.");
+        }
+
         // Validate status transition
         validateStatusTransition(order.getOrderStatus(), newStatus);
 
@@ -429,6 +433,10 @@ public class OrderService {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
         
+        if (order.getAssignedPartner() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName() + "'. Engineers must be assigned by the partner branch.");
+        }
+
         EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer not found"));
 
