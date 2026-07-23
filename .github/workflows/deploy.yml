@@ -34,9 +34,13 @@ jobs:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USERNAME }}
         key: ${{ secrets.VPS_SSH_KEY }}
+        script_stop: true
         script: |
           cd /root/battery-mantra/Battery-Mantra
-          git pull origin main
+          git fetch origin main
+          git reset --hard origin/main
           docker compose up -d --build
-          sleep 10
-          docker compose exec redis redis-cli FLUSHALL
+          docker image prune -f
+          sleep 5
+          docker compose exec -T redis redis-cli FLUSHALL || true
+
