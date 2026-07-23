@@ -67,6 +67,9 @@ public class ProductService {
         res.setCapacity(p.getCapacity());
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
         res.setAutoAssignToPartner(p.isAutoAssignToPartner());
+        res.setApproved(p.isApproved());
+        res.setCreatedByPartnerId(p.getCreatedByPartnerId());
+        res.setPartnerBusinessName(p.getPartnerBusinessName());
 
         City currentCity = null;
         if (cityId != null) {
@@ -109,6 +112,9 @@ public class ProductService {
 
         res.setCapacity(p.getCapacity());
         res.setAutoAssignToPartner(p.isAutoAssignToPartner());
+        res.setApproved(p.isApproved());
+        res.setCreatedByPartnerId(p.getCreatedByPartnerId());
+        res.setPartnerBusinessName(p.getPartnerBusinessName());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -381,7 +387,75 @@ public class ProductService {
         }
 
         bulkPricingService.applyBulkPricingToProduct(product);
+        Product updatedProduct = productRepository.save(product);
+        return toDetailResponse(updatedProduct, null);
+    }
+
+    @Transactional
+    public ProductDetailResponse addProductByPartner(CreateProductRequest productDto, com.api.batterymantra.entity.PartnerProfile partnerProfile) {
+        ProductDetailResponse response = addProduct(productDto);
+        Product product = productRepository.findById(response.getProductId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + response.getProductId()));
+        product.setApproved(false);
+        product.setCreatedByPartnerId(partnerProfile.getId());
+        product.setPartnerBusinessName(partnerProfile.getBusinessName());
         Product saved = productRepository.save(product);
         return toDetailResponse(saved, null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ProductListResponse> getPendingApprovalProducts() {
+        return productRepository.findAll().stream()
+                .filter(p -> !p.isApproved())
+                .map(p -> toListResponse(p, null))
+                .toList();
+    }
+
+    @Transactional
+    public ProductDetailResponse approveProduct(UUID productId) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + productId));
+        product.setApproved(true);
+        Product saved = productRepository.save(product);
+        return toDetailResponse(saved, null);
+    }
+
+    @Transactional
+    public ProductDetailResponse updateCityPricingByPartner(UUID productId, CityPricingDto dto, com.api.batterymantra.entity.PartnerProfile partnerProfile) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + productId));
+
+        // Validate that cityId belongs to partner's operating cities
+        boolean isPartnerCity = partnerProfile.getOperatingCities() != null && partnerProfile.getOperatingCities().stream()
+                .anyMatch(c -> c.getCityId().equals(dto.getCityId()));
+
+        if (!isPartnerCity) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only change prices for your branch operating cities.");
+        }
+
+        City city = cityRepository.findById(dto.getCityId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "City not found: " + dto.getCityId()));
+
+        ProductCityPricing existingPricing = product.getCityPrices().stream()
+                .filter(cp -> cp.getCity().getCityId().equals(dto.getCityId()))
+                .findFirst()
+                .orElse(null);
+
+        if (existingPricing != null) {
+            existingPricing.setPrice(dto.getPrice());
+            if (dto.getExchangeDiscount() != null) existingPricing.setExchangeDiscount(dto.getExchangeDiscount());
+            existingPricing.setStock(dto.getStock());
+        } else {
+            ProductCityPricing pricing = new ProductCityPricing();
+            pricing.setProduct(product);
+            pricing.setCity(city);
+            pricing.setPrice(dto.getPrice());
+            pricing.setExchangeDiscount(dto.getExchangeDiscount() != null ? dto.getExchangeDiscount() : BigDecimal.ZERO);
+            pricing.setStock(dto.getStock());
+            product.getCityPrices().add(pricing);
+        }
+
+        Product saved = productRepository.save(product);
+        return toDetailResponse(saved, dto.getCityId());
     }
 }

@@ -27,5 +27,9 @@ public class ProductDetailResponse {
     private List<CityPricingDto> cityPrices;
     @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
     private boolean isAutoAssignToPartner;
+    @com.fasterxml.jackson.annotation.JsonProperty("isApproved")
+    private boolean isApproved = true;
+    private UUID createdByPartnerId;
+    private String partnerBusinessName;
     private com.api.batterymantra.entity.SeoMetadata seo;
 }

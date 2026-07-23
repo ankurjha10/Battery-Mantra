@@ -77,6 +77,15 @@ public class Product {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Column(name = "is_approved", nullable = false)
+    private boolean isApproved = true;
+
+    @Column(name = "created_by_partner_id")
+    private UUID createdByPartnerId;
+
+    @Column(name = "partner_business_name")
+    private String partnerBusinessName;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 }

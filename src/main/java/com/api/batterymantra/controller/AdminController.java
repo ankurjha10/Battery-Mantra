@@ -166,6 +166,18 @@ public class AdminController {
         return ResponseEntity.noContent().build();
     }
 
+    @GetMapping("/products/pending-approvals")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<com.api.batterymantra.dto.product.ProductListResponse>> getPendingApprovalProducts() {
+        return ResponseEntity.ok(productService.getPendingApprovalProducts());
+    }
+
+    @PatchMapping("/products/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ProductDetailResponse> approveProduct(@PathVariable UUID id) {
+        return ResponseEntity.ok(productService.approveProduct(id));
+    }
+
     // --- Orders ---
     @GetMapping("/orders")
     @PreAuthorize("hasRole('ADMIN')")

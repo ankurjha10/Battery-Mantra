@@ -21,6 +21,11 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.List;
 import java.util.UUID;
 
+import com.api.batterymantra.dto.product.CityPricingDto;
+import com.api.batterymantra.dto.product.CreateProductRequest;
+import com.api.batterymantra.dto.product.ProductDetailResponse;
+import com.api.batterymantra.service.ProductService;
+
 @RestController
 @RequestMapping("/api/partner")
 @RequiredArgsConstructor
@@ -29,6 +34,7 @@ public class PartnerDashboardController {
     private final OrderService orderService;
     private final EngineerService engineerService;
     private final PartnerProfileRepository partnerProfileRepository;
+    private final ProductService productService;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
         return partnerProfileRepository.findByUserUserId(userPrincipal.getUser().getUserId())
@@ -99,5 +105,27 @@ public class PartnerDashboardController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         engineerService.deleteEngineer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    // ===== Partner Product Request & City Pricing =====
+
+    @PostMapping("/products")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<ProductDetailResponse> requestNewProduct(
+            @Valid @RequestBody CreateProductRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(productService.addProductByPartner(request, partnerProfile));
+    }
+
+    @PutMapping("/products/{productId}/city-pricing")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<ProductDetailResponse> updateCityPricing(
+            @PathVariable UUID productId,
+            @Valid @RequestBody CityPricingDto dto,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(productService.updateCityPricingByPartner(productId, dto, partnerProfile));
     }
 }
