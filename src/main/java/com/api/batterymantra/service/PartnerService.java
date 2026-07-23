@@ -74,12 +74,6 @@ public class PartnerService {
                 .collect(Collectors.toList());
     }
 
-    public PartnerResponse getPartnerById(UUID id) {
-        PartnerProfile profile = partnerProfileRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
-        return mapToResponse(profile);
-    }
-
     @Transactional(readOnly = true)
     public PartnerResponse getPartnerById(UUID id) {
         PartnerProfile profile = partnerProfileRepository.findById(id)
