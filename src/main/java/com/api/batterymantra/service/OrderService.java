@@ -35,6 +35,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final PartnerProfileRepository partnerProfileRepository;
+    private final com.api.batterymantra.repository.EngineerProfileRepository engineerProfileRepository;
     private final com.api.batterymantra.repository.PincodeRepository pincodeRepository;
     private final OrderMapper orderMapper;
 
@@ -411,6 +412,7 @@ public class OrderService {
         }
         return cartItemList;
     }
+    @Transactional
     public OrderResponse assignPartner(UUID orderId, UUID partnerId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
@@ -419,6 +421,42 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
                 
         order.setAssignedPartner(partner);
+        return orderMapper.toOrderResponse(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderResponse assignEngineerByAdmin(UUID orderId, UUID engineerId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+        
+        EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer not found"));
+
+        if (engineer.getPartnerProfile() != null) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin can only assign Direct Admin engineers.");
+        }
+
+        order.setAssignedEngineer(engineer);
+        return orderMapper.toOrderResponse(orderRepository.save(order));
+    }
+
+    @Transactional
+    public OrderResponse assignEngineerByPartner(UUID orderId, UUID engineerId, UUID partnerProfileId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. Order is not assigned to your partner branch.");
+        }
+
+        EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer not found"));
+
+        if (engineer.getPartnerProfile() == null || !engineer.getPartnerProfile().getId().equals(partnerProfileId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only assign engineers belonging to your partner branch.");
+        }
+
+        order.setAssignedEngineer(engineer);
         return orderMapper.toOrderResponse(orderRepository.save(order));
     }
 }

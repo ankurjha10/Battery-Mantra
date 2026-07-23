@@ -54,6 +54,17 @@ public class PartnerDashboardController {
         return ResponseEntity.ok(updatedOrder);
     }
 
+    @PutMapping("/orders/{orderId}/assign-engineer")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<OrderResponse> assignEngineer(
+            @PathVariable UUID orderId,
+            @RequestParam UUID engineerId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        OrderResponse updatedOrder = orderService.assignEngineerByPartner(orderId, engineerId, partnerProfile.getId());
+        return ResponseEntity.ok(updatedOrder);
+    }
+
     @GetMapping("/engineers")
     @PreAuthorize("hasRole('PARTNER')")
     public ResponseEntity<List<EngineerResponse>> getMyEngineers(@AuthenticationPrincipal UserPrincipal userPrincipal) {
