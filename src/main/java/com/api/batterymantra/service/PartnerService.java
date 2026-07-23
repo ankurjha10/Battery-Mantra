@@ -80,6 +80,13 @@ public class PartnerService {
         return mapToResponse(profile);
     }
 
+    @Transactional(readOnly = true)
+    public PartnerResponse getPartnerById(UUID id) {
+        PartnerProfile profile = partnerProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        return mapToResponse(profile);
+    }
+
     @Transactional
     public PartnerResponse updatePartner(UUID id, CreatePartnerRequest request) {
         PartnerProfile profile = partnerProfileRepository.findById(id)

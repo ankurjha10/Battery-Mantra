@@ -26,6 +26,9 @@ import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.service.ProductService;
 
+import com.api.batterymantra.dto.user.PartnerResponse;
+import com.api.batterymantra.service.PartnerService;
+
 @RestController
 @RequestMapping("/api/partner")
 @RequiredArgsConstructor
@@ -35,10 +38,18 @@ public class PartnerDashboardController {
     private final EngineerService engineerService;
     private final PartnerProfileRepository partnerProfileRepository;
     private final ProductService productService;
+    private final PartnerService partnerService;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
         return partnerProfileRepository.findByUserUserId(userPrincipal.getUser().getUserId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner profile not found for current user"));
+    }
+
+    @GetMapping("/profile")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<PartnerResponse> getMyProfile(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(partnerService.getPartnerById(partnerProfile.getId()));
     }
 
     @GetMapping("/orders")

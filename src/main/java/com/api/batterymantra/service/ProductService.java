@@ -425,8 +425,16 @@ public class ProductService {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + productId));
 
+        if (partnerProfile.getOperatingCities() == null || partnerProfile.getOperatingCities().isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No operating cities assigned to your partner profile. Contact Admin.");
+        }
+
+        if (dto.getCityId() == null) {
+            dto.setCityId(partnerProfile.getOperatingCities().iterator().next().getCityId());
+        }
+
         // Validate that cityId belongs to partner's operating cities
-        boolean isPartnerCity = partnerProfile.getOperatingCities() != null && partnerProfile.getOperatingCities().stream()
+        boolean isPartnerCity = partnerProfile.getOperatingCities().stream()
                 .anyMatch(c -> c.getCityId().equals(dto.getCityId()));
 
         if (!isPartnerCity) {

@@ -14,7 +14,6 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 public class CityPricingDto {
-    @NotNull(message = "City ID is required")
     private UUID cityId;
 
     @NotNull(message = "Price is required")
