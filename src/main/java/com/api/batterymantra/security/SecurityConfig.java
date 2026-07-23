@@ -47,6 +47,9 @@ public class SecurityConfig {
                         // Public endpoints (e.g. delivery time)
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
 
+                        // FAQs - public
+                        .requestMatchers(HttpMethod.GET, "/api/faqs/public/**").permitAll()
+
                         // Locations — public
                         .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
 
