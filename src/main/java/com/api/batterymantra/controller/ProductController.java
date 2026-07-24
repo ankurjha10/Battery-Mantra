@@ -60,8 +60,8 @@ public class ProductController {
     }
 
     @GetMapping("/id/{id}")
-    public ResponseEntity<ProductDetailResponse> getProductById(@PathVariable UUID id, @RequestParam(required = false) UUID cityId) {
-        return ResponseEntity.ok(productService.getProductById(id, cityId));
+    public ResponseEntity<ProductDetailResponse> getProductById(@PathVariable String id, @RequestParam(required = false) UUID cityId) {
+        return ResponseEntity.ok(productService.getProductByIdOrSlug(id, cityId));
     }
 
     @GetMapping("/name/{name}")

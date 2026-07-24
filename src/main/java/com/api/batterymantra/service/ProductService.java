@@ -154,12 +154,21 @@ public class ProductService {
         return productRepository.findAll().stream().map(p -> toListResponse(p, cityId)).toList();
     }
 
-    @Cacheable(value = "products", key = "{#id, #cityId}")
+    @Cacheable(value = "products", key = "{#idOrSlug, #cityId}")
     @Transactional(readOnly = true)
-    public ProductDetailResponse getProductById(UUID id, UUID cityId) {
-        return productRepository.findById(id)
+    public ProductDetailResponse getProductByIdOrSlug(String idOrSlug, UUID cityId) {
+        Optional<Product> productOpt;
+        try {
+            UUID id = UUID.fromString(idOrSlug);
+            productOpt = productRepository.findById(id);
+        } catch (IllegalArgumentException e) {
+            // Not a UUID, try finding by slug
+            productOpt = productRepository.findBySeo_Slug(idOrSlug);
+        }
+
+        return productOpt
                 .map(p -> toDetailResponse(p, cityId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + id));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + idOrSlug));
     }
 
     @Cacheable(value = "products", key = "{#name, #cityId}")
