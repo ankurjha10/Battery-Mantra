@@ -278,6 +278,10 @@ public class ProductService {
             product.setAutoAssignToPartner(dto.getIsAutoAssignToPartner());
         }
 
+        if (dto.getSeo() != null) {
+            product.setSeo(dto.getSeo());
+        }
+
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
                 City city = cityRepository.findById(cpd.getCityId())
@@ -369,6 +373,10 @@ public class ProductService {
 
         if (dto.getIsAutoAssignToPartner() != null) {
             product.setAutoAssignToPartner(dto.getIsAutoAssignToPartner());
+        }
+
+        if (dto.getSeo() != null) {
+            product.setSeo(dto.getSeo());
         }
 
         if (dto.getCityPrices() != null) {

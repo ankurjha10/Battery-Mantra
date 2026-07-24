@@ -43,4 +43,3 @@ jobs:
           docker image prune -f
           sleep 5
           docker compose exec -T redis redis-cli FLUSHALL || true
-

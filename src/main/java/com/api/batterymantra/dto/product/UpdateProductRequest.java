@@ -1,11 +1,13 @@
 package com.api.batterymantra.dto.product;
 
 import lombok.Data;
-
+import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
+import com.api.batterymantra.entity.SeoMetadata;
 
 @Data
 public class UpdateProductRequest {
@@ -24,6 +26,8 @@ public class UpdateProductRequest {
     @jakarta.validation.Valid
     private List<CityPricingDto> cityPrices;
 
-    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    @JsonProperty("isAutoAssignToPartner")
     private Boolean isAutoAssignToPartner;
+
+    private SeoMetadata seo;
 }
