@@ -46,6 +46,13 @@ public class SeoUtil {
         resolved.setSlug(replace.apply(raw.getSlug()));
         resolved.setCanonicalUrl(replace.apply(raw.getCanonicalUrl()));
 
+        // Preserve the raw city template fields so the admin can edit them
+        resolved.setMetaTitleCity(raw.getMetaTitleCity());
+        resolved.setMetaDescriptionCity(raw.getMetaDescriptionCity());
+        resolved.setMetaKeywordsCity(raw.getMetaKeywordsCity());
+        resolved.setOgTitleCity(raw.getOgTitleCity());
+        resolved.setOgDescriptionCity(raw.getOgDescriptionCity());
+
         return resolved;
     }
 }
