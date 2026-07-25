@@ -1,15 +1,18 @@
 package com.api.batterymantra.service;
 
-import com.api.batterymantra.entity.enums.VehicleType;
-
 import com.api.batterymantra.dto.manufacturer.CreateManufacturerRequest;
 import com.api.batterymantra.dto.manufacturer.ManufacturerResponse;
 import com.api.batterymantra.dto.manufacturer.UpdateManufacturerRequest;
+import com.api.batterymantra.entity.Category;
 import com.api.batterymantra.entity.Manufacturer;
+import com.api.batterymantra.repository.CategoryRepository;
 import com.api.batterymantra.repository.ManufacturerRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -19,11 +22,12 @@ import java.util.stream.Collectors;
 public class ManufacturerService {
 
     private final ManufacturerRepository manufacturerRepository;
+    private final CategoryRepository categoryRepository;
 
-    public List<ManufacturerResponse> getAllManufacturers(VehicleType type) {
+    public List<ManufacturerResponse> getAllManufacturers(UUID categoryId) {
         List<Manufacturer> manufacturers;
-        if (type != null) {
-            manufacturers = manufacturerRepository.findDistinctByVehicleType(type);
+        if (categoryId != null) {
+            manufacturers = manufacturerRepository.findDistinctByCategoriesCategoryIdOrderByDisplayOrderAsc(categoryId);
         } else {
             manufacturers = manufacturerRepository.findAllByOrderByDisplayOrderAsc();
         }
@@ -38,6 +42,7 @@ public class ManufacturerService {
         return mapToResponse(manufacturer);
     }
 
+    @Transactional
     public ManufacturerResponse createManufacturer(CreateManufacturerRequest request) {
         if (manufacturerRepository.existsByName(request.getName())) {
             throw new RuntimeException("Manufacturer with name '" + request.getName() + "' already exists");
@@ -48,10 +53,16 @@ public class ManufacturerService {
         manufacturer.setLogoUrl(request.getLogoUrl());
         manufacturer.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
 
+        if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+            manufacturer.setCategories(categories);
+        }
+
         Manufacturer savedManufacturer = manufacturerRepository.save(manufacturer);
         return mapToResponse(savedManufacturer);
     }
 
+    @Transactional
     public ManufacturerResponse updateManufacturer(UUID id, UpdateManufacturerRequest request) {
         Manufacturer manufacturer = manufacturerRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Manufacturer not found with id: " + id));
@@ -71,6 +82,11 @@ public class ManufacturerService {
             manufacturer.setDisplayOrder(request.getDisplayOrder());
         }
 
+        if (request.getCategoryIds() != null) {
+            List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+            manufacturer.setCategories(categories);
+        }
+
         Manufacturer updatedManufacturer = manufacturerRepository.save(manufacturer);
         return mapToResponse(updatedManufacturer);
     }
@@ -88,6 +104,21 @@ public class ManufacturerService {
         response.setName(manufacturer.getName());
         response.setLogoUrl(manufacturer.getLogoUrl());
         response.setDisplayOrder(manufacturer.getDisplayOrder());
+
+        if (manufacturer.getCategories() != null) {
+            List<ManufacturerResponse.CategoryInfo> categoryInfos = manufacturer.getCategories().stream()
+                    .map(cat -> {
+                        ManufacturerResponse.CategoryInfo info = new ManufacturerResponse.CategoryInfo();
+                        info.setCategoryId(cat.getCategoryId());
+                        info.setCategoryName(cat.getCategoryName());
+                        return info;
+                    })
+                    .collect(Collectors.toList());
+            response.setCategories(categoryInfos);
+        } else {
+            response.setCategories(Collections.emptyList());
+        }
+
         return response;
     }
 }

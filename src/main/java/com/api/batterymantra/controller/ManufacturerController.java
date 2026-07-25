@@ -1,7 +1,5 @@
 package com.api.batterymantra.controller;
 
-import com.api.batterymantra.entity.enums.VehicleType;
-
 import com.api.batterymantra.dto.manufacturer.CreateManufacturerRequest;
 import com.api.batterymantra.dto.manufacturer.ManufacturerResponse;
 import com.api.batterymantra.dto.manufacturer.UpdateManufacturerRequest;
@@ -24,8 +22,8 @@ public class ManufacturerController {
 
     @GetMapping
     public ResponseEntity<List<ManufacturerResponse>> getAllManufacturers(
-            @RequestParam(required = false) VehicleType type) {
-        return ResponseEntity.ok(manufacturerService.getAllManufacturers(type));
+            @RequestParam(required = false) UUID categoryId) {
+        return ResponseEntity.ok(manufacturerService.getAllManufacturers(categoryId));
     }
 
     @GetMapping("/{id}")

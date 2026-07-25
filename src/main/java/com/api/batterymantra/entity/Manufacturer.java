@@ -6,6 +6,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -26,6 +28,14 @@ public class Manufacturer {
     private String logoUrl;
 
     private Integer displayOrder;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "manufacturer_categories",
+        joinColumns = @JoinColumn(name = "manufacturer_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private List<Category> categories = new ArrayList<>();
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
