@@ -45,13 +45,5 @@ public class Vehicle {
 
     @Column(columnDefinition = "TEXT")
     private String description;
-
-    @Column(columnDefinition = "TEXT")
-    private String shortDescription;
-
-    @Column(columnDefinition = "TEXT")
-    private String shortDescriptionDealer;
-
-    @Embedded
-    private SeoMetadata seo = new SeoMetadata();
 }
+

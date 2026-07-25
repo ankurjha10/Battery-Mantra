@@ -40,10 +40,7 @@ public class VehicleService {
         res.setVehicleType(v.getVehicleType());
         res.setImageUrl(v.getImageUrl());
         res.setCapacity(v.getCapacity());
-        res.setSeo(v.getSeo());
         res.setDescription(v.getDescription());
-        res.setShortDescription(v.getShortDescription());
-        res.setShortDescriptionDealer(v.getShortDescriptionDealer());
         if (v.getCategory() != null) res.setCategoryId(v.getCategory().getCategoryId());
         if (v.getManufacturer() != null) res.setManufacturerId(v.getManufacturer().getId());
         return res;
@@ -84,12 +81,6 @@ public class VehicleService {
         vehicle.setImageUrl(dto.getImageUrl());
         vehicle.setCapacity(dto.getCapacity());
         vehicle.setDescription(dto.getDescription());
-        vehicle.setShortDescription(dto.getShortDescription());
-        vehicle.setShortDescriptionDealer(dto.getShortDescriptionDealer());
-        
-        if (dto.getSeo() != null) {
-            vehicle.setSeo(dto.getSeo());
-        }
 
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);
@@ -128,9 +119,7 @@ public class VehicleService {
             vehicle.setCapacity(dto.getCapacity());
 
         if (dto.getDescription() != null) vehicle.setDescription(dto.getDescription());
-        if (dto.getShortDescription() != null) vehicle.setShortDescription(dto.getShortDescription());
-        if (dto.getShortDescriptionDealer() != null) vehicle.setShortDescriptionDealer(dto.getShortDescriptionDealer());
-        if (dto.getSeo() != null) vehicle.setSeo(dto.getSeo());
+
 
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);

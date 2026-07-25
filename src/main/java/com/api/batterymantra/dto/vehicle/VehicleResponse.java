@@ -22,8 +22,5 @@ public class VehicleResponse {
     private UUID categoryId;
     private UUID manufacturerId;
     private String description;
-    private String shortDescription;
-    private String shortDescriptionDealer;
-
-    private SeoMetadata seo;
 }
+
