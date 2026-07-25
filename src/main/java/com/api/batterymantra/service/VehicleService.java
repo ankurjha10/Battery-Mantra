@@ -31,7 +31,6 @@ public class VehicleService {
     private VehicleResponse toResponse(Vehicle v) {
         VehicleResponse res = new VehicleResponse();
         res.setVehicleId(v.getVehicleId());
-        res.setMake(v.getMake());
         res.setModel(v.getModel());
         if (v.getFuel() != null) {
             res.setFuelId(v.getFuel().getFuelId());
@@ -40,9 +39,11 @@ public class VehicleService {
         res.setVehicleType(v.getVehicleType());
         res.setImageUrl(v.getImageUrl());
         res.setCapacity(v.getCapacity());
-        res.setDescription(v.getDescription());
         if (v.getCategory() != null) res.setCategoryId(v.getCategory().getCategoryId());
-        if (v.getManufacturer() != null) res.setManufacturerId(v.getManufacturer().getId());
+        if (v.getManufacturer() != null) {
+            res.setManufacturerId(v.getManufacturer().getId());
+            res.setMake(v.getManufacturer().getName());
+        }
         return res;
     }
 
@@ -62,10 +63,10 @@ public class VehicleService {
     @Cacheable(value = "vehicles", key = "#make + '-' + #model")
     public List<VehicleResponse> searchVehicles(String make, String model) {
         if (make != null && model != null) {
-            return vehicleRepository.findByMakeIgnoreCaseAndModelIgnoreCase(make, model)
+            return vehicleRepository.findByManufacturerNameIgnoreCaseAndModelIgnoreCase(make, model)
                     .stream().map(this::toResponse).toList();
         } else if (make != null) {
-            return vehicleRepository.findByMakeIgnoreCase(make)
+            return vehicleRepository.findByManufacturerNameIgnoreCase(make)
                     .stream().map(this::toResponse).toList();
         }
         return getAllVehicles();
@@ -75,12 +76,10 @@ public class VehicleService {
     @CacheEvict(value = "vehicles", allEntries = true)
     public VehicleResponse createVehicle(CreateVehicleRequest dto) {
         Vehicle vehicle = new Vehicle();
-        vehicle.setMake(dto.getMake());
         vehicle.setModel(dto.getModel());
         vehicle.setVehicleType(dto.getVehicleType());
         vehicle.setImageUrl(dto.getImageUrl());
         vehicle.setCapacity(dto.getCapacity());
-        vehicle.setDescription(dto.getDescription());
 
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);
@@ -103,9 +102,6 @@ public class VehicleService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Vehicle not found with id: " + vehicleId));
 
-        if (dto.getMake() != null)
-            vehicle.setMake(dto.getMake());
-
         if (dto.getModel() != null)
             vehicle.setModel(dto.getModel());
 
@@ -117,8 +113,6 @@ public class VehicleService {
 
         if (dto.getCapacity() != null)
             vehicle.setCapacity(dto.getCapacity());
-
-        if (dto.getDescription() != null) vehicle.setDescription(dto.getDescription());
 
 
         if (dto.getCategoryId() != null) {

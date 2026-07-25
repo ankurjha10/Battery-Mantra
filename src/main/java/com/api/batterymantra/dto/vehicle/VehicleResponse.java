@@ -21,6 +21,6 @@ public class VehicleResponse {
 
     private UUID categoryId;
     private UUID manufacturerId;
-    private String description;
 }
+
 

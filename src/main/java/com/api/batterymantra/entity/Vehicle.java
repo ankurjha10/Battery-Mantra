@@ -21,7 +21,6 @@ public class Vehicle {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID vehicleId;
 
-    private String make;
     private String model;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -43,7 +42,6 @@ public class Vehicle {
     @JoinColumn(name = "manufacturer_id")
     private Manufacturer manufacturer;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
 }
+
 
