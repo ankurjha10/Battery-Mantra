@@ -1,5 +1,10 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.entity.enums.PaymentMethod;
+import com.api.batterymantra.repository.EngineerProfileRepository;
+import com.api.batterymantra.entity.enums.DeliveryMethod;
+import com.api.batterymantra.repository.PincodeRepository;
+
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
 import com.api.batterymantra.dto.order.AdminOrderItemRequest;
 import com.api.batterymantra.dto.order.CheckoutRequest;
@@ -35,8 +40,8 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final UserRepository userRepository;
     private final PartnerProfileRepository partnerProfileRepository;
-    private final com.api.batterymantra.repository.EngineerProfileRepository engineerProfileRepository;
-    private final com.api.batterymantra.repository.PincodeRepository pincodeRepository;
+    private final EngineerProfileRepository engineerProfileRepository;
+    private final PincodeRepository pincodeRepository;
     private final OrderMapper orderMapper;
 
 
@@ -62,19 +67,19 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Use a valid address");
         }
 
-        com.api.batterymantra.entity.enums.DeliveryMethod deliveryMethod = null;
+        DeliveryMethod deliveryMethod = null;
         try {
-            deliveryMethod = com.api.batterymantra.entity.enums.DeliveryMethod.valueOf(request.getDeliveryMethod());
+            deliveryMethod = DeliveryMethod.valueOf(request.getDeliveryMethod());
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or missing Delivery Method");
         }
         
-        com.api.batterymantra.entity.enums.PaymentMethod paymentMethod = null;
+        PaymentMethod paymentMethod = null;
         try {
             if (request.getPaymentMethod() != null) {
-                paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.valueOf(request.getPaymentMethod());
+                paymentMethod = PaymentMethod.valueOf(request.getPaymentMethod());
             } else {
-                paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.COD; // Default to COD
+                paymentMethod = PaymentMethod.COD; // Default to COD
             }
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Payment Method");
@@ -186,18 +191,18 @@ public class OrderService {
             address = addresses.get(0);
         }
 
-        com.api.batterymantra.entity.enums.DeliveryMethod deliveryMethod;
+        DeliveryMethod deliveryMethod;
         try {
-            deliveryMethod = com.api.batterymantra.entity.enums.DeliveryMethod.valueOf(request.getDeliveryMethod());
+            deliveryMethod = DeliveryMethod.valueOf(request.getDeliveryMethod());
         } catch (Exception e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Delivery Method");
         }
 
-        com.api.batterymantra.entity.enums.PaymentMethod paymentMethod;
+        PaymentMethod paymentMethod;
         try {
-            paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.valueOf(request.getPaymentMethod());
+            paymentMethod = PaymentMethod.valueOf(request.getPaymentMethod());
         } catch (Exception e) {
-            paymentMethod = com.api.batterymantra.entity.enums.PaymentMethod.COD;
+            paymentMethod = PaymentMethod.COD;
         }
 
         Orders orders = Orders.builder()

@@ -1,5 +1,7 @@
 package com.api.batterymantra.util;
 
+import java.util.function.Function;
+
 import com.api.batterymantra.entity.City;
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.SeoMetadata;
@@ -18,7 +20,7 @@ public class SeoUtil {
         String brandName = p != null && p.getBrand() != null ? p.getBrand().getBrandName() : "";
         String categoryName = p != null && p.getProductCategory() != null ? p.getProductCategory().getCategoryName() : "";
 
-        java.util.function.Function<String, String> replace = (text) -> {
+        Function<String, String> replace = (text) -> {
             if (text == null) return null;
             return text.replace("{product_name}", productName).replace("product_name", productName)
                        .replace("{brand_name}", brandName).replace("brand_name", brandName)

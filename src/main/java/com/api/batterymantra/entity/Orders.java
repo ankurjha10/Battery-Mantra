@@ -1,5 +1,9 @@
 package com.api.batterymantra.entity;
 
+import com.api.batterymantra.entity.enums.PaymentMethod;
+import java.time.LocalDate;
+import com.api.batterymantra.entity.enums.DeliveryMethod;
+
 import com.api.batterymantra.entity.enums.OrderStatus;
 import com.api.batterymantra.entity.enums.PaymentStatus;
 import jakarta.persistence.*;
@@ -49,17 +53,17 @@ public class Orders {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "payment_method")
-    private com.api.batterymantra.entity.enums.PaymentMethod paymentMethod;
+    private PaymentMethod paymentMethod;
 
     @CreationTimestamp
     private LocalDateTime placedAt;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "delivery_method")
-    private com.api.batterymantra.entity.enums.DeliveryMethod deliveryMethod;
+    private DeliveryMethod deliveryMethod;
 
     @Column(name = "installation_date")
-    private java.time.LocalDate installationDate;
+    private LocalDate installationDate;
 
     @Column(name = "exchange_discount")
     private BigDecimal exchangeDiscount;

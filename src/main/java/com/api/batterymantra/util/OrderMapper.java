@@ -1,5 +1,8 @@
 package com.api.batterymantra.util;
 
+import com.api.batterymantra.dto.user.EngineerResponse;
+import com.api.batterymantra.dto.user.PartnerResponse;
+
 import com.api.batterymantra.dto.order.OrderItemResponse;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.entity.Orders;
@@ -57,7 +60,7 @@ public class OrderMapper {
             return itemResponse;
         }).toList());
         if (order.getAssignedPartner() != null) {
-            com.api.batterymantra.dto.user.PartnerResponse p = com.api.batterymantra.dto.user.PartnerResponse.builder()
+            PartnerResponse p = PartnerResponse.builder()
                     .id(order.getAssignedPartner().getId())
                     .businessName(order.getAssignedPartner().getBusinessName())
                     .build();
@@ -65,7 +68,7 @@ public class OrderMapper {
         }
         
         if (order.getAssignedEngineer() != null) {
-            com.api.batterymantra.dto.user.EngineerResponse e = com.api.batterymantra.dto.user.EngineerResponse.builder()
+            EngineerResponse e = EngineerResponse.builder()
                     .id(order.getAssignedEngineer().getId())
                     .firstName(order.getAssignedEngineer().getFirstName())
                     .lastName(order.getAssignedEngineer().getLastName())

@@ -1,5 +1,7 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.product.ProductListResponse;
+
 import com.api.batterymantra.dto.admin.UserResponse;
 import com.api.batterymantra.service.AdminService;
 
@@ -168,7 +170,7 @@ public class AdminController {
 
     @GetMapping("/products/pending-approvals")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<List<com.api.batterymantra.dto.product.ProductListResponse>> getPendingApprovalProducts() {
+    public ResponseEntity<List<ProductListResponse>> getPendingApprovalProducts() {
         return ResponseEntity.ok(productService.getPendingApprovalProducts());
     }
 

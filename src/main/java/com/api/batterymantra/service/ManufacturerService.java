@@ -1,5 +1,7 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.entity.enums.VehicleType;
+
 import com.api.batterymantra.dto.manufacturer.CreateManufacturerRequest;
 import com.api.batterymantra.dto.manufacturer.ManufacturerResponse;
 import com.api.batterymantra.dto.manufacturer.UpdateManufacturerRequest;
@@ -18,7 +20,7 @@ public class ManufacturerService {
 
     private final ManufacturerRepository manufacturerRepository;
 
-    public List<ManufacturerResponse> getAllManufacturers(com.api.batterymantra.entity.enums.VehicleType type) {
+    public List<ManufacturerResponse> getAllManufacturers(VehicleType type) {
         List<Manufacturer> manufacturers;
         if (type != null) {
             manufacturers = manufacturerRepository.findDistinctByVehicleType(type);

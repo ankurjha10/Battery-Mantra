@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import java.util.UUID;
 
 import jakarta.validation.constraints.Email;
@@ -28,7 +30,7 @@ public class CreateEngineerRequest {
 
     private String password;
     
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    @JsonProperty("isActive")
     private Boolean active;
 
     private UUID partnerId;

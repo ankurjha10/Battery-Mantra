@@ -1,5 +1,8 @@
 package com.api.batterymantra.dto.product;
 
+import com.api.batterymantra.entity.SeoMetadata;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -17,11 +20,11 @@ public class ProductListResponse {
     private List<String> additionalImages;
     private String productCategory;
     private String capacity;
-    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    @JsonProperty("isAutoAssignToPartner")
     private boolean isAutoAssignToPartner;
-    @com.fasterxml.jackson.annotation.JsonProperty("isApproved")
+    @JsonProperty("isApproved")
     private boolean isApproved = true;
     private UUID createdByPartnerId;
     private String partnerBusinessName;
-    private com.api.batterymantra.entity.SeoMetadata seo;
+    private SeoMetadata seo;
 }

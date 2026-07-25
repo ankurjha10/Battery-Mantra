@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
@@ -27,7 +29,7 @@ public class CreatePartnerRequest {
 
     private String password;
     
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    @JsonProperty("isActive")
     private Boolean active;
     
     private List<UUID> operatingCityIds;

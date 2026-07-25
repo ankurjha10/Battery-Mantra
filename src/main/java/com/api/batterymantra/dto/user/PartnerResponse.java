@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.user;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.api.batterymantra.dto.location.CityDto;
 import lombok.Builder;
 import lombok.Data;
@@ -19,7 +21,7 @@ public class PartnerResponse {
     private String alternatePhone;
     private String address;
     private List<CityDto> operatingCities;
-    @com.fasterxml.jackson.annotation.JsonProperty("isActive")
+    @JsonProperty("isActive")
     private boolean isActive;
     private LocalDateTime createdAt;
 }

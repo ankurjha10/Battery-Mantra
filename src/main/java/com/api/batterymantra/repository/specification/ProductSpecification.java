@@ -1,5 +1,7 @@
 package com.api.batterymantra.repository.specification;
 
+import java.util.List;
+
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.Vehicle;
 import jakarta.persistence.criteria.Join;
@@ -20,7 +22,7 @@ public class ProductSpecification {
                 cb.equal(root.get("productCategory").get("categoryId"), categoryId);
     }
 
-    public static Specification<Product> hasCategoryIdIn(java.util.List<UUID> categoryIds) {
+    public static Specification<Product> hasCategoryIdIn(List<UUID> categoryIds) {
         return (root, query, cb) ->
                 root.get("productCategory").get("categoryId").in(categoryIds);
     }
@@ -30,7 +32,7 @@ public class ProductSpecification {
                 cb.equal(root.get("brand").get("brandId"), brandId);
     }
 
-    public static Specification<Product> hasCapacityIn(java.util.List<String> capacities) {
+    public static Specification<Product> hasCapacityIn(List<String> capacities) {
         return (root, query, cb) -> root.get("capacity").in(capacities);
     }
 

@@ -1,5 +1,8 @@
 package com.api.batterymantra.dto.product;
 
+import com.api.batterymantra.entity.SeoMetadata;
+import com.fasterxml.jackson.annotation.JsonProperty;
+
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import lombok.Data;
 
@@ -25,11 +28,11 @@ public class ProductDetailResponse {
     private Map<String, Object> specs;
     private String capacity;
     private List<CityPricingDto> cityPrices;
-    @com.fasterxml.jackson.annotation.JsonProperty("isAutoAssignToPartner")
+    @JsonProperty("isAutoAssignToPartner")
     private boolean isAutoAssignToPartner;
-    @com.fasterxml.jackson.annotation.JsonProperty("isApproved")
+    @JsonProperty("isApproved")
     private boolean isApproved = true;
     private UUID createdByPartnerId;
     private String partnerBusinessName;
-    private com.api.batterymantra.entity.SeoMetadata seo;
+    private SeoMetadata seo;
 }

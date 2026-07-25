@@ -1,5 +1,8 @@
 package com.api.batterymantra.dto.order;
 
+import com.api.batterymantra.dto.user.EngineerResponse;
+import com.api.batterymantra.dto.user.PartnerResponse;
+
 import java.time.LocalDate;
 
 import lombok.AllArgsConstructor;
@@ -28,6 +31,6 @@ public class OrderResponse {
     private String customerEmail;
     private String customerPhone;
     private List<OrderItemResponse> orderItems;
-    private com.api.batterymantra.dto.user.PartnerResponse assignedPartner;
-    private com.api.batterymantra.dto.user.EngineerResponse assignedEngineer;
+    private PartnerResponse assignedPartner;
+    private EngineerResponse assignedEngineer;
 }

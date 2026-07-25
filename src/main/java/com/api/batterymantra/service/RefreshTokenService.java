@@ -1,5 +1,7 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.entity.User;
+
 import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.repository.RefreshTokenRepository;
 import com.api.batterymantra.repository.UserRepository;
@@ -20,7 +22,7 @@ public class RefreshTokenService {
     private final UserRepository userRepository;
 
     public RefreshToken createRefreshToken(String userName) {
-        com.api.batterymantra.entity.User user = userRepository.findByUsername(userName);
+        User user = userRepository.findByUsername(userName);
         if (user == null) {
             throw new RuntimeException("User not found");
         }

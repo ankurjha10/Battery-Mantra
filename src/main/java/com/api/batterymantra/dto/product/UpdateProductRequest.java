@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.product;
 
+import jakarta.validation.Valid;
+
 import lombok.Data;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import java.math.BigDecimal;
@@ -23,7 +25,7 @@ public class UpdateProductRequest {
     private Map<String, Object> specs;
     private String capacity;
 
-    @jakarta.validation.Valid
+    @Valid
     private List<CityPricingDto> cityPrices;
 
     @JsonProperty("isAutoAssignToPartner")

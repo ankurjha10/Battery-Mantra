@@ -1,5 +1,8 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.entity.PartnerProfile;
+import java.util.Arrays;
+
 import com.api.batterymantra.dto.product.CityPricingDto;
 import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
@@ -215,7 +218,7 @@ public class ProductService {
             List<String> vehicleCapacities = new ArrayList<>();
             vehicleRepository.findById(vehicleId).ifPresent(v -> {
                 if (v.getCapacity() != null && !v.getCapacity().isBlank()) {
-                    vehicleCapacities.addAll(java.util.Arrays.stream(v.getCapacity().split(","))
+                    vehicleCapacities.addAll(Arrays.stream(v.getCapacity().split(","))
                             .map(String::trim)
                             .filter(c -> !c.isEmpty())
                             .toList());
@@ -409,7 +412,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDetailResponse addProductByPartner(CreateProductRequest productDto, com.api.batterymantra.entity.PartnerProfile partnerProfile) {
+    public ProductDetailResponse addProductByPartner(CreateProductRequest productDto, PartnerProfile partnerProfile) {
         ProductDetailResponse response = addProduct(productDto);
         Product product = productRepository.findById(response.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + response.getProductId()));
@@ -438,7 +441,7 @@ public class ProductService {
     }
 
     @Transactional
-    public ProductDetailResponse updateCityPricingByPartner(UUID productId, CityPricingDto dto, com.api.batterymantra.entity.PartnerProfile partnerProfile) {
+    public ProductDetailResponse updateCityPricingByPartner(UUID productId, CityPricingDto dto, PartnerProfile partnerProfile) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, PRODUCT_NOT_FOUND + productId));
 

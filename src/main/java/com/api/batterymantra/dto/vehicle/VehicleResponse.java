@@ -1,5 +1,7 @@
 package com.api.batterymantra.dto.vehicle;
 
+import com.api.batterymantra.entity.SeoMetadata;
+
 import com.api.batterymantra.entity.enums.VehicleType;
 import lombok.Builder;
 import lombok.Data;
@@ -23,5 +25,5 @@ public class VehicleResponse {
     private String shortDescription;
     private String shortDescriptionDealer;
 
-    private com.api.batterymantra.entity.SeoMetadata seo;
+    private SeoMetadata seo;
 }

@@ -1,5 +1,7 @@
 package com.api.batterymantra.service;
 
+import java.math.BigDecimal;
+
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -136,8 +138,8 @@ public class CartService {
         response.setCartId(cart.getCartId());
         response.setUserId(cart.getCustomer().getUserId());
         
-        java.math.BigDecimal subTotal = java.math.BigDecimal.ZERO;
-        java.math.BigDecimal exchangeDiscount = java.math.BigDecimal.ZERO;
+        BigDecimal subTotal = BigDecimal.ZERO;
+        BigDecimal exchangeDiscount = BigDecimal.ZERO;
         
         if (cart.getCartItems() != null) {
             response.setCartItems(cart.getCartItems().stream()
@@ -145,9 +147,9 @@ public class CartService {
                     .toList());
             
             for (CartItem item : cart.getCartItems()) {
-                subTotal = subTotal.add(item.getProduct().getProductPrice().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
+                subTotal = subTotal.add(item.getProduct().getProductPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
                 if (item.isExchangeOldBattery() && item.getProduct().getExchangeDiscount() != null) {
-                    exchangeDiscount = exchangeDiscount.add(item.getProduct().getExchangeDiscount().multiply(java.math.BigDecimal.valueOf(item.getQuantity())));
+                    exchangeDiscount = exchangeDiscount.add(item.getProduct().getExchangeDiscount().multiply(BigDecimal.valueOf(item.getQuantity())));
                 }
             }
         } else {
@@ -156,9 +158,9 @@ public class CartService {
         
         response.setSubTotal(subTotal);
         response.setExchangeDiscount(exchangeDiscount);
-        java.math.BigDecimal total = subTotal.subtract(exchangeDiscount);
-        if (total.compareTo(java.math.BigDecimal.ZERO) < 0) {
-            total = java.math.BigDecimal.ZERO;
+        BigDecimal total = subTotal.subtract(exchangeDiscount);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
         }
         response.setTotalAmount(total);
         

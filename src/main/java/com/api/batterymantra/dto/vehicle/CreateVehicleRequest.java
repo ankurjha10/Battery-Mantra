@@ -1,5 +1,8 @@
 package com.api.batterymantra.dto.vehicle;
 
+import com.api.batterymantra.entity.SeoMetadata;
+import java.util.UUID;
+
 import com.api.batterymantra.entity.enums.VehicleType;
 import lombok.Data;
 
@@ -7,16 +10,16 @@ import lombok.Data;
 public class CreateVehicleRequest {
     private String make;
     private String model;
-    private java.util.UUID fuelId;
+    private UUID fuelId;
     private VehicleType vehicleType;
     private String imageUrl;
     private String capacity;
     
-    private java.util.UUID categoryId;
-    private java.util.UUID manufacturerId;
+    private UUID categoryId;
+    private UUID manufacturerId;
     private String description;
     private String shortDescription;
     private String shortDescriptionDealer;
     
-    private com.api.batterymantra.entity.SeoMetadata seo;
+    private SeoMetadata seo;
 }
