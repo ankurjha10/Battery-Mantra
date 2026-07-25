@@ -21,8 +21,9 @@ public class ManufacturerController {
     private final ManufacturerService manufacturerService;
 
     @GetMapping
-    public ResponseEntity<List<ManufacturerResponse>> getAllManufacturers() {
-        return ResponseEntity.ok(manufacturerService.getAllManufacturers());
+    public ResponseEntity<List<ManufacturerResponse>> getAllManufacturers(
+            @RequestParam(required = false) com.api.batterymantra.entity.enums.VehicleType type) {
+        return ResponseEntity.ok(manufacturerService.getAllManufacturers(type));
     }
 
     @GetMapping("/{id}")

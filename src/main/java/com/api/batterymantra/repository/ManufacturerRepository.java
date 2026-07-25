@@ -11,4 +11,7 @@ import java.util.List;
 public interface ManufacturerRepository extends JpaRepository<Manufacturer, UUID> {
     List<Manufacturer> findAllByOrderByDisplayOrderAsc();
     boolean existsByName(String name);
+    
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT v.manufacturer FROM Vehicle v WHERE v.vehicleType = :type ORDER BY v.manufacturer.displayOrder ASC")
+    List<Manufacturer> findDistinctByVehicleType(@org.springframework.data.repository.query.Param("type") com.api.batterymantra.entity.enums.VehicleType type);
 }

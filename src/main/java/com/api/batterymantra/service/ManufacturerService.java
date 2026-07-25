@@ -18,8 +18,14 @@ public class ManufacturerService {
 
     private final ManufacturerRepository manufacturerRepository;
 
-    public List<ManufacturerResponse> getAllManufacturers() {
-        return manufacturerRepository.findAllByOrderByDisplayOrderAsc().stream()
+    public List<ManufacturerResponse> getAllManufacturers(com.api.batterymantra.entity.enums.VehicleType type) {
+        List<Manufacturer> manufacturers;
+        if (type != null) {
+            manufacturers = manufacturerRepository.findDistinctByVehicleType(type);
+        } else {
+            manufacturers = manufacturerRepository.findAllByOrderByDisplayOrderAsc();
+        }
+        return manufacturers.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
