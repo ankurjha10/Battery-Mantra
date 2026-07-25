@@ -18,6 +18,6 @@ public interface ManufacturerRepository extends JpaRepository<Manufacturer, UUID
 
     boolean existsByName(String name);
 
-    @Query("SELECT DISTINCT m FROM Manufacturer m WHERE m.name IN (SELECT v.make FROM Vehicle v WHERE v.vehicleType = :type) ORDER BY m.displayOrder ASC")
+    @Query("SELECT DISTINCT m FROM Manufacturer m WHERE LOWER(m.name) IN (SELECT LOWER(v.make) FROM Vehicle v WHERE v.vehicleType = :type) ORDER BY m.displayOrder ASC")
     List<Manufacturer> findDistinctByVehicleType(@Param("type") VehicleType type);
 }
