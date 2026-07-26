@@ -24,6 +24,11 @@ public class SmsService {
 
     private void sendSms(String phone, String message, String senderId, String templateId) {
         try {
+            // Ensure phone has 91 prefix for Indian numbers if it's exactly 10 digits
+            if (phone != null && phone.trim().length() == 10) {
+                phone = "91" + phone.trim();
+            }
+
             UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(BASE_URL)
                     .queryParam("authentic-key", AUTH_KEY)
                     .queryParam("senderid", senderId)
@@ -32,8 +37,8 @@ public class SmsService {
                     .queryParam("message", message)
                     .queryParam("templateid", templateId);
 
-            String url = builder.build().encode().toUriString();
-            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
+            java.net.URI uri = builder.build().encode().toUri();
+            ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
             log.info("SMS sent to {}. Template: {}. Response: {}", phone, templateId, response.getBody());
         } catch (Exception e) {
             log.error("Failed to send SMS to {}. Template: {}. Error: {}", phone, templateId, e.getMessage());
