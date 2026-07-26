@@ -3,7 +3,6 @@ package com.api.batterymantra.dto.product;
 import com.api.batterymantra.entity.SeoMetadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
-import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import lombok.Data;
 
 import java.math.BigDecimal;

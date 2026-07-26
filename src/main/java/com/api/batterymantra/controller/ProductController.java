@@ -1,20 +1,14 @@
 package com.api.batterymantra.controller;
 
-import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.dto.product.ProductListResponse;
-import com.api.batterymantra.dto.product.UpdateProductRequest;
-import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.service.ProductService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;

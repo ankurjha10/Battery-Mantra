@@ -1,7 +1,6 @@
 package com.api.batterymantra.service;
 
 import com.api.batterymantra.dto.admin.UserResponse;
-import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;
@@ -23,7 +22,6 @@ import java.util.UUID;
 public class AdminService {
 
     private final UserRepository userRepository;
-    private final ProductRepository productRepository;
     private final AddressRepository addressRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 

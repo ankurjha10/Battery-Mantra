@@ -2,7 +2,6 @@ package com.api.batterymantra.controller;
 
 import com.api.batterymantra.dto.order.CheckoutRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
-import com.api.batterymantra.dto.order.OrderStatusUpdateRequest;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.service.OrderService;
 import jakarta.validation.Valid;

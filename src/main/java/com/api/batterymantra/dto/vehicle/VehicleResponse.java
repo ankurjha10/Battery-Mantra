@@ -1,9 +1,7 @@
 package com.api.batterymantra.dto.vehicle;
 
-import com.api.batterymantra.entity.SeoMetadata;
 
 import com.api.batterymantra.entity.enums.VehicleType;
-import lombok.Builder;
 import lombok.Data;
 
 import java.util.UUID;

@@ -1,15 +1,11 @@
 package com.api.batterymantra.controller;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import com.api.batterymantra.dto.category.CategoryDetailResponse;
 import com.api.batterymantra.dto.category.CategoryListResponse;
-import com.api.batterymantra.dto.category.CreateCategoryRequest;
-import com.api.batterymantra.dto.category.UpdateCategoryRequest;
 import com.api.batterymantra.service.CategoryService;
 
 import java.util.List;

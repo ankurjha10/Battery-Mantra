@@ -41,6 +41,7 @@ public class EngineerProfile {
 
     private String city;
 
+    @Builder.Default
     private boolean isActive = true;
 
     @CreationTimestamp

@@ -1,6 +1,5 @@
 package com.api.batterymantra.dto.vehicle;
 
-import com.api.batterymantra.entity.SeoMetadata;
 import java.util.UUID;
 
 import com.api.batterymantra.entity.enums.VehicleType;

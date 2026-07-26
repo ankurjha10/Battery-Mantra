@@ -16,14 +16,8 @@ import java.util.Date;
 @Component
 public class AuthUtil {
 
-    private final UserDetailsService userDetailsService;
-
     @Value("${jwt.secretKey}")
     private String jwtSecretKey;
-
-    public AuthUtil(UserDetailsService userDetailsService) {
-        this.userDetailsService = userDetailsService;
-    }
 
     private SecretKey getSecretKey(){
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecretKey);

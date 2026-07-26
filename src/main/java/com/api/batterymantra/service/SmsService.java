@@ -29,7 +29,7 @@ public class SmsService {
                 phone = "91" + phone.trim();
             }
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromHttpUrl(BASE_URL)
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
                     .queryParam("authentic-key", AUTH_KEY)
                     .queryParam("senderid", senderId)
                     .queryParam("route", ROUTE)

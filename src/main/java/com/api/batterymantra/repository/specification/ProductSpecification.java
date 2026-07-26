@@ -3,9 +3,6 @@ package com.api.batterymantra.repository.specification;
 import java.util.List;
 
 import com.api.batterymantra.entity.Product;
-import com.api.batterymantra.entity.Vehicle;
-import jakarta.persistence.criteria.Join;
-import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;

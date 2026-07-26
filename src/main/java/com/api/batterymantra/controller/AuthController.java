@@ -9,7 +9,6 @@ import com.api.batterymantra.dto.auth.RegisterResponse;
 import com.api.batterymantra.dto.auth.SendOtpRequest;
 import com.api.batterymantra.dto.auth.VerifyOtpRequest;
 import com.api.batterymantra.service.AuthService;
-import com.api.batterymantra.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;

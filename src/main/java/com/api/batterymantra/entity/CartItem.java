@@ -36,6 +36,7 @@ public class CartItem {
     @Min(1)
     private int quantity;
 
+    @Builder.Default
     @Column(name = "exchange_old_battery")
     private boolean exchangeOldBattery = false;
 }

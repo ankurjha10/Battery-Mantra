@@ -56,6 +56,7 @@ public class Address {
 
     private boolean isDefault;
 
+    @Builder.Default
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 

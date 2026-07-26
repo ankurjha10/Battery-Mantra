@@ -8,13 +8,11 @@ import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.dto.product.ProductListResponse;
 import com.api.batterymantra.dto.product.UpdateProductRequest;
-import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import com.api.batterymantra.entity.Brand;
 import com.api.batterymantra.entity.Category;
 import com.api.batterymantra.entity.City;
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.ProductCityPricing;
-import com.api.batterymantra.entity.Vehicle;
 import com.api.batterymantra.util.SeoUtil;
 import com.api.batterymantra.repository.BrandRepository;
 import com.api.batterymantra.repository.CartItemRepository;
@@ -58,7 +56,7 @@ public class ProductService {
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
-    private ProductListResponse toListResponse(Product p, UUID cityId) {
+    public ProductListResponse toListResponse(Product p, UUID cityId) {
         ProductListResponse res = new ProductListResponse();
         res.setProductId(p.getProductId());
         res.setProductName(p.getProductName());
@@ -198,7 +196,7 @@ public class ProductService {
                                                      BigDecimal minPrice, BigDecimal maxPrice,
                                                      String specKey, String specValue,
                                                      String keyword, Pageable pageable, UUID cityId) {
-        Specification<Product> spec = Specification.where(null);
+        Specification<Product> spec = Specification.allOf();
 
         if (categoryId != null) {
             List<UUID> categoryIds = new ArrayList<>();

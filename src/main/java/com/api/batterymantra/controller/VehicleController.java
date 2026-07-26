@@ -1,12 +1,9 @@
 package com.api.batterymantra.controller;
 
-import com.api.batterymantra.dto.vehicle.CreateVehicleRequest;
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import com.api.batterymantra.service.VehicleService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
