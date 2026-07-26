@@ -14,4 +14,6 @@ public class UpdateCityRequest {
     private Boolean isPopular;
     private Boolean isCodAvailable;
     private Boolean isExchangeAvailable;
+    private Double deliveryCharge;
+    private Double originalDeliveryCharge;
 }

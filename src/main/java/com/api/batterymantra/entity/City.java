@@ -42,6 +42,12 @@ public class City {
     @Column(nullable = false)
     private Boolean isExchangeAvailable = false;
 
+    @Column(nullable = false)
+    private Double deliveryCharge = 0.0;
+
+    @Column(nullable = false)
+    private Double originalDeliveryCharge = 40.0;
+
     @OneToMany(mappedBy = "city", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Pincode> pincodes = new ArrayList<>();
 }

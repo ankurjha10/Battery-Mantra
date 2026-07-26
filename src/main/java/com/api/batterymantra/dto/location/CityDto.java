@@ -19,5 +19,7 @@ public class CityDto {
     private Boolean isPopular;
     private Boolean isCodAvailable;
     private Boolean isExchangeAvailable;
+    private Double deliveryCharge;
+    private Double originalDeliveryCharge;
     private int pincodeCount;
 }

@@ -37,6 +37,8 @@ public class LocationServiceImpl implements LocationService {
         city.setIsPopular(request.getIsPopular() != null ? request.getIsPopular() : false);
         city.setIsCodAvailable(request.getIsCodAvailable() != null ? request.getIsCodAvailable() : false);
         city.setIsExchangeAvailable(request.getIsExchangeAvailable() != null ? request.getIsExchangeAvailable() : false);
+        city.setDeliveryCharge(request.getDeliveryCharge() != null ? request.getDeliveryCharge() : 0.0);
+        city.setOriginalDeliveryCharge(request.getOriginalDeliveryCharge() != null ? request.getOriginalDeliveryCharge() : 40.0);
 
         City savedCity = cityRepository.save(city);
         return mapToCityDto(savedCity);
@@ -67,6 +69,8 @@ public class LocationServiceImpl implements LocationService {
         if (request.getIsPopular() != null) city.setIsPopular(request.getIsPopular());
         if (request.getIsCodAvailable() != null) city.setIsCodAvailable(request.getIsCodAvailable());
         if (request.getIsExchangeAvailable() != null) city.setIsExchangeAvailable(request.getIsExchangeAvailable());
+        if (request.getDeliveryCharge() != null) city.setDeliveryCharge(request.getDeliveryCharge());
+        if (request.getOriginalDeliveryCharge() != null) city.setOriginalDeliveryCharge(request.getOriginalDeliveryCharge());
 
         City updatedCity = cityRepository.save(city);
         return mapToCityDto(updatedCity);
@@ -131,6 +135,8 @@ public class LocationServiceImpl implements LocationService {
                 .isPopular(city.getIsPopular())
                 .isCodAvailable(city.getIsCodAvailable())
                 .isExchangeAvailable(city.getIsExchangeAvailable())
+                .deliveryCharge(city.getDeliveryCharge() != null ? city.getDeliveryCharge() : 0.0)
+                .originalDeliveryCharge(city.getOriginalDeliveryCharge() != null ? city.getOriginalDeliveryCharge() : 40.0)
                 .pincodeCount(city.getPincodes() != null ? city.getPincodes().size() : 0)
                 .build();
     }

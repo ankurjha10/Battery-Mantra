@@ -19,4 +19,6 @@ public class CreateCityRequest {
     private Boolean isPopular = false;
     private Boolean isCodAvailable = false;
     private Boolean isExchangeAvailable = false;
+    private Double deliveryCharge = 0.0;
+    private Double originalDeliveryCharge = 40.0;
 }
