@@ -6,6 +6,8 @@ import com.api.batterymantra.dto.auth.RegisterRequest;
 import com.api.batterymantra.dto.auth.LoginRequest;
 import com.api.batterymantra.dto.auth.LoginResponse;
 import com.api.batterymantra.dto.auth.RegisterResponse;
+import com.api.batterymantra.dto.auth.SendOtpRequest;
+import com.api.batterymantra.dto.auth.VerifyOtpRequest;
 import com.api.batterymantra.service.AuthService;
 import com.api.batterymantra.service.RefreshTokenService;
 import lombok.RequiredArgsConstructor;
@@ -37,5 +39,16 @@ public class AuthController {
     @PostMapping("/refresh")
     public ResponseEntity<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request){
         return ResponseEntity.ok(authService.refreshToken(request));
+    }
+
+    @PostMapping("/send-otp")
+    public ResponseEntity<String> sendOtp(@RequestBody SendOtpRequest request){
+        authService.sendOtp(request);
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
+    @PostMapping("/verify-otp")
+    public ResponseEntity<LoginResponse> verifyOtp(@RequestBody VerifyOtpRequest request){
+        return ResponseEntity.ok(authService.verifyOtp(request));
     }
 }

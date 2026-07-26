@@ -15,12 +15,16 @@ import com.api.batterymantra.dto.auth.RefreshTokenRequest;
 import com.api.batterymantra.dto.auth.RefreshTokenResponse;
 import com.api.batterymantra.dto.auth.RegisterRequest;
 import com.api.batterymantra.dto.auth.RegisterResponse;
+import com.api.batterymantra.dto.auth.SendOtpRequest;
+import com.api.batterymantra.dto.auth.VerifyOtpRequest;
 import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.security.AuthUtil;
+
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -31,6 +35,63 @@ public class AuthService {
     private final AuthenticationManager authManager;
     private final BCryptPasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
+    private final SmsService smsService;
+    private final OtpService otpService;
+
+    public void sendOtp(SendOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+        
+        String phone = request.getPhoneNumber().trim();
+        String otp = otpService.generateOtp(phone);
+        
+        User user = userRepository.findByPhoneNumber(phone);
+        String name = (user != null && user.getUsername() != null) ? user.getUsername() : "Customer";
+        
+        smsService.sendOtp(phone, name, otp);
+    }
+
+    public LoginResponse verifyOtp(VerifyOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+        if (request.getOtp() == null || request.getOtp().trim().isEmpty()) {
+            throw new IllegalArgumentException("OTP cannot be empty");
+        }
+        
+        String phone = request.getPhoneNumber().trim();
+        boolean isValid = otpService.verifyOtp(phone, request.getOtp().trim());
+        
+        if (!isValid) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+        
+        User user = userRepository.findByPhoneNumber(phone);
+        
+        if (user == null) {
+            // Auto register new user
+            String dummyEmail = phone + "@batterymantra.com";
+            String dummyPassword = UUID.randomUUID().toString();
+            
+            user = User.builder()
+                    .username(phone)
+                    .email(dummyEmail)
+                    .password(passwordEncoder.encode(dummyPassword))
+                    .phoneNumber(phone)
+                    .role(UserRole.CUSTOMER)
+                    .isActive(true)
+                    .build();
+            
+            user = userRepository.save(user);
+            smsService.sendRegistrationSms(phone, phone);
+        }
+        
+        String token = authUtil.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
+
+        return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name());
+    }
 
     public RegisterResponse register(RegisterRequest signUpRequest) {
         // Validate input

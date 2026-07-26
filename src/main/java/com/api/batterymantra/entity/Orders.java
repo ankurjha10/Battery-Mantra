@@ -79,4 +79,7 @@ public class Orders {
     @JoinColumn(name = "assigned_engineer_id")
     private EngineerProfile assignedEngineer;
 
+    @Column(name = "delivery_security_code")
+    private String deliverySecurityCode;
+
 }

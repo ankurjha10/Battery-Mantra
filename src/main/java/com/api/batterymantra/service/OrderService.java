@@ -29,6 +29,15 @@ import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import java.util.Random;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.math.BigDecimal;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +52,7 @@ public class OrderService {
     private final EngineerProfileRepository engineerProfileRepository;
     private final PincodeRepository pincodeRepository;
     private final OrderMapper orderMapper;
+    private final SmsService smsService;
 
 
     @Transactional
@@ -169,6 +179,16 @@ public class OrderService {
         cart.getCartItems().clear();
         cartRepository.save(cart);
 
+        // Send SMS
+        String customerPhone = cart.getCustomer().getPhoneNumber();
+        String customerName = cart.getCustomer().getUsername();
+        String orderIdStr = placedOrder.getOrderId().toString();
+        
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+        }
+        smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
+
         return orderMapper.toOrderResponse(placedOrder);
     }
 
@@ -272,6 +292,17 @@ public class OrderService {
         orders.setExchangeDiscount(exchangeDiscount);
 
         Orders placedOrder = orderRepository.save(orders);
+
+        // Send SMS
+        String customerPhone = customer.getPhoneNumber();
+        String customerName = customer.getUsername();
+        String orderIdStr = placedOrder.getOrderId().toString();
+        
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+        }
+        smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
+
         return orderMapper.toOrderResponse(placedOrder);
     }
 
@@ -321,6 +352,15 @@ public class OrderService {
 
         order.setOrderStatus(OrderStatus.CANCELLED);
         Orders cancelledOrder = orderRepository.save(order);
+
+        // Send SMS
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getCustomer().getUsername();
+        String orderIdStr = order.getOrderId().toString();
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+        }
+
         return orderMapper.toOrderResponse(cancelledOrder);
     }
 
@@ -360,8 +400,32 @@ public class OrderService {
             }
         }
 
+        // Handle OUT_FOR_DELIVERY status to generate security code
+        if (newStatus == OrderStatus.OUT_FOR_DELIVERY && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+            String securityCode = String.valueOf(1000 + new Random().nextInt(9000));
+            order.setDeliverySecurityCode(securityCode);
+        }
+
         order.setOrderStatus(newStatus);
         Orders updatedOrder = orderRepository.save(order);
+
+        // Send SMS
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getCustomer().getUsername();
+        String orderIdStr = order.getOrderId().toString();
+        
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
+                String engName = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName() : "Engineer";
+                String engPhone = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getUser().getPhoneNumber() : "N/A";
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
+            } else if (newStatus == OrderStatus.DELIVERED) {
+                smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
+            } else if (newStatus == OrderStatus.CANCELLED) {
+                smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+            }
+        }
+
         return orderMapper.toOrderResponse(updatedOrder);
     }
 
@@ -393,8 +457,32 @@ public class OrderService {
 
         validateStatusTransition(order.getOrderStatus(), newStatus);
 
+        // Handle OUT_FOR_DELIVERY status to generate security code
+        if (newStatus == OrderStatus.OUT_FOR_DELIVERY && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+            String securityCode = String.valueOf(1000 + new Random().nextInt(9000));
+            order.setDeliverySecurityCode(securityCode);
+        }
+
         order.setOrderStatus(newStatus);
         Orders updatedOrder = orderRepository.save(order);
+
+        // Send SMS
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getCustomer().getUsername();
+        String orderIdStr = order.getOrderId().toString();
+        
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
+                String engName = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName() : "Engineer";
+                String engPhone = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getUser().getPhoneNumber() : "N/A";
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
+            } else if (newStatus == OrderStatus.DELIVERED) {
+                smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
+            } else if (newStatus == OrderStatus.CANCELLED) {
+                smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+            }
+        }
+
         return orderMapper.toOrderResponse(updatedOrder);
     }
 
