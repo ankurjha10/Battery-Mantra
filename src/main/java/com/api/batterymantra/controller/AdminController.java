@@ -36,6 +36,12 @@ import com.api.batterymantra.service.BannerService;
 import com.api.batterymantra.dto.callback.CallbackResponse;
 import com.api.batterymantra.dto.callback.UpdateCallbackStatusRequest;
 import com.api.batterymantra.service.CallbackRequestService;
+
+import com.api.batterymantra.dto.enquiry.EnquiryResponse;
+import com.api.batterymantra.dto.enquiry.UpdateEnquiryStatusRequest;
+import com.api.batterymantra.entity.enums.EnquiryType;
+import com.api.batterymantra.service.EnquiryService;
+
 import com.api.batterymantra.dto.admin.AdminCreateCustomerRequest;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
 
@@ -63,6 +69,7 @@ public class AdminController {
     private final OrderService orderService;
     private final BannerService bannerService;
     private final CallbackRequestService callbackRequestService;
+    private final EnquiryService enquiryService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -256,5 +263,20 @@ public class AdminController {
     public ResponseEntity<CallbackResponse> updateCallbackStatus(@PathVariable Long callbackId,
                                                                   @RequestBody UpdateCallbackStatusRequest request) {
         return ResponseEntity.ok(callbackRequestService.updateCallbackStatus(callbackId, request.getStatus()));
+    }
+
+    // --- Enquiries ---
+    @GetMapping("/enquiries")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EnquiryResponse>> getAllEnquiries(
+            @RequestParam(required = false) EnquiryType type) {
+        return ResponseEntity.ok(enquiryService.getAllEnquiries(type));
+    }
+
+    @PatchMapping("/enquiries/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EnquiryResponse> updateEnquiryStatus(@PathVariable Long id,
+                                                                @RequestBody UpdateEnquiryStatusRequest request) {
+        return ResponseEntity.ok(enquiryService.updateEnquiryStatus(id, request.getStatus()));
     }
 }

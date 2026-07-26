@@ -41,6 +41,9 @@ public class SecurityConfig {
                         // Callbacks — public for creation
                         .requestMatchers(HttpMethod.POST, "/api/callbacks").permitAll()
 
+                        // Enquiries — public for creation
+                        .requestMatchers(HttpMethod.POST, "/api/enquiries/**").permitAll()
+
                         // Banners — read public
                         .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
 
