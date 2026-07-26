@@ -136,25 +136,27 @@ public class CartService {
         CartResponse response = new CartResponse();
         response.setCartId(cart.getCartId());
         response.setUserId(cart.getCustomer().getUserId());
-        
+
         BigDecimal subTotal = BigDecimal.ZERO;
         BigDecimal exchangeDiscount = BigDecimal.ZERO;
-        
+
         if (cart.getCartItems() != null) {
             response.setCartItems(cart.getCartItems().stream()
                     .map(this::mapToCartItemResponse)
                     .toList());
-            
+
             for (CartItem item : cart.getCartItems()) {
-                subTotal = subTotal.add(item.getProduct().getProductPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
+                subTotal = subTotal
+                        .add(item.getProduct().getProductPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
                 if (item.isExchangeOldBattery() && item.getProduct().getExchangeDiscount() != null) {
-                    exchangeDiscount = exchangeDiscount.add(item.getProduct().getExchangeDiscount().multiply(BigDecimal.valueOf(item.getQuantity())));
+                    exchangeDiscount = exchangeDiscount.add(
+                            item.getProduct().getExchangeDiscount().multiply(BigDecimal.valueOf(item.getQuantity())));
                 }
             }
         } else {
             response.setCartItems(new ArrayList<>());
         }
-        
+
         response.setSubTotal(subTotal);
         response.setExchangeDiscount(exchangeDiscount);
         BigDecimal total = subTotal.subtract(exchangeDiscount);
@@ -162,7 +164,7 @@ public class CartService {
             total = BigDecimal.ZERO;
         }
         response.setTotalAmount(total);
-        
+
         return response;
     }
 

@@ -30,14 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.Random;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Service;
-import org.springframework.web.server.ResponseStatusException;
-
-import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -54,7 +46,6 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final SmsService smsService;
 
-
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
         // Fetch the cart for the customer
@@ -64,7 +55,7 @@ public class OrderService {
 
         List<CartItem> cartItemList = getCartItems(customerId, cart);
 
-        //Fetch the Address
+        // Fetch the Address
         Address address = addressRepository.findById(request.getAddressId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Address not found for user: " + customerId));
@@ -83,7 +74,7 @@ public class OrderService {
         } catch (IllegalArgumentException | NullPointerException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or missing Delivery Method");
         }
-        
+
         PaymentMethod paymentMethod = null;
         try {
             if (request.getPaymentMethod() != null) {
@@ -95,7 +86,7 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Payment Method");
         }
 
-        //Creating a new Order
+        // Creating a new Order
         Orders orders = Orders.builder()
                 .customer(cart.getCustomer())
                 .shippingAddress(address)
@@ -109,7 +100,7 @@ public class OrderService {
         // Converting Cart Items to Order Items
         List<OrderItems> orderItems = new ArrayList<>();
         boolean shouldAutoAssign = false;
-        
+
         for (CartItem cartItem : cartItemList) {
             OrderItems items = OrderItems.builder()
                     .order(orders)
@@ -135,14 +126,16 @@ public class OrderService {
                 var pincodeOpt = pincodeRepository.findByCode(cleanPincode);
                 if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
                     UUID cityId = pincodeOpt.get().getCity().getCityId();
-                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId).orElse(null);
+                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId)
+                            .orElse(null);
                 }
             }
 
             // 2. Fallback: Try matching by Shipping Address City Name
             if (matchedPartner == null && address.getCity() != null && !address.getCity().isBlank()) {
                 String cleanCity = address.getCity().trim();
-                matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
+                matchedPartner = partnerProfileRepository
+                        .findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
             }
 
             if (matchedPartner != null) {
@@ -150,16 +143,17 @@ public class OrderService {
             }
         }
 
-        //Calculating the Total Amount
+        // Calculating the Total Amount
         BigDecimal subTotal = orderItems.stream()
                 .map(item -> item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        //Calculate Exchange Discount
+        // Calculate Exchange Discount
         BigDecimal exchangeDiscount = BigDecimal.ZERO;
         for (CartItem cartItem : cartItemList) {
             if (cartItem.isExchangeOldBattery() && cartItem.getProduct().getExchangeDiscount() != null) {
-                exchangeDiscount = exchangeDiscount.add(cartItem.getProduct().getExchangeDiscount().multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+                exchangeDiscount = exchangeDiscount.add(cartItem.getProduct().getExchangeDiscount()
+                        .multiply(BigDecimal.valueOf(cartItem.getQuantity())));
             }
         }
 
@@ -172,10 +166,10 @@ public class OrderService {
         orders.setTotalAmount(total);
         orders.setExchangeDiscount(exchangeDiscount);
 
-        //Save the Order
+        // Save the Order
         Orders placedOrder = orderRepository.save(orders);
 
-        //Clearing Cart
+        // Clearing Cart
         cart.getCartItems().clear();
         cartRepository.save(cart);
 
@@ -183,7 +177,7 @@ public class OrderService {
         String customerPhone = cart.getCustomer().getPhoneNumber();
         String customerName = cart.getCustomer().getUsername();
         String orderIdStr = placedOrder.getOrderId().toString();
-        
+
         if (customerPhone != null && !customerPhone.isBlank()) {
             smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
         }
@@ -196,7 +190,8 @@ public class OrderService {
     public OrderResponse createAdminOrder(AdminCreateOrderRequest request) {
         // Fetch User
         User customer = userRepository.findById(request.getCustomerId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found: " + request.getCustomerId()));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Customer not found: " + request.getCustomerId()));
 
         // Fetch Address
         Address address;
@@ -206,7 +201,8 @@ public class OrderService {
         } else {
             List<Address> addresses = addressRepository.findAllByUserUserIdAndIsDeletedFalse(customer.getUserId());
             if (addresses.isEmpty()) {
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer has no addresses to use as default");
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Customer has no addresses to use as default");
             }
             address = addresses.get(0);
         }
@@ -241,7 +237,8 @@ public class OrderService {
 
         for (AdminOrderItemRequest itemReq : request.getItems()) {
             Product product = productRepository.findById(itemReq.getProductId())
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found: " + itemReq.getProductId()));
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Product not found: " + itemReq.getProductId()));
 
             OrderItems item = OrderItems.builder()
                     .order(orders)
@@ -254,7 +251,8 @@ public class OrderService {
             subTotal = subTotal.add(product.getProductPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
 
             if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
-                exchangeDiscount = exchangeDiscount.add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                exchangeDiscount = exchangeDiscount
+                        .add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
             }
         }
 
@@ -266,12 +264,14 @@ public class OrderService {
                 var pincodeOpt = pincodeRepository.findByCode(cleanPincode);
                 if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
                     UUID cityId = pincodeOpt.get().getCity().getCityId();
-                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId).orElse(null);
+                    matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityId(cityId)
+                            .orElse(null);
                 }
             }
             if (matchedPartner == null && address.getCity() != null && !address.getCity().isBlank()) {
                 String cleanCity = address.getCity().trim();
-                matchedPartner = partnerProfileRepository.findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
+                matchedPartner = partnerProfileRepository
+                        .findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity).orElse(null);
             }
             if (matchedPartner != null) {
                 orders.setAssignedPartner(matchedPartner);
@@ -297,7 +297,7 @@ public class OrderService {
         String customerPhone = customer.getPhoneNumber();
         String customerName = customer.getUsername();
         String orderIdStr = placedOrder.getOrderId().toString();
-        
+
         if (customerPhone != null && !customerPhone.isBlank()) {
             smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
         }
@@ -306,7 +306,7 @@ public class OrderService {
         return orderMapper.toOrderResponse(placedOrder);
     }
 
-    //To Get All the Orders Placed by a Customer
+    // To Get All the Orders Placed by a Customer
     @Transactional(readOnly = true)
     public List<OrderResponse> getMyOrders(UUID customerId) {
         List<Orders> orders = orderRepository.findByCustomer_UserIdOrderByPlacedAtDesc(customerId);
@@ -317,7 +317,7 @@ public class OrderService {
         return orders.stream().map(orderMapper::toOrderResponse).toList();
     }
 
-    //To Get a Particular Order by ID
+    // To Get a Particular Order by ID
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(UUID orderId, UUID customerId) {
         Orders order = orderRepository.findById(orderId)
@@ -385,7 +385,9 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
         if (order.getAssignedPartner() != null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName() + "'. Status updates must be managed by the assigned partner.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName()
+                            + "'. Status updates must be managed by the assigned partner.");
         }
 
         // Validate status transition
@@ -413,12 +415,17 @@ public class OrderService {
         String customerPhone = order.getCustomer().getPhoneNumber();
         String customerName = order.getCustomer().getUsername();
         String orderIdStr = order.getOrderId().toString();
-        
+
         if (customerPhone != null && !customerPhone.isBlank()) {
             if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
-                String engName = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName() : "Engineer";
-                String engPhone = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getUser().getPhoneNumber() : "N/A";
-                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
+                String engName = order.getAssignedEngineer() != null
+                        ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName()
+                        : "Engineer";
+                String engPhone = order.getAssignedEngineer() != null
+                        ? order.getAssignedEngineer().getUser().getPhoneNumber()
+                        : "N/A";
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone,
+                        updatedOrder.getDeliverySecurityCode());
             } else if (newStatus == OrderStatus.DELIVERED) {
                 smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
@@ -452,7 +459,8 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
         if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied to this order. It is not assigned to you.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied to this order. It is not assigned to you.");
         }
 
         validateStatusTransition(order.getOrderStatus(), newStatus);
@@ -470,12 +478,17 @@ public class OrderService {
         String customerPhone = order.getCustomer().getPhoneNumber();
         String customerName = order.getCustomer().getUsername();
         String orderIdStr = order.getOrderId().toString();
-        
+
         if (customerPhone != null && !customerPhone.isBlank()) {
             if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
-                String engName = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName() : "Engineer";
-                String engPhone = order.getAssignedEngineer() != null ? order.getAssignedEngineer().getUser().getPhoneNumber() : "N/A";
-                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
+                String engName = order.getAssignedEngineer() != null
+                        ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName()
+                        : "Engineer";
+                String engPhone = order.getAssignedEngineer() != null
+                        ? order.getAssignedEngineer().getUser().getPhoneNumber()
+                        : "N/A";
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone,
+                        updatedOrder.getDeliverySecurityCode());
             } else if (newStatus == OrderStatus.DELIVERED) {
                 smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
@@ -486,16 +499,15 @@ public class OrderService {
         return orderMapper.toOrderResponse(updatedOrder);
     }
 
-
     private List<CartItem> getCartItems(UUID customerId, Cart cart) {
         List<CartItem> cartItemList = cart.getCartItems();
 
-        //Check if cart is empty or not
+        // Check if cart is empty or not
         if (cartItemList.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cart is empty for user: " + customerId);
         }
 
-        //Checking Stock Availability
+        // Checking Stock Availability
         for (CartItem cartItem : cartItemList) {
             Product product = cartItem.getProduct();
             if (product.getProductStock() < cartItem.getQuantity()) {
@@ -509,14 +521,15 @@ public class OrderService {
         }
         return cartItemList;
     }
+
     @Transactional
     public OrderResponse assignPartner(UUID orderId, UUID partnerId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        
+
         PartnerProfile partner = partnerProfileRepository.findById(partnerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
-                
+
         order.setAssignedPartner(partner);
         return orderMapper.toOrderResponse(orderRepository.save(order));
     }
@@ -525,9 +538,11 @@ public class OrderService {
     public OrderResponse assignEngineerByAdmin(UUID orderId, UUID engineerId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
-        
+
         if (order.getAssignedPartner() != null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName() + "'. Engineers must be assigned by the partner branch.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName()
+                            + "'. Engineers must be assigned by the partner branch.");
         }
 
         EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
@@ -547,14 +562,16 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
         if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied. Order is not assigned to your partner branch.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied. Order is not assigned to your partner branch.");
         }
 
         EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer not found"));
 
         if (engineer.getPartnerProfile() == null || !engineer.getPartnerProfile().getId().equals(partnerProfileId)) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only assign engineers belonging to your partner branch.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You can only assign engineers belonging to your partner branch.");
         }
 
         order.setAssignedEngineer(engineer);

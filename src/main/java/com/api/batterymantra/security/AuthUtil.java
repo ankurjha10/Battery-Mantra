@@ -19,12 +19,12 @@ public class AuthUtil {
     @Value("${jwt.secretKey}")
     private String jwtSecretKey;
 
-    private SecretKey getSecretKey(){
+    private SecretKey getSecretKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    public String generateAccessToken(User user){
+    public String generateAccessToken(User user) {
         return Jwts.builder()
                 .subject(user.getUsername())
                 .claim("userId", user.getUserId().toString())
@@ -45,7 +45,7 @@ public class AuthUtil {
         return claims.getSubject();
     }
 
-    public boolean isTokenValid(String token, UserDetails userDetails){
+    public boolean isTokenValid(String token, UserDetails userDetails) {
         String username = extractUsername(token);
         return username.equals(userDetails.getUsername());
     }

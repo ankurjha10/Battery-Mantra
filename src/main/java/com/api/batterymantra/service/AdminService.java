@@ -25,8 +25,7 @@ public class AdminService {
     private final AddressRepository addressRepository;
     private final BCryptPasswordEncoder passwordEncoder;
 
-
-    public List<UserResponse> getAllUsers(){
+    public List<UserResponse> getAllUsers() {
         return userRepository.findAll().stream().map(this::toUserResponse).toList();
     }
 
@@ -64,7 +63,7 @@ public class AdminService {
         return toUserResponse(savedUser);
     }
 
-    private UserResponse toUserResponse(User user){
+    private UserResponse toUserResponse(User user) {
         return UserResponse.builder()
                 .userId(user.getUserId())
                 .name(user.getUsername())
