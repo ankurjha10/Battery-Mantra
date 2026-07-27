@@ -57,8 +57,7 @@ public class SmsService {
 
     public void sendOtp(String phone, String name, String otp) {
         String templateId = "1707172906349288415";
-        String customerName = (name != null && !name.isBlank()) ? name : "Customer";
-        String message = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account https://www.batterymantra.com", customerName, otp);
+        String message = String.format("%s is your verification code for Battery Mantra login. Valid for 10 mins. Please do not share this OTP with anyone. - Battery Mantra", otp);
         sendSms(phone, message, templateId);
     }
 
