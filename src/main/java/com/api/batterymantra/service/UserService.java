@@ -47,8 +47,11 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already in use by another account");
         }
 
-        user.setEmail(request.getEmail());
-        user.setPhoneNumber(request.getPhoneNumber());
+        if (request.getUsername() != null && !request.getUsername().isBlank()) {
+            user.setUsername(request.getUsername().trim());
+        }
+        user.setEmail(request.getEmail().trim());
+        user.setPhoneNumber(request.getPhoneNumber().trim());
 
         User updatedUser = userRepository.save(user);
 
