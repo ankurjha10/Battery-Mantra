@@ -141,7 +141,7 @@ public class RazorpayService {
         } catch (RazorpayException e) {
             log.error("Failed to create Razorpay order: {}", e.getMessage(), e);
             throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to create payment order. Please try again.");
+                    "Failed to create payment order: " + e.getMessage());
         }
 
         String razorpayOrderId = razorpayOrder.get("id");
