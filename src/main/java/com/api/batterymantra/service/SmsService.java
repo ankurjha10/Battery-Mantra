@@ -47,8 +47,8 @@ public class SmsService {
                     .queryParam("message", message)
                     .queryParam("templateid", templateId);
 
-            java.net.URI uri = builder.build().encode().toUri();
-            ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
+            String url = builder.toUriString();
+            ResponseEntity<String> response = restTemplate.getForEntity(url, String.class);
             log.info("SMS sent to {}. Template: {}. Response: {}", cleanPhone, templateId, response.getBody());
         } catch (Exception e) {
             log.error("Failed to send SMS to {}. Template: {}. Error: {}", phone, templateId, e.getMessage());
