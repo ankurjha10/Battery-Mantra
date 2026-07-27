@@ -26,8 +26,7 @@ public class OrderMapper {
                             + ", " + order.getShippingAddress().getCity()
                             + ", " + order.getShippingAddress().getState()
                             + ", " + order.getShippingAddress().getPostalCode()
-                            + ", " + order.getShippingAddress().getCountry()
-            );
+                            + ", " + order.getShippingAddress().getCountry());
         }
         if (order.getDeliveryMethod() != null) {
             response.setDeliveryMethod(order.getDeliveryMethod().name());
@@ -35,9 +34,12 @@ public class OrderMapper {
         if (order.getPaymentMethod() != null) {
             response.setPaymentMethod(order.getPaymentMethod().name());
         }
+        if (order.getPaymentStatus() != null) {
+            response.setPaymentStatus(order.getPaymentStatus().name());
+        }
         response.setInstallationDate(order.getInstallationDate());
         response.setExchangeDiscount(order.getExchangeDiscount());
-        
+
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());
             response.setCustomerPhone(order.getShippingAddress().getPhoneNumber());
@@ -45,7 +47,7 @@ public class OrderMapper {
             response.setCustomerName(order.getCustomer().getUsername());
             response.setCustomerPhone(order.getCustomer().getPhoneNumber());
         }
-        
+
         if (order.getCustomer() != null) {
             response.setCustomerEmail(order.getCustomer().getEmail());
         }
@@ -66,7 +68,7 @@ public class OrderMapper {
                     .build();
             response.setAssignedPartner(p);
         }
-        
+
         if (order.getAssignedEngineer() != null) {
             EngineerResponse e = EngineerResponse.builder()
                     .id(order.getAssignedEngineer().getId())
