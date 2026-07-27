@@ -82,4 +82,7 @@ public class Orders {
     @Column(name = "delivery_security_code")
     private String deliverySecurityCode;
 
+    @Column(name = "razorpay_order_id")
+    private String razorpayOrderId;
+
 }
