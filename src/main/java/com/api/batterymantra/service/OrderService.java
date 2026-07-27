@@ -169,19 +169,21 @@ public class OrderService {
         // Save the Order
         Orders placedOrder = orderRepository.save(orders);
 
-        // Clearing Cart
-        cart.getCartItems().clear();
-        cartRepository.save(cart);
+        if (paymentMethod != PaymentMethod.ONLINE) {
+            // Clearing Cart
+            cart.getCartItems().clear();
+            cartRepository.save(cart);
 
-        // Send SMS
-        String customerPhone = cart.getCustomer().getPhoneNumber();
-        String customerName = cart.getCustomer().getUsername();
-        String orderIdStr = placedOrder.getOrderId().toString();
+            // Send SMS
+            String customerPhone = cart.getCustomer().getPhoneNumber();
+            String customerName = cart.getCustomer().getUsername();
+            String orderIdStr = placedOrder.getOrderId().toString();
 
-        if (customerPhone != null && !customerPhone.isBlank()) {
-            smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+            if (customerPhone != null && !customerPhone.isBlank()) {
+                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+            }
+            smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
         }
-        smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
 
         return orderMapper.toOrderResponse(placedOrder);
     }
@@ -309,7 +311,9 @@ public class OrderService {
     // To Get All the Orders Placed by a Customer
     @Transactional(readOnly = true)
     public List<OrderResponse> getMyOrders(UUID customerId) {
-        List<Orders> orders = orderRepository.findByCustomer_UserIdOrderByPlacedAtDesc(customerId);
+        List<Orders> orders = orderRepository.findByCustomer_UserIdOrderByPlacedAtDesc(customerId).stream()
+                .filter(o -> !(o.getPaymentMethod() == PaymentMethod.ONLINE && o.getPaymentStatus() != PaymentStatus.PAID))
+                .toList();
 
         if (orders.isEmpty())
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No orders found for user: " + customerId);
@@ -372,6 +376,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
         return orderRepository.findAll().stream()
+                .filter(o -> !(o.getPaymentMethod() == PaymentMethod.ONLINE && o.getPaymentStatus() != PaymentStatus.PAID))
                 .map(orderMapper::toOrderResponse)
                 .toList();
     }
@@ -391,7 +396,7 @@ public class OrderService {
         }
 
         // Validate status transition
-        validateStatusTransition(order.getOrderStatus(), newStatus);
+        validateStatusTransition(order, newStatus);
 
         // If cancelling, restore stock
         if (newStatus == OrderStatus.CANCELLED && order.getOrderStatus() != OrderStatus.CANCELLED) {
@@ -436,12 +441,29 @@ public class OrderService {
         return orderMapper.toOrderResponse(updatedOrder);
     }
 
-    private void validateStatusTransition(OrderStatus currentStatus, OrderStatus newStatus) {
+    private void validateStatusTransition(Orders order, OrderStatus newStatus) {
+        OrderStatus currentStatus = order.getOrderStatus();
         if (currentStatus == OrderStatus.DELIVERED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change status of a delivered order");
         }
         if (currentStatus == OrderStatus.CANCELLED) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change status of a cancelled order");
+        }
+
+        // 1. Prevent processing or dispatching unpaid online orders
+        if (order.getPaymentMethod() == PaymentMethod.ONLINE
+                && order.getPaymentStatus() != PaymentStatus.PAID
+                && newStatus != OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot process or dispatch an Online Payment order whose payment is pending or failed! The customer has not completed the payment.");
+        }
+
+        // 2. Prevent dispatching or delivering without an assigned engineer
+        if ((newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY
+                || newStatus == OrderStatus.DELIVERED || newStatus == OrderStatus.INSTALLED)
+                && order.getAssignedEngineer() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot change order status to " + newStatus + " without assigning a Field Engineer! Please assign a technician first.");
         }
     }
 
@@ -449,7 +471,9 @@ public class OrderService {
 
     @Transactional(readOnly = true)
     public List<OrderResponse> getPartnerOrders(UUID partnerProfileId) {
-        List<Orders> orders = orderRepository.findByAssignedPartner_IdOrderByPlacedAtDesc(partnerProfileId);
+        List<Orders> orders = orderRepository.findByAssignedPartner_IdOrderByPlacedAtDesc(partnerProfileId).stream()
+                .filter(o -> !(o.getPaymentMethod() == PaymentMethod.ONLINE && o.getPaymentStatus() != PaymentStatus.PAID))
+                .toList();
         return orders.stream().map(orderMapper::toOrderResponse).toList();
     }
 
@@ -463,7 +487,7 @@ public class OrderService {
                     "Access denied to this order. It is not assigned to you.");
         }
 
-        validateStatusTransition(order.getOrderStatus(), newStatus);
+        validateStatusTransition(order, newStatus);
 
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
         if ((newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) && order.getDeliverySecurityCode() == null) {
