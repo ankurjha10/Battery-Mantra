@@ -402,8 +402,8 @@ public class OrderService {
             }
         }
 
-        // Handle OUT_FOR_DELIVERY status to generate security code
-        if (newStatus == OrderStatus.OUT_FOR_DELIVERY && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+        // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
+        if ((newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) && order.getDeliverySecurityCode() == null) {
             String securityCode = String.valueOf(1000 + new Random().nextInt(9000));
             order.setDeliverySecurityCode(securityCode);
         }
@@ -417,7 +417,7 @@ public class OrderService {
         String orderIdStr = order.getOrderId().toString();
 
         if (customerPhone != null && !customerPhone.isBlank()) {
-            if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
+            if (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) {
                 String engName = order.getAssignedEngineer() != null
                         ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName()
                         : "Engineer";
@@ -465,8 +465,8 @@ public class OrderService {
 
         validateStatusTransition(order.getOrderStatus(), newStatus);
 
-        // Handle OUT_FOR_DELIVERY status to generate security code
-        if (newStatus == OrderStatus.OUT_FOR_DELIVERY && order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY) {
+        // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
+        if ((newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) && order.getDeliverySecurityCode() == null) {
             String securityCode = String.valueOf(1000 + new Random().nextInt(9000));
             order.setDeliverySecurityCode(securityCode);
         }
@@ -480,7 +480,7 @@ public class OrderService {
         String orderIdStr = order.getOrderId().toString();
 
         if (customerPhone != null && !customerPhone.isBlank()) {
-            if (newStatus == OrderStatus.OUT_FOR_DELIVERY) {
+            if (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) {
                 String engName = order.getAssignedEngineer() != null
                         ? order.getAssignedEngineer().getFirstName() + " " + order.getAssignedEngineer().getLastName()
                         : "Engineer";

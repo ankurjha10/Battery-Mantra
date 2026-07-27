@@ -39,6 +39,7 @@ public class OrderMapper {
         }
         response.setInstallationDate(order.getInstallationDate());
         response.setExchangeDiscount(order.getExchangeDiscount());
+        response.setDeliverySecurityCode(order.getDeliverySecurityCode());
 
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());

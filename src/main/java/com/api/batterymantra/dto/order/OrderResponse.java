@@ -25,6 +25,7 @@ public class OrderResponse {
     private BigDecimal totalAmount;
     private String deliveryMethod;
     private String paymentMethod;
+    private String paymentStatus;
     private LocalDate installationDate;
     private BigDecimal exchangeDiscount;
     private String customerName;
@@ -33,4 +34,5 @@ public class OrderResponse {
     private List<OrderItemResponse> orderItems;
     private PartnerResponse assignedPartner;
     private EngineerResponse assignedEngineer;
+    private String deliverySecurityCode;
 }
