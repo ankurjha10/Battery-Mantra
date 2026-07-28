@@ -66,6 +66,7 @@ public class Product {
 
     @PositiveOrZero
     private BigDecimal productPrice;
+    private BigDecimal originalPrice;
 
     @Min(0)
     private BigDecimal exchangeDiscount = BigDecimal.ZERO;

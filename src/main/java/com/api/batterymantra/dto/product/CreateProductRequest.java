@@ -17,6 +17,7 @@ public class CreateProductRequest {
     private String productDescription;
     private int productStock;
     private BigDecimal productPrice;
+    private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
     private String productImage;
     private List<String> additionalImages;

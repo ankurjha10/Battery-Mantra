@@ -15,6 +15,7 @@ public class ProductListResponse {
     private String productName;
     private String brandName;
     private BigDecimal productPrice;
+    private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
     private String productImage;
     private List<String> additionalImages;

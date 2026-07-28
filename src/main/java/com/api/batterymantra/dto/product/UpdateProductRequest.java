@@ -16,6 +16,7 @@ public class UpdateProductRequest {
     private String productName;
     private String productDescription;
     private BigDecimal productPrice;
+    private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
     private UUID categoryId;
     private UUID brandId;

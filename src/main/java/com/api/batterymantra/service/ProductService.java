@@ -65,6 +65,7 @@ public class ProductService {
         res.setProductId(p.getProductId());
         res.setProductName(p.getProductName());
         res.setProductPrice(p.getProductPrice());
+        res.setOriginalPrice(p.getOriginalPrice() != null ? p.getOriginalPrice() : BigDecimal.ZERO);
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
         res.setProductCategory(p.getProductCategory().getCategoryName());
@@ -102,6 +103,7 @@ public class ProductService {
         res.setProductName(p.getProductName());
         res.setProductDescription(p.getProductDescription());
         res.setProductPrice(p.getProductPrice());
+        res.setOriginalPrice(p.getOriginalPrice() != null ? p.getOriginalPrice() : BigDecimal.ZERO);
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
         res.setProductStock(p.getProductStock());
@@ -295,6 +297,7 @@ public class ProductService {
         product.setProductDescription(dto.getProductDescription());
         product.setProductImage(dto.getProductImage());
         product.setProductPrice(dto.getProductPrice());
+        product.setOriginalPrice(dto.getOriginalPrice() != null ? dto.getOriginalPrice() : dto.getProductPrice());
         product.setProductStock(dto.getProductStock());
         if (dto.getExchangeDiscount() != null) {
             product.setExchangeDiscount(dto.getExchangeDiscount());
@@ -400,6 +403,9 @@ public class ProductService {
 
         if (dto.getProductPrice() != null)
             product.setProductPrice(dto.getProductPrice());
+
+        if (dto.getOriginalPrice() != null)
+            product.setOriginalPrice(dto.getOriginalPrice());
 
         if (dto.getExchangeDiscount() != null)
             product.setExchangeDiscount(dto.getExchangeDiscount());
