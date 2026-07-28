@@ -168,6 +168,11 @@ public class SpecService {
         List<SpecCategory> specCategories = specCategoryRepository
                 .findByCategory_CategoryIdOrderByNameAsc(categoryId);
 
+        if (specCategories.isEmpty() && category.getParent() != null) {
+            specCategories = specCategoryRepository
+                    .findByCategory_CategoryIdOrderByNameAsc(category.getParent().getCategoryId());
+        }
+
         List<CategorySpecTemplateResponse.SpecGroupDto> specGroups = specCategories.stream()
                 .map(sc -> {
                     List<SpecAttribute> attributes = specAttributeRepository
