@@ -256,9 +256,9 @@ public class RazorpayService {
             String orderIdStr = order.getOrderId().toString();
 
             if (customerPhone != null && !customerPhone.isBlank()) {
-                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(order.getTotalAmount()), order.getPlacedAt() != null ? order.getPlacedAt().toString() : "", "Your Product", "Online");
             }
-            smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
+            // smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
 
             log.info("Payment verified for order: {}", order.getOrderId());
 

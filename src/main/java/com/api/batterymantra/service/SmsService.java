@@ -18,10 +18,8 @@ public class SmsService {
     private static final String ROUTE = "1";
     private static final String SENDER_ID = "BATRYM";
 
-    private static final String WA_BASE_URL = "http://wacontrol.ambeytech.com/api/wapi";
-    private static final String WA_API_KEY = "fc8a1dbb72d014e62475c42ac478022f";
 
-    @Value("${admin.phone:8057965238}")
+    @Value("${admin.phone:8282825280}")
     private String adminPhone;
 
     public SmsService() {
@@ -58,29 +56,37 @@ public class SmsService {
         }
     }
 
-    private void sendWhatsapp(String phone, String message) {
+    private void sendWhatsapp(String phone, String templateName, String... params) {
         try {
-            if (phone == null || phone.isBlank()) {
-                return;
-            }
+            if (phone == null || phone.isBlank()) return;
             String cleanPhone = phone.trim();
             if ("ADMIN".equalsIgnoreCase(cleanPhone)) {
                 cleanPhone = adminPhone;
             }
             if (cleanPhone.length() == 10) {
-                cleanPhone = "91" + cleanPhone;
+                cleanPhone = "+91" + cleanPhone;
+            } else if (!cleanPhone.startsWith("+")) {
+                cleanPhone = "+" + cleanPhone;
             }
+            
+            String paramsJson = java.util.Arrays.stream(params)
+                .map(p -> "\"" + (p == null ? "" : p.replace("\"", "\\\"").replace("\n", "\\n")) + "\"")
+                .collect(java.util.stream.Collectors.joining(","));
+                
+            String jsonPayload = String.format(
+                "{\"from\": \"+918282825280\", \"campaignName\": \"api-test\", \"to\": \"%s\", \"templateName\": \"%s\", \"components\": {\"body\":{\"params\":[%s]}}, \"type\": \"template\"}",
+                cleanPhone, templateName, paramsJson
+            );
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(WA_BASE_URL)
-                    .queryParam("apikey", WA_API_KEY)
-                    .queryParam("mobile", cleanPhone)
-                    .queryParam("msg", message);
+            org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
+            headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
+            headers.set("apiKey", "RRAfcTaXy19DO5y3CCOP9hb3bSRMaA");
 
-            java.net.URI uri = builder.build().encode().toUri();
-            ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
-            log.info("WhatsApp sent to {}. Response: {}", cleanPhone, response.getBody());
+            org.springframework.http.HttpEntity<String> request = new org.springframework.http.HttpEntity<>(jsonPayload, headers);
+            ResponseEntity<String> response = restTemplate.postForEntity("https://api.aoc-portal.com/v1/whatsapp", request, String.class);
+            log.info("WhatsApp sent to {} with template {}. Response: {}", cleanPhone, templateName, response.getBody());
         } catch (Exception e) {
-            log.error("Failed to send WhatsApp to {}. Error: {}", phone, e.getMessage());
+            log.error("Failed to send WhatsApp to {}. Template: {}. Error: {}", phone, templateName, e.getMessage());
         }
     }
 
@@ -93,86 +99,60 @@ public class SmsService {
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
-        String waMessage = String.format("Hi *%s* 👋,\r\n\r\nWelcome to *Battery Mantra*.   \r\nYour OTP is *%s* for your Battery Mantra account.  Thank you.", customerName, otp);
-        sendWhatsapp(phone, waMessage);
+        sendWhatsapp(phone, "otp_for_sign_up", otp);
     }
 
     public void sendRegistrationSms(String phone, String name) {
-        String templateId = "1707172906056997301";
+        String templateId = "1707172911246995646";
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s, Thank You for Registation. FROM: Battery Mantra", customerName);
+        String smsMessage = String.format("Dear %s , Thank you for choosing Battery Mantra. You have registered successfully your Battery Mantra account. Get lowest price for Car, Inverter Battery and Many More.. https://www.batterymantra.com", customerName);
         sendSms(phone, smsMessage, templateId);
         
-        // WhatsApp Message
-        String waMessage = String.format("Dear *%s* 👋,   \n\nThank you🙏 for choosing *Battery Mantra*. \nYou have registered successfully your Battery Mantra account.  \nGet lowest price for:  \n✅ Car Battery \n✅ Inverter Battery \n✅ Inverter Battery Trolley \n✅ Two Wheeler Battery \n✅ AC Voltage Stabilizers \n✅ Computer UPS \n✅ E-Riksha Battery \n✅ Generator Battery \n✅ Inverter\n✅ Inverter & Battery Combo\n✅ Inverter With Integrated Lithium Battery \n✅ SMF VRLA Battery \n✅ Solar System and many more...", customerName);
-        sendWhatsapp(phone, waMessage);
+        // No AOC Whatsapp Template found for registration, skip WhatsApp here or use a default if it existed.
     }
 
-    public void sendAdminOrderAlert(String phone, String orderId) {
-        String templateId = "1707172906419435636";
-        String smsMessage = String.format("Dear Admin,Congratulations! You got a New Order with Order Id :%s. FROM : Battery Mantra", orderId);
-        sendSms(phone, smsMessage, templateId);
-        // The old PHP code did not send whatsapp for admin order alert, but if we do it might be rejected because there's no template for it. We'll skip whatsapp for admin alert for now unless we know the template.
-    }
-
-    public void sendOrderPlacedSms(String phone, String name, String orderId) {
-        String templateId = "1707172906339048747";
-        String customerName = (name != null && !name.isBlank()) ? name : "Customer";
+    public void sendOrderPlacedSms(String phone, String customerName, String orderId, String amount, String date, String productName, String paymentMode) {
+        String templateId = "1707172911369348906";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s, Your order has been placed successfully. Order Id : %s. FROM : Battery Mantra", customerName, orderId);
+        String smsMessage = String.format("Dear %s , Your order %s has been placed successfully for order id %s . Thank you for ordering with us. You can track your order from https://www.batterymantra.com", customerName, productName, orderId);
         sendSms(phone, smsMessage, templateId);
         
-        // WhatsApp Message
-        // For product name, since it's not available in this simple method signature, we will use "Items" or we should pass the product name. 
-        // For now, replacing *product_name* with "Battery Mantra products".
-        String waMessage = String.format("Dear *%s* 👋,\r\n\r\nYour order *Battery Mantra products* has been placed successfully for order id *%s*. \r\n\r\nThank you🙏 for ordering with us.\r\n\r\nYou can track your order from below button:\r\n", customerName, orderId);
-        sendWhatsapp(phone, waMessage);
+        // WhatsApp Message to Customer
+        sendWhatsapp(phone, "new_order_customer", customerName, orderId, date, amount, paymentMode, productName);
+        
+        // WhatsApp Message to Admin
+        sendWhatsapp("ADMIN", "new_order_admins", customerName, orderId, date, amount, paymentMode);
     }
 
-    public void sendOrderDispatchedSms(String phone, String name, String orderId, String engineerName, String engineerPhone, String securityCode) {
-        String templateId = "1707172906036030181";
-        String customerName = (name != null && !name.isBlank()) ? name : "Customer";
-        String engName = (engineerName != null && !engineerName.isBlank()) ? engineerName : "Engineer";
-        String engPhone = (engineerPhone != null && !engineerPhone.isBlank()) ? engineerPhone : "N/A";
-        String code = (securityCode != null && !securityCode.isBlank()) ? securityCode : "1234";
+    public void sendOrderDispatchedSms(String phone, String customerName, String productName, String orderId, String engineerName, String engineerPhone, String securityCode) {
+        String templateId = "1707172911579717144";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s your order has been dispatched for order id %s and arriving soon by our engineer ( %s +91 %s ). Your Delivery Security Code is %s FROM : Battery Mantra", 
-                customerName, orderId, engName, engPhone, code);
+        String smsMessage = String.format("Dear %s , Your order has been dispatched (%s) for order id %s and arriving soon by (Name: %s, Mobile No.: %s). Your Delivery Security Code is %s. Thank you https://www.batterymantra.com", customerName, productName, orderId, engineerName, engineerPhone, securityCode);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
-        String waMessage = String.format("Dear *%s* 👋,\r\n\r\nYour order has been dispatched (*Battery Mantra products*) for order id *%s* and arriving soon by (Name: *%s*, Mobile No.: *%s*). Your Delivery Security Code is *%s*.\r\n\r\nThank you🙏\r\n", 
-                customerName, orderId, engName, engPhone, code);
-        sendWhatsapp(phone, waMessage);
+        sendWhatsapp(phone, "order_dispatch", customerName, engineerName, engineerPhone);
     }
 
-    public void sendOrderDeliveredSms(String phone, String name, String orderId) {
-        String templateId = "1707172906101228231";
-        String customerName = (name != null && !name.isBlank()) ? name : "Customer";
+    public void sendOrderDeliveredSms(String phone, String customerName, String productName, String orderId) {
+        String templateId = "1707172911533423405";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s, Your order has been delivered successfully for order id %s. FROM : Battery Mantra", customerName, orderId);
+        String smsMessage = String.format("Dear %s , Your Battery Mantra order for %s has been delivered successfully for order id %s . Thank you https://www.batterymantra.com", customerName, productName, orderId);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
-        String waMessage = String.format("Dear *%s* 👋,\r\n\r\nYour order *Battery Mantra products* has been delivered successfully for order id *%s*. \r\nJust go here to : https://www.batterymantra.com/dr/%s to leave a review and help us to improve our services.\r\n\r\nThank you🙏", customerName, orderId, orderId);
-        sendWhatsapp(phone, waMessage);
+        sendWhatsapp(phone, "order_id", productName, "https://www.batterymantra.com/");
     }
 
-    public void sendOrderCancelledSms(String phone, String name, String orderId) {
-        String templateId = "1707172906092467307";
-        String customerName = (name != null && !name.isBlank()) ? name : "Customer";
-        
-        // SMS Message
-        String smsMessage = String.format("Dear %s Your order has been Cancelled for order id %s For more information you can call us to +91-9200920051. FROM : Battery Mantra", customerName, orderId);
-        sendSms(phone, smsMessage, templateId);
+    public void sendOrderCancelledSms(String phone, String customerName, String productName, String orderId, String cancelReason) {
+        String templateId = "1707172906092467307"; // fallback to order delivered SMS template? Or maybe they don't have SMS template for cancel.
         
         // WhatsApp Message
-        String waMessage = String.format("Dear *%s* 👋,\n\nYour order has been cancelled (*Battery Mantra products*) for order id *%s*.\n\nFor more information, you can call us to *+91-9200920051*\n\nThank you🙏\n", customerName, orderId);
-        sendWhatsapp(phone, waMessage);
+        sendWhatsapp(phone, "order_cancelled", customerName, orderId, cancelReason);
     }
 }

@@ -180,9 +180,9 @@ public class OrderService {
             String orderIdStr = placedOrder.getOrderId().toString();
 
             if (customerPhone != null && !customerPhone.isBlank()) {
-                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(placedOrder.getTotalAmount()), placedOrder.getPlacedAt() != null ? placedOrder.getPlacedAt().toString() : "", "Your Product", "Online");
             }
-            smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
+            // admin alert handled inside sendOrderPlacedSms
         }
 
         return orderMapper.toOrderResponse(placedOrder);
@@ -301,9 +301,9 @@ public class OrderService {
         String orderIdStr = placedOrder.getOrderId().toString();
 
         if (customerPhone != null && !customerPhone.isBlank()) {
-            smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr);
+            smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(placedOrder.getTotalAmount()), placedOrder.getPlacedAt() != null ? placedOrder.getPlacedAt().toString() : "", "Your Product", "Online");
         }
-        smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
+        // admin alert handled inside sendOrderPlacedSms
 
         return orderMapper.toOrderResponse(placedOrder);
     }
@@ -362,7 +362,7 @@ public class OrderService {
         String customerName = order.getCustomer().getUsername();
         String orderIdStr = order.getOrderId().toString();
         if (customerPhone != null && !customerPhone.isBlank()) {
-            smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+            smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
         }
 
         return orderMapper.toOrderResponse(cancelledOrder);
@@ -429,12 +429,11 @@ public class OrderService {
                 String engPhone = order.getAssignedEngineer() != null
                         ? order.getAssignedEngineer().getUser().getPhoneNumber()
                         : "N/A";
-                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone,
-                        updatedOrder.getDeliverySecurityCode());
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, "Your Product", orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
             } else if (newStatus == OrderStatus.DELIVERED) {
-                smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderDeliveredSms(customerPhone, customerName, "Your Product", orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
-                smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
             }
         }
 
@@ -511,12 +510,11 @@ public class OrderService {
                 String engPhone = order.getAssignedEngineer() != null
                         ? order.getAssignedEngineer().getUser().getPhoneNumber()
                         : "N/A";
-                smsService.sendOrderDispatchedSms(customerPhone, customerName, orderIdStr, engName, engPhone,
-                        updatedOrder.getDeliverySecurityCode());
+                smsService.sendOrderDispatchedSms(customerPhone, customerName, "Your Product", orderIdStr, engName, engPhone, updatedOrder.getDeliverySecurityCode());
             } else if (newStatus == OrderStatus.DELIVERED) {
-                smsService.sendOrderDeliveredSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderDeliveredSms(customerPhone, customerName, "Your Product", orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
-                smsService.sendOrderCancelledSms(customerPhone, customerName, orderIdStr);
+                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
             }
         }
 
