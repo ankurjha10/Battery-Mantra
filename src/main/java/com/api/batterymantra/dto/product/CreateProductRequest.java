@@ -24,6 +24,8 @@ public class CreateProductRequest {
     private UUID categoryId;
     private UUID brandId;
     private List<UUID> specUnitIds;
+    private List<UUID> highlightedSpecAttributeIds;
+    private Map<UUID, String> specAttributeIcons;
 
     private String capacity;
 

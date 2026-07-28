@@ -23,6 +23,8 @@ public class UpdateProductRequest {
     private List<String> additionalImages;
     private Integer productStock;
     private List<UUID> specUnitIds;
+    private List<UUID> highlightedSpecAttributeIds;
+    private Map<UUID, String> specAttributeIcons;
     private String capacity;
 
     @Valid

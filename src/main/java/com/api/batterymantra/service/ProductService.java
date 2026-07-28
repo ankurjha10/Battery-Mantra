@@ -108,6 +108,9 @@ public class ProductService {
         res.setCategoryName(p.getProductCategory().getCategoryName());
         res.setCategoryId(p.getProductCategory().getCategoryId());
         res.setSpecs(mapSpecUnits(p.getSpecUnits()));
+        res.setSpecDetails(mapSpecDetails(p.getSpecUnits()));
+        res.setHighlightedSpecAttributeIds(p.getHighlightedSpecAttributeIds() != null ? new ArrayList<>(p.getHighlightedSpecAttributeIds()) : new ArrayList<>());
+        res.setSpecAttributeIcons(p.getSpecAttributeIcons() != null ? new java.util.HashMap<>(p.getSpecAttributeIcons()) : new java.util.HashMap<>());
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
 
         if (p.getBrand() != null) {
@@ -169,6 +172,20 @@ public class ProductService {
             categoryMap.put(attributeName, value);
         }
         return specsMap;
+    }
+
+    private List<Map<String, String>> mapSpecDetails(java.util.Set<SpecUnit> specUnits) {
+        if (specUnits == null || specUnits.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+        return specUnits.stream().map(unit -> {
+            Map<String, String> map = new java.util.HashMap<>();
+            map.put("attributeId", unit.getSpecAttribute().getId().toString());
+            map.put("attributeName", unit.getSpecAttribute().getName());
+            map.put("categoryName", unit.getSpecCategory().getName());
+            map.put("value", unit.getValue());
+            return map;
+        }).toList();
     }
 
     @Cacheable(value = "products", key = "{'all', #cityId}")
@@ -302,6 +319,14 @@ public class ProductService {
             product.setSpecUnits(new java.util.HashSet<>(units));
         }
 
+        if (dto.getHighlightedSpecAttributeIds() != null) {
+            product.setHighlightedSpecAttributeIds(dto.getHighlightedSpecAttributeIds());
+        }
+
+        if (dto.getSpecAttributeIcons() != null) {
+            product.setSpecAttributeIcons(dto.getSpecAttributeIcons());
+        }
+
         // Set capacity
         if (dto.getCapacity() != null) {
             product.setCapacity(dto.getCapacity());
@@ -399,6 +424,14 @@ public class ProductService {
         if (dto.getSpecUnitIds() != null) {
             List<SpecUnit> units = specUnitRepository.findAllById(dto.getSpecUnitIds());
             product.setSpecUnits(new java.util.HashSet<>(units));
+        }
+
+        if (dto.getHighlightedSpecAttributeIds() != null) {
+            product.setHighlightedSpecAttributeIds(dto.getHighlightedSpecAttributeIds());
+        }
+
+        if (dto.getSpecAttributeIcons() != null) {
+            product.setSpecAttributeIcons(dto.getSpecAttributeIcons());
         }
 
         if (dto.getCapacity() != null) {

@@ -48,6 +48,17 @@ public class Product {
     )
     private Set<SpecUnit> specUnits = new HashSet<>();
 
+    @ElementCollection
+    @CollectionTable(name = "product_highlighted_spec_attributes", joinColumns = @JoinColumn(name = "product_id"))
+    @Column(name = "spec_attribute_id")
+    private List<UUID> highlightedSpecAttributeIds = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(name = "product_spec_attribute_icons", joinColumns = @JoinColumn(name = "product_id"))
+    @MapKeyColumn(name = "spec_attribute_id")
+    @Column(name = "icon_name")
+    private Map<UUID, String> specAttributeIcons = new HashMap<>();
+
     private String capacity;
 
     @Min(0)

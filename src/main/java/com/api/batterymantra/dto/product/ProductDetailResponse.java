@@ -25,6 +25,9 @@ public class ProductDetailResponse {
     private String productImage;
     private List<String> additionalImages;
     private Map<String, Object> specs;
+    private List<Map<String, String>> specDetails;
+    private List<UUID> highlightedSpecAttributeIds;
+    private Map<UUID, String> specAttributeIcons;
     private String capacity;
     private List<CityPricingDto> cityPrices;
     @JsonProperty("isAutoAssignToPartner")
