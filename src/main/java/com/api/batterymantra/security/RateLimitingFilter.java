@@ -1,42 +1,50 @@
 package com.api.batterymantra.security;
 
+import io.github.bucket4j.Bandwidth;
+import io.github.bucket4j.BucketConfiguration;
+import io.github.bucket4j.Bucket;
+import io.github.bucket4j.distributed.proxy.ProxyManager;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
+import java.util.function.Supplier;
 
+import java.nio.charset.StandardCharsets;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Component
 public class RateLimitingFilter extends OncePerRequestFilter {
 
-    private static final int MAX_REQUESTS_PER_MINUTE = 15;
-    private static final long ONE_MINUTE_IN_MILLIS = 60000;
+    private final ProxyManager<byte[]> proxyManager;
 
-    private final Map<String, RateLimitInfo> requestCounts = new ConcurrentHashMap<>();
-
-    private static class RateLimitInfo {
-        int count;
-        long windowStart;
-
-        public RateLimitInfo(int count, long windowStart) {
-            this.count = count;
-            this.windowStart = windowStart;
-        }
+    public RateLimitingFilter(ProxyManager<byte[]> proxyManager) {
+        this.proxyManager = proxyManager;
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
+    protected void doFilterInternal(@NonNull HttpServletRequest request, @NonNull HttpServletResponse response, @NonNull FilterChain filterChain)
             throws ServletException, IOException {
 
         String path = request.getRequestURI();
         if (isRateLimitedEndpoint(path) && request.getMethod().equalsIgnoreCase("POST")) {
             String clientIp = getClientIp(request);
-            if (isRateLimited(clientIp)) {
+            
+            Supplier<BucketConfiguration> bucketConfigurationSupplier = () -> BucketConfiguration.builder()
+                    .addLimit(Bandwidth.builder().capacity(15).refillGreedy(15, Duration.ofMinutes(1)).build())
+                    .build();
+
+            Bucket bucket = proxyManager.builder().build(clientIp.getBytes(StandardCharsets.UTF_8), bucketConfigurationSupplier);
+
+            if (!bucket.tryConsume(1)) {
+                log.warn("Rate limit exceeded for IP: {}", clientIp);
                 response.setStatus(429);
                 response.setContentType("application/json");
                 response.getWriter().write("{\"status\":429,\"message\":\"Too many requests. Please try again after a minute.\"}");
@@ -56,28 +64,11 @@ public class RateLimitingFilter extends OncePerRequestFilter {
 
     private String getClientIp(HttpServletRequest request) {
         String xfHeader = request.getHeader("X-Forwarded-For");
+        log.info("RateLimitingFilter IP Check -> X-Forwarded-For: '{}', Remote Addr: '{}'", xfHeader, request.getRemoteAddr());
+        
         if (xfHeader == null || xfHeader.isEmpty()) {
             return request.getRemoteAddr();
         }
         return xfHeader.split(",")[0].trim();
-    }
-
-    private boolean isRateLimited(String clientIp) {
-        long currentTime = System.currentTimeMillis();
-        boolean[] isLimited = new boolean[1];
-
-        requestCounts.compute(clientIp, (key, info) -> {
-            if (info == null || (currentTime - info.windowStart) > ONE_MINUTE_IN_MILLIS) {
-                return new RateLimitInfo(1, currentTime);
-            }
-            if (info.count >= MAX_REQUESTS_PER_MINUTE) {
-                isLimited[0] = true;
-                return info;
-            }
-            info.count++;
-            return info;
-        });
-
-        return isLimited[0];
     }
 }
