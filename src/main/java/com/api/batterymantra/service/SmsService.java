@@ -18,6 +18,9 @@ public class SmsService {
     private static final String ROUTE = "1";
     private static final String SENDER_ID = "BATRYM";
 
+    private static final String WA_BASE_URL = "http://wacontrol.ambeytech.com/api/wapi";
+    private static final String WA_API_KEY = "fc8a1dbb72d014e62475c42ac478022f";
+
     @Value("${admin.phone:8057965238}")
     private String adminPhone;
 
@@ -55,11 +58,38 @@ public class SmsService {
         }
     }
 
+    private void sendWhatsapp(String phone, String message) {
+        try {
+            if (phone == null || phone.isBlank()) {
+                return;
+            }
+            String cleanPhone = phone.trim();
+            if ("ADMIN".equalsIgnoreCase(cleanPhone)) {
+                cleanPhone = adminPhone;
+            }
+            if (cleanPhone.length() == 10) {
+                cleanPhone = "91" + cleanPhone;
+            }
+
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(WA_BASE_URL)
+                    .queryParam("apikey", WA_API_KEY)
+                    .queryParam("mobile", cleanPhone)
+                    .queryParam("msg", message);
+
+            java.net.URI uri = builder.build().encode().toUri();
+            ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
+            log.info("WhatsApp sent to {}. Response: {}", cleanPhone, response.getBody());
+        } catch (Exception e) {
+            log.error("Failed to send WhatsApp to {}. Error: {}", phone, e.getMessage());
+        }
+    }
+
     public void sendOtp(String phone, String name, String otp) {
         String templateId = "1707172906349288415";
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         String message = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account https://www.batterymantra.com", customerName, otp);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendRegistrationSms(String phone, String name) {
@@ -67,12 +97,14 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         String message = String.format("Dear %s, Thank You for Registation. FROM: Battery Mantra", customerName);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendAdminOrderAlert(String phone, String orderId) {
         String templateId = "1707172906419435636";
         String message = String.format("Dear Admin,Congratulations! You got a New Order with Order Id :%s. FROM : Battery Mantra", orderId);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendOrderPlacedSms(String phone, String name, String orderId) {
@@ -80,6 +112,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         String message = String.format("Dear %s, Your order has been placed successfully. Order Id : %s. FROM : Battery Mantra", customerName, orderId);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendOrderDispatchedSms(String phone, String name, String orderId, String engineerName, String engineerPhone, String securityCode) {
@@ -91,6 +124,7 @@ public class SmsService {
         String message = String.format("Dear %s your order has been dispatched for order id %s and arriving soon by our engineer ( %s +91 %s ). Your Delivery Security Code is %s FROM : Battery Mantra", 
                 customerName, orderId, engName, engPhone, code);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendOrderDeliveredSms(String phone, String name, String orderId) {
@@ -98,6 +132,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         String message = String.format("Dear %s, Your order has been delivered successfully for order id %s. FROM : Battery Mantra", customerName, orderId);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 
     public void sendOrderCancelledSms(String phone, String name, String orderId) {
@@ -105,5 +140,6 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         String message = String.format("Dear %s, Your order has been cancelled. for order id %s. FROM : Battery Mantra", customerName, orderId);
         sendSms(phone, message, templateId);
+        sendWhatsapp(phone, message);
     }
 }
