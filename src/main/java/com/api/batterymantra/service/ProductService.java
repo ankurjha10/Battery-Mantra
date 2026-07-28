@@ -22,6 +22,8 @@ import com.api.batterymantra.repository.OrderItemRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.VehicleRepository;
 import com.api.batterymantra.repository.specification.ProductSpecification;
+import com.api.batterymantra.repository.SpecUnitRepository;
+import com.api.batterymantra.entity.SpecUnit;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -38,6 +40,7 @@ import org.springframework.cache.annotation.CacheEvict;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -53,6 +56,7 @@ public class ProductService {
     private final OrderItemRepository orderItemRepository;
     private final CityRepository cityRepository;
     private final BulkPricingService bulkPricingService;
+    private final SpecUnitRepository specUnitRepository;
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
@@ -103,7 +107,7 @@ public class ProductService {
         res.setProductStock(p.getProductStock());
         res.setCategoryName(p.getProductCategory().getCategoryName());
         res.setCategoryId(p.getProductCategory().getCategoryId());
-        res.setSpecs(p.getSpec());
+        res.setSpecs(mapSpecUnits(p.getSpecUnits()));
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
 
         if (p.getBrand() != null) {
@@ -147,6 +151,24 @@ public class ProductService {
         res.setSeo(SeoUtil.resolveSeo(p.getSeo(), currentCity, p));
         
         return res;
+    }
+
+    private Map<String, Object> mapSpecUnits(java.util.Set<SpecUnit> specUnits) {
+        if (specUnits == null || specUnits.isEmpty()) {
+            return new java.util.HashMap<>();
+        }
+        Map<String, Object> specsMap = new java.util.HashMap<>();
+        for (SpecUnit unit : specUnits) {
+            String categoryName = unit.getSpecCategory().getName();
+            String attributeName = unit.getSpecAttribute().getName();
+            String value = unit.getValue();
+
+            specsMap.putIfAbsent(categoryName, new java.util.HashMap<String, String>());
+            @SuppressWarnings("unchecked")
+            Map<String, String> categoryMap = (Map<String, String>) specsMap.get(categoryName);
+            categoryMap.put(attributeName, value);
+        }
+        return specsMap;
     }
 
     @Cacheable(value = "products", key = "{'all', #cityId}")
@@ -275,8 +297,9 @@ public class ProductService {
         }
 
         // Set specs
-        if (dto.getSpecs() != null) {
-            product.setSpec(dto.getSpecs());
+        if (dto.getSpecUnitIds() != null && !dto.getSpecUnitIds().isEmpty()) {
+            List<SpecUnit> units = specUnitRepository.findAllById(dto.getSpecUnitIds());
+            product.setSpecUnits(new java.util.HashSet<>(units));
         }
 
         // Set capacity
@@ -373,8 +396,9 @@ public class ProductService {
             product.setBrand(brand);
         }
 
-        if (dto.getSpecs() != null) {
-            product.setSpec(dto.getSpecs());
+        if (dto.getSpecUnitIds() != null) {
+            List<SpecUnit> units = specUnitRepository.findAllById(dto.getSpecUnitIds());
+            product.setSpecUnits(new java.util.HashSet<>(units));
         }
 
         if (dto.getCapacity() != null) {

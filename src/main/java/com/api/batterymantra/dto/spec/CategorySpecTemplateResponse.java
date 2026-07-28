@@ -27,6 +27,13 @@ public class CategorySpecTemplateResponse {
     public static class SpecAttributeDto {
         private UUID attributeId;
         private String attributeName;
-        private List<String> availableUnits; // List of predefined unit options
+        private List<SpecUnitDto> availableUnits; // List of predefined unit options
+    }
+
+    @Data
+    @Builder
+    public static class SpecUnitDto {
+        private UUID unitId;
+        private String unitValue;
     }
 }

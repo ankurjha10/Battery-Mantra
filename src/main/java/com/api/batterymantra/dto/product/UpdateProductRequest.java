@@ -22,7 +22,7 @@ public class UpdateProductRequest {
     private String productImage;
     private List<String> additionalImages;
     private Integer productStock;
-    private Map<String, Object> specs;
+    private List<UUID> specUnitIds;
     private String capacity;
 
     @Valid

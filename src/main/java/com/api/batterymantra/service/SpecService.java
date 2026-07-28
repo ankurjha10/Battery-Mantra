@@ -175,10 +175,13 @@ public class SpecService {
 
                     List<CategorySpecTemplateResponse.SpecAttributeDto> attributeDtos = attributes.stream()
                             .map(attr -> {
-                                List<String> units = specUnitRepository
+                                List<CategorySpecTemplateResponse.SpecUnitDto> units = specUnitRepository
                                         .findBySpecAttribute_IdOrderByValueAsc(attr.getId())
                                         .stream()
-                                        .map(SpecUnit::getValue)
+                                        .map(u -> CategorySpecTemplateResponse.SpecUnitDto.builder()
+                                                .unitId(u.getId())
+                                                .unitValue(u.getValue())
+                                                .build())
                                         .collect(Collectors.toList());
 
                                 return CategorySpecTemplateResponse.SpecAttributeDto.builder()

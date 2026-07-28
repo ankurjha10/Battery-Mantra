@@ -1,6 +1,5 @@
 package com.api.batterymantra.entity;
 
-import io.hypersistence.utils.hibernate.type.json.JsonBinaryType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
@@ -41,9 +40,13 @@ public class Product {
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;
 
-    @Type(JsonBinaryType.class)
-    @Column(columnDefinition = "jsonb")
-    private Map<String, Object> spec = new HashMap<>();
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "product_spec_units",
+        joinColumns = @JoinColumn(name = "product_id"),
+        inverseJoinColumns = @JoinColumn(name = "spec_unit_id")
+    )
+    private Set<SpecUnit> specUnits = new HashSet<>();
 
     private String capacity;
 

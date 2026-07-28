@@ -23,7 +23,7 @@ public class CreateProductRequest {
     @NotNull(message = "Category is required")
     private UUID categoryId;
     private UUID brandId;
-    private Map<String, Object> specs;
+    private List<UUID> specUnitIds;
 
     private String capacity;
 
