@@ -15,8 +15,11 @@ public class GoogleFeedService {
 
     private final ProductRepository productRepository;
 
-    @Value("${app.frontend.url:https://batterymantra.com}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
+
+    @Value("${cloudinary.cloud-name:dwy48p5w1}")
+    private String cloudName;
 
     private String escapeXml(String input) {
         if (input == null) return "";
@@ -56,7 +59,7 @@ public class GoogleFeedService {
             // Assuming image URL is already absolute or relative to some base
             String imageLink = product.getProductImage();
             if (imageLink != null && !imageLink.startsWith("http")) {
-                imageLink = "https://res.cloudinary.com/dwy48p5w1/image/upload/v1/" + imageLink; // Adjust as needed
+                imageLink = "https://res.cloudinary.com/" + cloudName + "/image/upload/v1/" + imageLink;
             }
 
             xml.append("    <item>\n");

@@ -6,9 +6,9 @@ import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.repository.RefreshTokenRepository;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.time.Duration;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -16,7 +16,8 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RefreshTokenService {
 
-    private static final Long REFRESH_TOKEN_VALIDITY = Duration.ofHours(12).toMillis();
+    @Value("${jwt.refresh-expiration-ms:43200000}")
+    private long refreshValidityMs;
 
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserRepository userRepository;
@@ -34,7 +35,7 @@ public class RefreshTokenService {
 
         RefreshToken token = RefreshToken.builder()
                 .refreshToken(UUID.randomUUID().toString())
-                .expiry(Instant.now().plusMillis(REFRESH_TOKEN_VALIDITY))
+                .expiry(Instant.now().plusMillis(refreshValidityMs))
                 .user(user)
                 .build();
 

@@ -13,14 +13,32 @@ public class SmsService {
 
     private final RestTemplate restTemplate;
 
-    private static final String BASE_URL = "http://sms.tddigitalsolution.com/http-tokenkeyapi.php";
-    private static final String AUTH_KEY = "323556494b4153323030383539301728374563";
-    private static final String ROUTE = "1";
-    private static final String SENDER_ID = "BATRYM";
+    @Value("${sms.base.url}")
+    private String smsBaseUrl;
 
+    @Value("${sms.auth.key}")
+    private String smsAuthKey;
+
+    @Value("${sms.route}")
+    private String smsRoute;
+
+    @Value("${sms.sender.id}")
+    private String smsSenderId;
+
+    @Value("${sms.wa.base.url}")
+    private String smsWaBaseUrl;
+
+    @Value("${sms.wa.api.key}")
+    private String smsWaApiKey;
+
+    @Value("${sms.wa.sender.number:+918282825280}")
+    private String smsWaSenderNumber;
 
     @Value("${admin.phone:8282825280}")
     private String adminPhone;
+
+    @Value("${app.frontend.url:https://batterymantra.com}")
+    private String frontendUrl;
 
     public SmsService() {
         this.restTemplate = new RestTemplate();
@@ -40,10 +58,10 @@ public class SmsService {
                 cleanPhone = "91" + cleanPhone;
             }
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(BASE_URL)
-                    .queryParam("authentic-key", AUTH_KEY)
-                    .queryParam("senderid", SENDER_ID)
-                    .queryParam("route", ROUTE)
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(smsBaseUrl)
+                    .queryParam("authentic-key", smsAuthKey)
+                    .queryParam("senderid", smsSenderId)
+                    .queryParam("route", smsRoute)
                     .queryParam("number", cleanPhone)
                     .queryParam("message", message)
                     .queryParam("templateid", templateId);
@@ -74,16 +92,16 @@ public class SmsService {
                 .collect(java.util.stream.Collectors.joining(","));
                 
             String jsonPayload = String.format(
-                "{\"from\": \"+918282825280\", \"campaignName\": \"api-test\", \"to\": \"%s\", \"templateName\": \"%s\", \"components\": {\"body\":{\"params\":[%s]}}, \"type\": \"template\"}",
-                cleanPhone, templateName, paramsJson
+                "{\"from\": \"%s\", \"campaignName\": \"api-test\", \"to\": \"%s\", \"templateName\": \"%s\", \"components\": {\"body\":{\"params\":[%s]}}, \"type\": \"template\"}",
+                smsWaSenderNumber, cleanPhone, templateName, paramsJson
             );
 
             org.springframework.http.HttpHeaders headers = new org.springframework.http.HttpHeaders();
             headers.setContentType(org.springframework.http.MediaType.APPLICATION_JSON);
-            headers.set("apiKey", "RRAfcTaXy19DO5y3CCOP9hb3bSRMaA");
+            headers.set("apiKey", smsWaApiKey);
 
             org.springframework.http.HttpEntity<String> request = new org.springframework.http.HttpEntity<>(jsonPayload, headers);
-            ResponseEntity<String> response = restTemplate.postForEntity("https://api.aoc-portal.com/v1/whatsapp", request, String.class);
+            ResponseEntity<String> response = restTemplate.postForEntity(smsWaBaseUrl, request, String.class);
             log.info("WhatsApp sent to {} with template {}. Response: {}", cleanPhone, templateName, response.getBody());
         } catch (Exception e) {
             log.error("Failed to send WhatsApp to {}. Template: {}. Error: {}", phone, templateName, e.getMessage());
@@ -95,7 +113,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account https://www.batterymantra.com", customerName, otp);
+        String smsMessage = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account %s", customerName, otp, frontendUrl);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
@@ -107,7 +125,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Thank you for choosing Battery Mantra. You have registered successfully your Battery Mantra account. Get lowest price for Car, Inverter Battery and Many More.. https://www.batterymantra.com", customerName);
+        String smsMessage = String.format("Dear %s , Thank you for choosing Battery Mantra. You have registered successfully your Battery Mantra account. Get lowest price for Car, Inverter Battery and Many More.. %s", customerName, frontendUrl);
         sendSms(phone, smsMessage, templateId);
         
         // No AOC Whatsapp Template found for registration, skip WhatsApp here or use a default if it existed.
@@ -117,7 +135,7 @@ public class SmsService {
         String templateId = "1707172911369348906";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your order %s has been placed successfully for order id %s . Thank you for ordering with us. You can track your order from https://www.batterymantra.com", customerName, productName, orderId);
+        String smsMessage = String.format("Dear %s , Your order %s has been placed successfully for order id %s . Thank you for ordering with us. You can track your order from %s", customerName, productName, orderId, frontendUrl);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message to Customer
@@ -131,7 +149,7 @@ public class SmsService {
         String templateId = "1707172911579717144";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your order has been dispatched (%s) for order id %s and arriving soon by (Name: %s, Mobile No.: %s). Your Delivery Security Code is %s. Thank you https://www.batterymantra.com", customerName, productName, orderId, engineerName, engineerPhone, securityCode);
+        String smsMessage = String.format("Dear %s , Your order has been dispatched (%s) for order id %s and arriving soon by (Name: %s, Mobile No.: %s). Your Delivery Security Code is %s. Thank you %s", customerName, productName, orderId, engineerName, engineerPhone, securityCode, frontendUrl);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
@@ -142,11 +160,11 @@ public class SmsService {
         String templateId = "1707172911533423405";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your Battery Mantra order for %s has been delivered successfully for order id %s . Thank you https://www.batterymantra.com", customerName, productName, orderId);
+        String smsMessage = String.format("Dear %s , Your Battery Mantra order for %s has been delivered successfully for order id %s . Thank you %s", customerName, productName, orderId, frontendUrl);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
-        sendWhatsapp(phone, "order_id", productName, "https://www.batterymantra.com/");
+        sendWhatsapp(phone, "order_id", productName, frontendUrl);
     }
 
     public void sendOrderCancelledSms(String phone, String customerName, String productName, String orderId, String cancelReason) {

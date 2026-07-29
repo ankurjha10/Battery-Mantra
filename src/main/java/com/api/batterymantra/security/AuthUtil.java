@@ -19,6 +19,9 @@ public class AuthUtil {
     @Value("${jwt.secretKey}")
     private String jwtSecretKey;
 
+    @Value("${jwt.expiration-ms:3600000}")
+    private long jwtExpirationMs;
+
     private SecretKey getSecretKey() {
         byte[] keyBytes = Decoders.BASE64.decode(jwtSecretKey);
         return Keys.hmacShaKeyFor(keyBytes);
@@ -30,7 +33,7 @@ public class AuthUtil {
                 .claim("userId", user.getUserId().toString())
                 .claim("role", "ROLE_" + user.getRole().name())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + 60 * 60 * 1000))
+                .expiration(new Date(System.currentTimeMillis() + jwtExpirationMs))
                 .signWith(getSecretKey())
                 .compact();
     }
