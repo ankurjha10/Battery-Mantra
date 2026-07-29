@@ -31,13 +31,13 @@ public class SmsService {
     @Value("${sms.wa.api.key}")
     private String smsWaApiKey;
 
-    @Value("${sms.wa.sender.number:+918282825280}")
+    @Value("${sms.wa.sender.number}")
     private String smsWaSenderNumber;
 
-    @Value("${admin.phone:8282825280}")
+    @Value("${admin.phone}")
     private String adminPhone;
 
-    @Value("${app.frontend.url:https://batterymantra.com}")
+    @Value("${app.frontend.url}")
     private String frontendUrl;
 
     public SmsService() {
@@ -164,7 +164,7 @@ public class SmsService {
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
-        sendWhatsapp(phone, "order_id", productName, frontendUrl);
+        sendWhatsapp(phone, "order_id", productName, frontendUrl + "/");
     }
 
     public void sendOrderCancelledSms(String phone, String customerName, String productName, String orderId, String cancelReason) {

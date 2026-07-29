@@ -24,7 +24,7 @@ public class OtpService {
     private final Map<String, OtpData> otpCache = new ConcurrentHashMap<>();
     private final Random random = new Random();
 
-    @Value("${otp.expiration-ms:300000}")
+    @Value("${otp.expiration-ms}")
     private long otpValidityMs;
 
     public String generateOtp(String phoneNumber) {

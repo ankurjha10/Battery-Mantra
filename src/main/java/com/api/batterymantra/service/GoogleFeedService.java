@@ -18,7 +18,7 @@ public class GoogleFeedService {
     @Value("${app.frontend.url}")
     private String frontendUrl;
 
-    @Value("${cloudinary.cloud-name:dwy48p5w1}")
+    @Value("${cloudinary.cloud-name}")
     private String cloudName;
 
     private String escapeXml(String input) {
