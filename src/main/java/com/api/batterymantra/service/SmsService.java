@@ -1,5 +1,6 @@
 package com.api.batterymantra.service;
 
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
@@ -44,6 +45,19 @@ public class SmsService {
         this.restTemplate = new RestTemplate();
     }
 
+    @PostConstruct
+    public void logConfig() {
+        log.info("=== SMS Config ===");
+        log.info("SMS Base URL: {}", smsBaseUrl);
+        log.info("SMS Auth Key: {}...{}", smsAuthKey != null && smsAuthKey.length() > 6 ? smsAuthKey.substring(0, 6) : "NULL", smsAuthKey != null && smsAuthKey.length() > 6 ? smsAuthKey.substring(smsAuthKey.length() - 4) : "");
+        log.info("SMS Route: {}", smsRoute);
+        log.info("SMS Sender ID: {}", smsSenderId);
+        log.info("Frontend URL: {}", frontendUrl);
+        log.info("Admin Phone: {}", adminPhone);
+        log.info("WA Base URL: {}", smsWaBaseUrl);
+        log.info("=================");
+    }
+
     private void sendSms(String phone, String message, String templateId) {
         try {
             if (phone == null || phone.isBlank()) {
@@ -67,10 +81,11 @@ public class SmsService {
                     .queryParam("templateid", templateId);
 
             java.net.URI uri = builder.build().encode().toUri();
+            log.info("SMS API call URI: {}", uri.toString().replaceAll("authentic-key=[^&]+", "authentic-key=***"));
             ResponseEntity<String> response = restTemplate.getForEntity(uri, String.class);
             log.info("SMS sent to {}. Template: {}. Response: {}", cleanPhone, templateId, response.getBody());
         } catch (Exception e) {
-            log.error("Failed to send SMS to {}. Template: {}. Error: {}", phone, templateId, e.getMessage());
+            log.error("Failed to send SMS to {}. Template: {}. Error: {}", phone, templateId, e.getMessage(), e);
         }
     }
 
