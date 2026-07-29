@@ -14,18 +14,14 @@ public class SmsService {
 
     private final RestTemplate restTemplate;
 
-    @Value("${sms.base.url}")
-    private String smsBaseUrl;
+    // Standard SMS - hardcoded (DLT template matching requires exact values)
+    private static final String SMS_BASE_URL = "http://sms.tddigitalsolution.com/http-tokenkeyapi.php";
+    private static final String SMS_AUTH_KEY = "323556494b4153323030383539301728374563";
+    private static final String SMS_ROUTE = "1";
+    private static final String SMS_SENDER_ID = "BATRYM";
+    private static final String FRONTEND_URL = "https://www.batterymantra.com";
 
-    @Value("${sms.auth.key}")
-    private String smsAuthKey;
-
-    @Value("${sms.route}")
-    private String smsRoute;
-
-    @Value("${sms.sender.id}")
-    private String smsSenderId;
-
+    // WhatsApp - from .env
     @Value("${sms.wa.base.url}")
     private String smsWaBaseUrl;
 
@@ -48,11 +44,9 @@ public class SmsService {
     @PostConstruct
     public void logConfig() {
         log.info("=== SMS Config ===");
-        log.info("SMS Base URL: {}", smsBaseUrl);
-        log.info("SMS Auth Key: {}...{}", smsAuthKey != null && smsAuthKey.length() > 6 ? smsAuthKey.substring(0, 6) : "NULL", smsAuthKey != null && smsAuthKey.length() > 6 ? smsAuthKey.substring(smsAuthKey.length() - 4) : "");
-        log.info("SMS Route: {}", smsRoute);
-        log.info("SMS Sender ID: {}", smsSenderId);
-        log.info("Frontend URL: {}", frontendUrl);
+        log.info("SMS Base URL: {}", SMS_BASE_URL);
+        log.info("SMS Sender ID: {}", SMS_SENDER_ID);
+        log.info("Frontend URL: {}", FRONTEND_URL);
         log.info("Admin Phone: {}", adminPhone);
         log.info("WA Base URL: {}", smsWaBaseUrl);
         log.info("=================");
@@ -72,10 +66,10 @@ public class SmsService {
                 cleanPhone = "91" + cleanPhone;
             }
 
-            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(smsBaseUrl)
-                    .queryParam("authentic-key", smsAuthKey)
-                    .queryParam("senderid", smsSenderId)
-                    .queryParam("route", smsRoute)
+            UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(SMS_BASE_URL)
+                    .queryParam("authentic-key", SMS_AUTH_KEY)
+                    .queryParam("senderid", SMS_SENDER_ID)
+                    .queryParam("route", SMS_ROUTE)
                     .queryParam("number", cleanPhone)
                     .queryParam("message", message)
                     .queryParam("templateid", templateId);
@@ -128,7 +122,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account %s", customerName, otp, frontendUrl);
+        String smsMessage = String.format("Dear %s Your New OTP is %s For Your Battery Mantra Account https://www.batterymantra.com", customerName, otp);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
@@ -140,7 +134,7 @@ public class SmsService {
         String customerName = (name != null && !name.isBlank()) ? name : "Customer";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Thank you for choosing Battery Mantra. You have registered successfully your Battery Mantra account. Get lowest price for Car, Inverter Battery and Many More.. %s", customerName, frontendUrl);
+        String smsMessage = String.format("Dear %s , Thank you for choosing Battery Mantra. You have registered successfully your Battery Mantra account. Get lowest price for Car, Inverter Battery and Many More.. https://www.batterymantra.com", customerName);
         sendSms(phone, smsMessage, templateId);
         
         // No AOC Whatsapp Template found for registration, skip WhatsApp here or use a default if it existed.
@@ -150,7 +144,7 @@ public class SmsService {
         String templateId = "1707172911369348906";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your order %s has been placed successfully for order id %s . Thank you for ordering with us. You can track your order from %s", customerName, productName, orderId, frontendUrl);
+        String smsMessage = String.format("Dear %s , Your order %s has been placed successfully for order id %s . Thank you for ordering with us. You can track your order from https://www.batterymantra.com", customerName, productName, orderId);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message to Customer
@@ -164,7 +158,7 @@ public class SmsService {
         String templateId = "1707172911579717144";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your order has been dispatched (%s) for order id %s and arriving soon by (Name: %s, Mobile No.: %s). Your Delivery Security Code is %s. Thank you %s", customerName, productName, orderId, engineerName, engineerPhone, securityCode, frontendUrl);
+        String smsMessage = String.format("Dear %s , Your order has been dispatched (%s) for order id %s and arriving soon by (Name: %s, Mobile No.: %s). Your Delivery Security Code is %s. Thank you https://www.batterymantra.com", customerName, productName, orderId, engineerName, engineerPhone, securityCode);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
@@ -175,7 +169,7 @@ public class SmsService {
         String templateId = "1707172911533423405";
         
         // SMS Message
-        String smsMessage = String.format("Dear %s , Your Battery Mantra order for %s has been delivered successfully for order id %s . Thank you %s", customerName, productName, orderId, frontendUrl);
+        String smsMessage = String.format("Dear %s , Your Battery Mantra order for %s has been delivered successfully for order id %s . Thank you https://www.batterymantra.com", customerName, productName, orderId);
         sendSms(phone, smsMessage, templateId);
         
         // WhatsApp Message
