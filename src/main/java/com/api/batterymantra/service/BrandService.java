@@ -35,7 +35,7 @@ public class BrandService {
 
     @Cacheable(value = "brands")
     public List<BrandResponse> getAllBrands() {
-        return brandRepository.findAll().stream().map(this::toBrandResponse).toList();
+        return brandRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "brandName")).stream().map(this::toBrandResponse).toList();
     }
 
     @Cacheable(value = "brands", key = "#brandId")

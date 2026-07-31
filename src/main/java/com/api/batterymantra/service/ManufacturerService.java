@@ -28,9 +28,10 @@ public class ManufacturerService {
         if (categoryId != null) {
             manufacturers = manufacturerRepository.findDistinctByCategoriesCategoryIdOrderByDisplayOrderAsc(categoryId);
         } else {
-            manufacturers = manufacturerRepository.findAllByOrderByDisplayOrderAsc();
+            manufacturers = manufacturerRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "name")));
         }
         return manufacturers.stream()
+                .sorted(java.util.Comparator.comparing(Manufacturer::getDisplayOrder).thenComparing(Manufacturer::getName))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

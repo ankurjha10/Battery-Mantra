@@ -113,12 +113,13 @@ public class CategoryService {
 
     @Cacheable(value = "categories")
     public List<CategoryListResponse> getAllCategories() {
-        return categoryRepository.findAll().stream().map(this::toListResponse).toList();
+        return categoryRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "categoryName"))).stream().map(this::toListResponse).toList();
     }
 
     public List<CategoryListResponse> getRootCategories() {
         return categoryRepository.findByParentIsNullOrderByDisplayOrderAsc()
                 .stream()
+                .sorted(java.util.Comparator.comparing(Category::getDisplayOrder).thenComparing(Category::getCategoryName))
                 .map(this::toListResponse)
                 .toList();
     }
