@@ -10,5 +10,6 @@ public class UpdateManufacturerRequest {
     private String name;
     private String logoUrl;
     private Integer displayOrder;
+    private String description;
     private List<UUID> categoryIds;
 }

@@ -15,5 +15,7 @@ public class CreateManufacturerRequest {
     
     private Integer displayOrder;
 
+    private String description;
+
     private List<UUID> categoryIds;
 }

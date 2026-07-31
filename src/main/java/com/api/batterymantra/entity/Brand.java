@@ -29,6 +29,9 @@ public class Brand {
     @Column(name = "is_featured")
     private boolean featured;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 }

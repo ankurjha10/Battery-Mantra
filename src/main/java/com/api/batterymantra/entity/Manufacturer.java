@@ -29,6 +29,9 @@ public class Manufacturer {
 
     private Integer displayOrder;
 
+    @Column(columnDefinition = "TEXT")
+    private String description;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
         name = "manufacturer_categories",

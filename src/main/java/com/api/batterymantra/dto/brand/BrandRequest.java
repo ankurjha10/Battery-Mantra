@@ -8,4 +8,5 @@ public class BrandRequest {
     private String brandName;
     private String brandLogo;
     private boolean featured;
+    private String description;
 }

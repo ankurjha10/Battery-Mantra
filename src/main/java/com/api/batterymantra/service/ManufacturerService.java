@@ -51,6 +51,7 @@ public class ManufacturerService {
         manufacturer.setName(request.getName());
         manufacturer.setLogoUrl(request.getLogoUrl());
         manufacturer.setDisplayOrder(request.getDisplayOrder() != null ? request.getDisplayOrder() : 0);
+        manufacturer.setDescription(request.getDescription());
 
         if (request.getCategoryIds() != null && !request.getCategoryIds().isEmpty()) {
             List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
@@ -81,6 +82,10 @@ public class ManufacturerService {
             manufacturer.setDisplayOrder(request.getDisplayOrder());
         }
 
+        if (request.getDescription() != null) {
+            manufacturer.setDescription(request.getDescription());
+        }
+
         if (request.getCategoryIds() != null) {
             List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
             manufacturer.setCategories(categories);
@@ -103,6 +108,7 @@ public class ManufacturerService {
         response.setName(manufacturer.getName());
         response.setLogoUrl(manufacturer.getLogoUrl());
         response.setDisplayOrder(manufacturer.getDisplayOrder());
+        response.setDescription(manufacturer.getDescription());
 
         if (manufacturer.getCategories() != null) {
             List<ManufacturerResponse.CategoryInfo> categoryInfos = manufacturer.getCategories().stream()
