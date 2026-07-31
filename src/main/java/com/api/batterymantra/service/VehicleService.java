@@ -49,7 +49,7 @@ public class VehicleService {
 
     @Cacheable(value = "vehicles")
     public List<VehicleResponse> getAllVehicles() {
-        return vehicleRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "make").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "model"))).stream().map(this::toResponse).toList();
+        return vehicleRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "manufacturer.name").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "model"))).stream().map(this::toResponse).toList();
     }
 
     @Cacheable(value = "vehicles", key = "#vehicleId")
