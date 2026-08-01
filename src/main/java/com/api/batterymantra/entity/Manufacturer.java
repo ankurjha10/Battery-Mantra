@@ -33,11 +33,7 @@ public class Manufacturer {
     private String description;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "manufacturer_categories",
-        joinColumns = @JoinColumn(name = "manufacturer_id"),
-        inverseJoinColumns = @JoinColumn(name = "category_id")
-    )
+    @JoinTable(name = "manufacturer_categories", joinColumns = @JoinColumn(name = "manufacturer_id"), inverseJoinColumns = @JoinColumn(name = "category_id"))
     private List<Category> categories = new ArrayList<>();
 
     @Embedded
