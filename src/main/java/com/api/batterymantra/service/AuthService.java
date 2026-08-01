@@ -90,7 +90,7 @@ public class AuthService {
         String token = authUtil.generateAccessToken(user);
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
 
-        return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name());
+        return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name(), user.getUsername());
     }
 
     public RegisterResponse register(RegisterRequest signUpRequest) {
@@ -173,7 +173,7 @@ public class AuthService {
             
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
 
-            return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name());
+            return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name(), user.getUsername());
         } catch (BadCredentialsException e) {
             throw new IllegalArgumentException("Invalid username or password");
         } catch (UsernameNotFoundException e) {
