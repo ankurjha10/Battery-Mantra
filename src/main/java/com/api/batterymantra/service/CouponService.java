@@ -40,7 +40,11 @@ public class CouponService {
         if (!couponRepository.existsById(id)) {
             throw new RuntimeException("Coupon not found with id: " + id);
         }
-        couponRepository.deleteById(id);
+        try {
+            couponRepository.deleteById(id);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            throw new RuntimeException("Cannot delete coupon because it has been used in orders. Please deactivate it instead.");
+        }
     }
 
     public List<CouponResponse> getAllCoupons() {
@@ -79,7 +83,8 @@ public class CouponService {
         }
         
         LocalDateTime now = LocalDateTime.now();
-        if (now.isBefore(coupon.getStartDate()) || now.isAfter(coupon.getExpiryDate())) {
+        if ((coupon.getStartDate() != null && now.isBefore(coupon.getStartDate())) || 
+            (coupon.getExpiryDate() != null && now.isAfter(coupon.getExpiryDate()))) {
             return ApplyCouponResponse.builder()
                     .isValid(false)
                     .discountAmount(0.0)
