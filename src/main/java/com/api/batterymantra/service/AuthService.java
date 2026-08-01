@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import com.api.batterymantra.dto.auth.LoginRequest;
 import com.api.batterymantra.dto.auth.LoginResponse;
+import com.api.batterymantra.dto.auth.CheckUserResponse;
 import com.api.batterymantra.dto.auth.RefreshTokenRequest;
 import com.api.batterymantra.dto.auth.RefreshTokenResponse;
 import com.api.batterymantra.dto.auth.RegisterRequest;
@@ -37,6 +38,21 @@ public class AuthService {
     private final RefreshTokenService refreshTokenService;
     private final SmsService smsService;
     private final OtpService otpService;
+
+    public CheckUserResponse checkUserByPhone(String phone) {
+        if (phone == null || phone.trim().isEmpty()) {
+            return new CheckUserResponse(false, null);
+        }
+        User user = userRepository.findByPhoneNumber(phone.trim());
+        if (user != null) {
+            String name = user.getUsername();
+            if (name != null && name.equals(phone.trim())) {
+                name = "User"; // If username is just the phone number
+            }
+            return new CheckUserResponse(true, name);
+        }
+        return new CheckUserResponse(false, null);
+    }
 
     public void sendOtp(SendOtpRequest request) {
         if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {

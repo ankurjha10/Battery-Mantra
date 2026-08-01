@@ -11,7 +11,10 @@ import com.api.batterymantra.dto.auth.VerifyOtpRequest;
 import com.api.batterymantra.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.api.batterymantra.dto.auth.CheckUserResponse;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -25,6 +28,11 @@ public class AuthController {
 
 
     private final AuthService authService;
+
+    @GetMapping("/check-user")
+    public ResponseEntity<CheckUserResponse> checkUser(@RequestParam String phoneNumber) {
+        return ResponseEntity.ok(authService.checkUserByPhone(phoneNumber));
+    }
 
     @PostMapping("/register")
     public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest user){
