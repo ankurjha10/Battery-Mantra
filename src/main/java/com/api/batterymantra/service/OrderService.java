@@ -45,6 +45,7 @@ public class OrderService {
     private final PincodeRepository pincodeRepository;
     private final OrderMapper orderMapper;
     private final SmsService smsService;
+    private final CouponService couponService;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -162,12 +163,33 @@ public class OrderService {
             total = BigDecimal.ZERO;
         }
 
+        // Apply coupon if present
+        BigDecimal discountAmount = BigDecimal.ZERO;
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
+            var couponResponse = couponService.applyCoupon(request.getCouponCode(), total.doubleValue());
+            if (couponResponse.getIsValid()) {
+                discountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
+                total = total.subtract(discountAmount);
+                if (total.compareTo(BigDecimal.ZERO) < 0) {
+                    total = BigDecimal.ZERO;
+                }
+                orders.setCouponCode(request.getCouponCode());
+                orders.setDiscountAmount(discountAmount);
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, couponResponse.getMessage());
+            }
+        }
+
         orders.setOrderItems(orderItems);
         orders.setTotalAmount(total);
         orders.setExchangeDiscount(exchangeDiscount);
 
         // Save the Order
         Orders placedOrder = orderRepository.save(orders);
+        
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank() && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+            couponService.incrementCouponUsage(request.getCouponCode());
+        }
 
         if (paymentMethod != PaymentMethod.ONLINE) {
             // Clearing Cart

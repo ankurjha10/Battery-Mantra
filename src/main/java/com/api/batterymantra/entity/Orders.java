@@ -85,4 +85,10 @@ public class Orders {
     @Column(name = "razorpay_order_id")
     private String razorpayOrderId;
 
+    @Column(name = "coupon_code")
+    private String couponCode;
+
+    @Column(name = "discount_amount")
+    private BigDecimal discountAmount;
+
 }

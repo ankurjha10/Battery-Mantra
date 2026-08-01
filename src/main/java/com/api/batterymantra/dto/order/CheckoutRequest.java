@@ -18,4 +18,6 @@ public class CheckoutRequest {
     private String paymentMethod;
 
     private LocalDate installationDate;
+
+    private String couponCode;
 }
