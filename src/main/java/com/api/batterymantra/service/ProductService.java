@@ -182,6 +182,7 @@ public class ProductService {
         }
         return specUnits.stream().map(unit -> {
             Map<String, String> map = new java.util.HashMap<>();
+            map.put("unitId", unit.getId().toString());
             map.put("attributeId", unit.getSpecAttribute().getId().toString());
             map.put("attributeName", unit.getSpecAttribute().getName());
             map.put("categoryName", unit.getSpecCategory().getName());
