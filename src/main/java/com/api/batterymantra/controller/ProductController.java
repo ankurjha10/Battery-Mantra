@@ -29,11 +29,13 @@ public class ProductController {
 
     @GetMapping("/filter")
     public ResponseEntity<Page<ProductListResponse>> filterProducts(
-            @RequestParam(required = false) UUID categoryId,
-            @RequestParam(required = false) UUID brandId,
+            @RequestParam(required = false) List<UUID> categoryId,
+            @RequestParam(required = false) List<UUID> brandId,
             @RequestParam(required = false) UUID vehicleId,
             @RequestParam(required = false) BigDecimal minPrice,
             @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> capacity,
+            @RequestParam(required = false) List<String> warranty,
             @RequestParam(required = false) String specKey,
             @RequestParam(required = false) String specValue,
             @RequestParam(required = false) String keyword,
@@ -49,7 +51,7 @@ public class ProductController {
         Pageable pageable = PageRequest.of(page, size, sort);
 
         return ResponseEntity.ok(productService.filterProducts(
-                categoryId, brandId, vehicleId, minPrice, maxPrice,
+                categoryId, brandId, vehicleId, minPrice, maxPrice, capacity, warranty,
                 specKey, specValue, keyword, pageable, cityId));
     }
 

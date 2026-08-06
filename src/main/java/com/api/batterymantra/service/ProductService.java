@@ -234,25 +234,26 @@ public class ProductService {
     }
 
     @Transactional(readOnly = true)
-    public Page<ProductListResponse> filterProducts(UUID categoryId, UUID brandId, UUID vehicleId,
+    public Page<ProductListResponse> filterProducts(List<UUID> categoryIdsInput, List<UUID> brandIds, UUID vehicleId,
                                                      BigDecimal minPrice, BigDecimal maxPrice,
+                                                     List<String> capacities, List<String> warranties,
                                                      String specKey, String specValue,
                                                      String keyword, Pageable pageable, UUID cityId) {
         Specification<Product> spec = Specification.allOf();
 
-        if (categoryId != null) {
-            List<UUID> categoryIds = new ArrayList<>();
-            categoryRepository.findById(categoryId).ifPresent(cat -> {
-                collectCategoryIds(cat, categoryIds);
-            });
-            if (!categoryIds.isEmpty()) {
-                spec = spec.and(ProductSpecification.hasCategoryIdIn(categoryIds));
-            } else {
-                spec = spec.and(ProductSpecification.hasCategoryId(categoryId));
+        if (categoryIdsInput != null && !categoryIdsInput.isEmpty()) {
+            List<UUID> allCategoryIds = new ArrayList<>();
+            for (UUID cid : categoryIdsInput) {
+                categoryRepository.findById(cid).ifPresent(cat -> {
+                    collectCategoryIds(cat, allCategoryIds);
+                });
+            }
+            if (!allCategoryIds.isEmpty()) {
+                spec = spec.and(ProductSpecification.hasCategoryIdIn(allCategoryIds));
             }
         }
-        if (brandId != null) {
-            spec = spec.and(ProductSpecification.hasBrandId(brandId));
+        if (brandIds != null && !brandIds.isEmpty()) {
+            spec = spec.and(ProductSpecification.hasBrandIdIn(brandIds));
         }
         if (vehicleId != null) {
             List<String> vehicleCapacities = new ArrayList<>();
@@ -275,6 +276,12 @@ public class ProductService {
         }
         if (maxPrice != null) {
             spec = spec.and(ProductSpecification.hasPriceLessThanOrEqual(maxPrice));
+        }
+        if (capacities != null && !capacities.isEmpty()) {
+            spec = spec.and(ProductSpecification.hasCapacityIn(capacities));
+        }
+        if (warranties != null && !warranties.isEmpty()) {
+            spec = spec.and(ProductSpecification.hasWarrantyIn(warranties));
         }
         if (specKey != null && specValue != null) {
             spec = spec.and(ProductSpecification.hasSpec(specKey, specValue));

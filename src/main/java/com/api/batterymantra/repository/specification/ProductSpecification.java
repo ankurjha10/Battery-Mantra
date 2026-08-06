@@ -24,13 +24,21 @@ public class ProductSpecification {
                 root.get("productCategory").get("categoryId").in(categoryIds);
     }
 
-    public static Specification<Product> hasBrandId(UUID brandId) {
+    public static Specification<Product> hasBrandIdIn(List<UUID> brandIds) {
         return (root, query, cb) ->
-                cb.equal(root.get("brand").get("brandId"), brandId);
+                root.get("brand").get("brandId").in(brandIds);
     }
 
     public static Specification<Product> hasCapacityIn(List<String> capacities) {
         return (root, query, cb) -> root.get("capacity").in(capacities);
+    }
+
+    public static Specification<Product> hasWarrantyIn(List<String> warranties) {
+        return (root, query, cb) -> {
+            var specUnitsJoin = root.join("specUnits");
+            return specUnitsJoin.get("unitValue").in(warranties);
+            // Assuming unitValue contains the "60 Months" string.
+        };
     }
 
     public static Specification<Product> hasPriceGreaterThanOrEqual(BigDecimal minPrice) {
