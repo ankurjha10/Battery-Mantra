@@ -31,8 +31,15 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDataIntegrityViolationException(
             DataIntegrityViolationException ex,
             WebRequest request) {
+        
+        String message = "Cannot perform operation: This record is referenced by other data or violates a unique constraint.";
+        
+        if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("duplicate")) {
+            message = "This record already exists. Please use a unique value (e.g. unique coupon code).";
+        }
+        
         ErrorResponse error = new ErrorResponse(
-                "Cannot perform operation: This record is referenced by other data.",
+                message,
                 HttpStatus.CONFLICT.value(),
                 LocalDateTime.now(),
                 request.getDescription(false).replace("uri=", "")

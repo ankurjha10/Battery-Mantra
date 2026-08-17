@@ -44,6 +44,23 @@ public class SpecService {
     }
 
     @Transactional
+    public SpecCategoryResponse updateSpecCategory(UUID id, SpecCategoryRequest request) {
+        SpecCategory specCategory = specCategoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Spec Category not found with id: " + id));
+
+        specCategory.setName(request.getName());
+        
+        if (!specCategory.getCategory().getCategoryId().equals(request.getCategoryId())) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            specCategory.setCategory(category);
+        }
+
+        SpecCategory saved = specCategoryRepository.save(specCategory);
+        return mapToSpecCategoryResponse(saved);
+    }
+
+    @Transactional
     public void deleteSpecCategory(UUID id) {
         if (!specCategoryRepository.existsById(id)) {
             throw new RuntimeException("Spec Category not found with id: " + id);
@@ -82,6 +99,29 @@ public class SpecService {
                 .specCategory(specCategory)
                 .category(category)
                 .build();
+
+        SpecAttribute saved = specAttributeRepository.save(specAttribute);
+        return mapToSpecAttributeResponse(saved);
+    }
+
+    @Transactional
+    public SpecAttributeResponse updateSpecAttribute(UUID id, SpecAttributeRequest request) {
+        SpecAttribute specAttribute = specAttributeRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Spec Attribute not found with id: " + id));
+
+        specAttribute.setName(request.getName());
+
+        if (!specAttribute.getSpecCategory().getId().equals(request.getSpecCategoryId())) {
+            SpecCategory specCategory = specCategoryRepository.findById(request.getSpecCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Spec Category not found with id: " + request.getSpecCategoryId()));
+            specAttribute.setSpecCategory(specCategory);
+        }
+
+        if (!specAttribute.getCategory().getCategoryId().equals(request.getCategoryId())) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            specAttribute.setCategory(category);
+        }
 
         SpecAttribute saved = specAttributeRepository.save(specAttribute);
         return mapToSpecAttributeResponse(saved);
@@ -132,6 +172,35 @@ public class SpecService {
                 .specCategory(specCategory)
                 .category(category)
                 .build();
+
+        SpecUnit saved = specUnitRepository.save(specUnit);
+        return mapToSpecUnitResponse(saved);
+    }
+
+    @Transactional
+    public SpecUnitResponse updateSpecUnit(UUID id, SpecUnitRequest request) {
+        SpecUnit specUnit = specUnitRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Spec Unit not found with id: " + id));
+
+        specUnit.setValue(request.getValue());
+
+        if (!specUnit.getSpecAttribute().getId().equals(request.getSpecAttributeId())) {
+            SpecAttribute specAttribute = specAttributeRepository.findById(request.getSpecAttributeId())
+                    .orElseThrow(() -> new RuntimeException("Spec Attribute not found with id: " + request.getSpecAttributeId()));
+            specUnit.setSpecAttribute(specAttribute);
+        }
+
+        if (!specUnit.getSpecCategory().getId().equals(request.getSpecCategoryId())) {
+            SpecCategory specCategory = specCategoryRepository.findById(request.getSpecCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Spec Category not found with id: " + request.getSpecCategoryId()));
+            specUnit.setSpecCategory(specCategory);
+        }
+
+        if (!specUnit.getCategory().getCategoryId().equals(request.getCategoryId())) {
+            Category category = categoryRepository.findById(request.getCategoryId())
+                    .orElseThrow(() -> new RuntimeException("Category not found with id: " + request.getCategoryId()));
+            specUnit.setCategory(category);
+        }
 
         SpecUnit saved = specUnitRepository.save(specUnit);
         return mapToSpecUnitResponse(saved);

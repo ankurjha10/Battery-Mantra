@@ -30,6 +30,11 @@ public class AdminSpecController {
         return ResponseEntity.status(HttpStatus.CREATED).body(specService.createSpecCategory(request));
     }
 
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<SpecCategoryResponse> updateSpecCategory(@PathVariable UUID id, @RequestBody @Valid SpecCategoryRequest request) {
+        return ResponseEntity.ok(specService.updateSpecCategory(id, request));
+    }
+
     @DeleteMapping("/categories/{id}")
     public ResponseEntity<Void> deleteSpecCategory(@PathVariable UUID id) {
         specService.deleteSpecCategory(id);
@@ -48,6 +53,11 @@ public class AdminSpecController {
         return ResponseEntity.status(HttpStatus.CREATED).body(specService.createSpecAttribute(request));
     }
 
+    @PutMapping("/attributes/{id}")
+    public ResponseEntity<SpecAttributeResponse> updateSpecAttribute(@PathVariable UUID id, @RequestBody @Valid SpecAttributeRequest request) {
+        return ResponseEntity.ok(specService.updateSpecAttribute(id, request));
+    }
+
     @DeleteMapping("/attributes/{id}")
     public ResponseEntity<Void> deleteSpecAttribute(@PathVariable UUID id) {
         specService.deleteSpecAttribute(id);
@@ -64,6 +74,11 @@ public class AdminSpecController {
     @PostMapping("/units")
     public ResponseEntity<SpecUnitResponse> createSpecUnit(@RequestBody @Valid SpecUnitRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(specService.createSpecUnit(request));
+    }
+
+    @PutMapping("/units/{id}")
+    public ResponseEntity<SpecUnitResponse> updateSpecUnit(@PathVariable UUID id, @RequestBody @Valid SpecUnitRequest request) {
+        return ResponseEntity.ok(specService.updateSpecUnit(id, request));
     }
 
     @DeleteMapping("/units/{id}")
