@@ -17,8 +17,8 @@ public class BrandController {
     private final BrandService brandService;
 
     @GetMapping
-    public ResponseEntity<List<BrandResponse>> getAllBrands() {
-        return ResponseEntity.ok(brandService.getAllBrands());
+    public ResponseEntity<List<BrandResponse>> getAllBrands(@RequestParam(required = false) UUID categoryId) {
+        return ResponseEntity.ok(brandService.getAllBrands(categoryId));
     }
 
     @GetMapping("/{id}")

@@ -34,9 +34,15 @@ public class BrandService {
                 .build();
     }
 
-    @Cacheable(value = "brands")
-    public List<BrandResponse> getAllBrands() {
-        return brandRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "brandName")).stream().map(this::toBrandResponse).toList();
+    @Cacheable(value = "brands", key = "#categoryId != null ? #categoryId : 'all'")
+    public List<BrandResponse> getAllBrands(UUID categoryId) {
+        List<Brand> brands;
+        if (categoryId != null) {
+            brands = brandRepository.findBrandsByCategoryId(categoryId);
+        } else {
+            brands = brandRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "brandName"));
+        }
+        return brands.stream().map(this::toBrandResponse).toList();
     }
 
     @Cacheable(value = "brands", key = "#brandId")

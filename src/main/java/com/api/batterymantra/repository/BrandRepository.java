@@ -10,4 +10,7 @@ import java.util.UUID;
 @Repository
 public interface BrandRepository extends JpaRepository<Brand, UUID> {
     List<Brand> findByFeaturedTrue();
+
+    @org.springframework.data.jpa.repository.Query("SELECT DISTINCT b FROM Brand b JOIN Product p ON p.brand = b WHERE p.category.categoryId = :categoryId AND p.isApproved = true ORDER BY b.brandName ASC")
+    List<Brand> findBrandsByCategoryId(@org.springframework.data.repository.query.Param("categoryId") UUID categoryId);
 }
