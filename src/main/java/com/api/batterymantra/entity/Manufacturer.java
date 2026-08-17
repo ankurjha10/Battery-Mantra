@@ -38,4 +38,7 @@ public class Manufacturer {
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
+
+    @org.hibernate.annotations.Formula("(select cast(count(*) as int) from vehicle v where v.manufacturer_id = id)")
+    private Integer vehicleCount;
 }

@@ -13,6 +13,7 @@ public class ManufacturerResponse {
     private Integer displayOrder;
     private String description;
     private List<CategoryInfo> categories;
+    private Integer vehicleCount;
 
     @Data
     public static class CategoryInfo {

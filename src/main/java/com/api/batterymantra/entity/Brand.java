@@ -34,4 +34,7 @@ public class Brand {
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
+
+    @org.hibernate.annotations.Formula("(select cast(count(*) as int) from products p where p.brand_id = brand_id and p.is_approved = true)")
+    private Integer productCount;
 }

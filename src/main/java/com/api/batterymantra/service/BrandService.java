@@ -30,6 +30,7 @@ public class BrandService {
                 .brandLogo(brand.getBrandLogo())
                 .featured(brand.isFeatured())
                 .description(brand.getDescription())
+                .productCount(brand.getProductCount() != null ? brand.getProductCount() : 0)
                 .build();
     }
 
