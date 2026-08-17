@@ -142,8 +142,19 @@ public class CouponService {
         entity.setDiscountValue(request.getDiscountValue());
         entity.setMaxDiscountAmount(request.getMaxDiscountAmount());
         entity.setMinOrderValue(request.getMinOrderValue() != null ? request.getMinOrderValue() : 0.0);
-        entity.setStartDate(request.getStartDate());
-        entity.setExpiryDate(request.getExpiryDate());
+        
+        if (request.getStartDate() != null) {
+            entity.setStartDate(request.getStartDate());
+        } else {
+            entity.setStartDate(LocalDateTime.of(2000, 1, 1, 0, 0));
+        }
+
+        if (request.getExpiryDate() != null) {
+            entity.setExpiryDate(request.getExpiryDate());
+        } else {
+            entity.setExpiryDate(LocalDateTime.of(2099, 12, 31, 23, 59, 59));
+        }
+
         entity.setUsageLimit(request.getUsageLimit());
         if (request.getIsActive() != null) {
             entity.setIsActive(request.getIsActive());
