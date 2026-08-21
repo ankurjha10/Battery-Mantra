@@ -22,43 +22,38 @@ public class NotificationService {
     private final NotificationRepository notificationRepository;
 
     public void sendPushNotification(UUID userId, String title, String message, Map<String, String> dataPayload) {
-        User user = userRepository.findById(userId).orElse(null);
-        if (user == null) {
-            log.warn("User with ID {} not found. Cannot send notification.", userId);
-            return;
-        }
+        try {
+            User user = userRepository.findById(userId).orElse(null);
+            if (user == null) {
+                log.warn("User with ID {} not found. Cannot send notification.", userId);
+                return;
+            }
 
-        // Save Notification to Database
-        Notification notification = Notification.builder()
-                .user(user)
-                .title(title)
-                .message(message)
-                .build();
-        notificationRepository.save(notification);
+            Notification notification = Notification.builder()
+                    .user(user)
+                    .title(title)
+                    .message(message)
+                    .build();
+            notificationRepository.save(notification);
 
-        // Send Push Notification if FCM token exists
-        String fcmToken = user.getFcmToken();
-        if (fcmToken != null && !fcmToken.trim().isEmpty()) {
-            try {
+            String fcmToken = user.getFcmToken();
+            if (fcmToken != null && !fcmToken.trim().isEmpty()) {
                 Message.Builder messageBuilder = Message.builder()
                         .setToken(fcmToken)
                         .setNotification(com.google.firebase.messaging.Notification.builder()
                                 .setTitle(title)
                                 .setBody(message)
                                 .build());
-
                 if (dataPayload != null) {
                     messageBuilder.putAllData(dataPayload);
                 }
-
-                Message fcmMessage = messageBuilder.build();
-                String response = FirebaseMessaging.getInstance().send(fcmMessage);
+                String response = FirebaseMessaging.getInstance().send(messageBuilder.build());
                 log.info("Successfully sent message to user {}: {}", userId, response);
-            } catch (Exception e) {
-                log.error("Failed to send Firebase push notification to user {}", userId, e);
+            } else {
+                log.info("User {} has no FCM token registered.", userId);
             }
-        } else {
-            log.info("User {} has no FCM token registered.", userId);
+        } catch (Exception e) {
+            log.error("sendPushNotification totally fail for user {} — swallow, don't break caller tx", userId, e);
         }
     }
 }
