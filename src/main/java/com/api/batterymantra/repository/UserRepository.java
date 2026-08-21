@@ -8,9 +8,12 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import com.api.batterymantra.entity.enums.UserRole;
+
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
     List<User> findAllByUsername(String username);
+    List<User> findAllByRole(UserRole role);
     List<User> findAllByEmail(String email);
     List<User> findAllByPhoneNumber(String phoneNumber);
 

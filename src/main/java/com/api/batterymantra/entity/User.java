@@ -46,6 +46,8 @@ public class User {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    private String fcmToken;
+
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }

@@ -39,4 +39,12 @@ public class UserController {
         userService.updatePassword(userPrincipal.getUser().getUserId(), request);
         return ResponseEntity.ok("Password updated successfully");
     }
+
+    @PostMapping("/fcm-token")
+    public ResponseEntity<String> updateFcmToken(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @Valid @RequestBody com.api.batterymantra.dto.user.FcmTokenRequest request) {
+        userService.updateFcmToken(userPrincipal.getUser().getUserId(), request.getFcmToken());
+        return ResponseEntity.ok("FCM Token updated successfully");
+    }
 }

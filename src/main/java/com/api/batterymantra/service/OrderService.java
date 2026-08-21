@@ -50,6 +50,7 @@ public class OrderService {
     private final OrderMapper orderMapper;
     private final SmsService smsService;
     private final CouponService couponService;
+    private final NotificationService notificationService;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -208,6 +209,12 @@ public class OrderService {
             if (customerPhone != null && !customerPhone.isBlank()) {
                 smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(placedOrder.getTotalAmount()), placedOrder.getPlacedAt() != null ? placedOrder.getPlacedAt().toString() : "", "Your Product", "Online");
             }
+            
+            // Notify Admins about new order
+            List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendPushNotification(admin.getUserId(), "New Order Placed", "Order #" + orderIdStr + " has been placed.", null);
+            }
             // admin alert handled inside sendOrderPlacedSms
         }
 
@@ -328,6 +335,12 @@ public class OrderService {
 
         if (customerPhone != null && !customerPhone.isBlank()) {
             smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(placedOrder.getTotalAmount()), placedOrder.getPlacedAt() != null ? placedOrder.getPlacedAt().toString() : "", "Your Product", "Online");
+        }
+        
+        // Notify Admins about new order
+        List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+        for (User admin : admins) {
+            notificationService.sendPushNotification(admin.getUserId(), "New Admin Order Created", "Admin Order #" + orderIdStr + " has been created.", null);
         }
         // admin alert handled inside sendOrderPlacedSms
 
@@ -579,7 +592,11 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
 
         order.setAssignedPartner(partner);
-        return orderMapper.toOrderResponse(orderRepository.save(order));
+        Orders savedOrder = orderRepository.save(order);
+        
+        notificationService.sendPushNotification(partner.getUser().getUserId(), "New Order Assigned", "Order #" + order.getOrderId() + " has been assigned to you.", null);
+        
+        return orderMapper.toOrderResponse(savedOrder);
     }
 
     @Transactional
@@ -601,7 +618,11 @@ public class OrderService {
         }
 
         order.setAssignedEngineer(engineer);
-        return orderMapper.toOrderResponse(orderRepository.save(order));
+        Orders savedOrder = orderRepository.save(order);
+        
+        notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
+        
+        return orderMapper.toOrderResponse(savedOrder);
     }
 
     @Transactional
@@ -623,7 +644,11 @@ public class OrderService {
         }
 
         order.setAssignedEngineer(engineer);
-        return orderMapper.toOrderResponse(orderRepository.save(order));
+        Orders savedOrder = orderRepository.save(order);
+        
+        notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
+
+        return orderMapper.toOrderResponse(savedOrder);
     }
 
     // ===== ENGINEER Methods =====
