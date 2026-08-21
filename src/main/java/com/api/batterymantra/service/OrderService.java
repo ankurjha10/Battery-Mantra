@@ -213,7 +213,8 @@ public class OrderService {
             // Notify Admins about new order
             List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
             for (User admin : admins) {
-                notificationService.sendPushNotification(admin.getUserId(), "New Order Placed", "Order #" + orderIdStr + " has been placed.", null);
+                String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+                notificationService.sendPushNotification(admin.getUserId(), "New Order Received", "Order #" + shortId + "... has been placed.", null);
             }
             // admin alert handled inside sendOrderPlacedSms
         }
@@ -340,7 +341,8 @@ public class OrderService {
         // Notify Admins about new order
         List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
         for (User admin : admins) {
-            notificationService.sendPushNotification(admin.getUserId(), "New Admin Order Created", "Admin Order #" + orderIdStr + " has been created.", null);
+            String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+            notificationService.sendPushNotification(admin.getUserId(), "New Order Received", "Order #" + shortId + "... has been created.", null);
         }
         // admin alert handled inside sendOrderPlacedSms
 
