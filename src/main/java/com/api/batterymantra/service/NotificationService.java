@@ -40,10 +40,9 @@ public class NotificationService {
             if (fcmToken != null && !fcmToken.trim().isEmpty()) {
                 Message.Builder messageBuilder = Message.builder()
                         .setToken(fcmToken)
-                        .setNotification(com.google.firebase.messaging.Notification.builder()
-                                .setTitle(title)
-                                .setBody(message)
-                                .build());
+                        .putData("title", title)
+                        .putData("body", message)
+                        .putData("type", "custom_ui");
                 if (dataPayload != null) {
                     messageBuilder.putAllData(dataPayload);
                 }
