@@ -16,7 +16,9 @@ public class OrderMapper {
     public OrderResponse toOrderResponse(Orders order) {
         OrderResponse response = new OrderResponse();
         response.setOrderId(order.getOrderId());
-        response.setOrderStatus(order.getOrderStatus().name());
+        if (order.getOrderStatus() != null) {
+            response.setOrderStatus(order.getOrderStatus().name());
+        }
         response.setTotalAmount(order.getTotalAmount());
         response.setPlacedAt(order.getPlacedAt());
         if (order.getShippingAddress() != null) {
@@ -64,12 +66,18 @@ public class OrderMapper {
         }
         response.setOrderItems(order.getOrderItems().stream().map(item -> {
             OrderItemResponse itemResponse = new OrderItemResponse();
-            itemResponse.setProductId(item.getProduct().getProductId());
-            itemResponse.setProductName(item.getProduct().getProductName());
+            if (item.getProduct() != null) {
+                itemResponse.setProductId(item.getProduct().getProductId());
+                itemResponse.setProductName(item.getProduct().getProductName());
+                itemResponse.setProductImage(item.getProduct().getProductImage());
+            }
             itemResponse.setQuantity(item.getQuantity());
-            itemResponse.setProductImage(item.getProduct().getProductImage());
             itemResponse.setPriceAtPurchase(item.getPriceAtPurchase());
-            itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
+            if (item.getPriceAtPurchase() != null) {
+                itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
+            } else {
+                itemResponse.setSubtotal(BigDecimal.ZERO);
+            }
             return itemResponse;
         }).toList());
 
@@ -78,7 +86,7 @@ public class OrderMapper {
                     .id(order.getAssignedPartner().getId())
                     .businessName(order.getAssignedPartner().getBusinessName())
                     .contactPerson(order.getAssignedPartner().getContactPerson())
-                    .phoneNumber(order.getAssignedPartner().getUser().getPhoneNumber())
+                    .phoneNumber(order.getAssignedPartner().getUser() != null ? order.getAssignedPartner().getUser().getPhoneNumber() : null)
                     .build();
             response.setAssignedPartner(p);
         }
@@ -88,7 +96,7 @@ public class OrderMapper {
                     .id(order.getAssignedEngineer().getId())
                     .firstName(order.getAssignedEngineer().getFirstName())
                     .lastName(order.getAssignedEngineer().getLastName())
-                    .phoneNumber(order.getAssignedEngineer().getUser().getPhoneNumber())
+                    .phoneNumber(order.getAssignedEngineer().getUser() != null ? order.getAssignedEngineer().getUser().getPhoneNumber() : null)
                     .dutyStatus(order.getAssignedEngineer().getDutyStatus() != null
                             ? order.getAssignedEngineer().getDutyStatus().name() : null)
                     .build();

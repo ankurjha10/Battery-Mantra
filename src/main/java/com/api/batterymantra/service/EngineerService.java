@@ -75,12 +75,14 @@ public class EngineerService {
         return createEngineer(request);
     }
 
+    @Transactional(readOnly = true)
     public List<EngineerResponse> getAllEngineers() {
         return engineerProfileRepository.findAll().stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
 
+    @Transactional(readOnly = true)
     public List<EngineerResponse> getEngineersByPartnerId(UUID partnerId) {
         return engineerProfileRepository.findByPartnerProfileId(partnerId).stream()
                 .map(this::mapToResponse)
