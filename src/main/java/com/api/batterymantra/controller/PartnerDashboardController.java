@@ -114,8 +114,22 @@ public class PartnerDashboardController {
     public ResponseEntity<Void> deleteEngineer(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        // Verify engineer belongs to this partner before deleting
+        EngineerResponse engineer = engineerService.getEngineerById(id);
+        if (engineer.getPartnerId() == null || !engineer.getPartnerId().equals(partnerProfile.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only delete your own engineers");
+        }
         engineerService.deleteEngineer(id);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/engineers/available")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<List<EngineerResponse>> getAvailableEngineers(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(engineerService.getAvailableEngineersByPartner(partnerProfile.getId()));
     }
 
     // ===== Partner Product Request & City Pricing =====

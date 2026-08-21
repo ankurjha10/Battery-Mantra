@@ -102,6 +102,12 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
 
+                        // Engineer App APIs
+                        .requestMatchers("/api/engineer/**").hasRole("ENGINEER")
+
+                        // Partner Dashboard APIs
+                        .requestMatchers("/api/partner/**").hasRole("PARTNER")
+
                         // Admin APIs
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 

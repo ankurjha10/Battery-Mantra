@@ -2,7 +2,6 @@ package com.api.batterymantra.service;
 
 import com.api.batterymantra.dto.admin.UserResponse;
 import com.api.batterymantra.entity.User;
-import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -68,6 +67,8 @@ public class AdminService {
                 .userId(user.getUserId())
                 .name(user.getUsername())
                 .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .isActive(user.isActive())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
                 .build();

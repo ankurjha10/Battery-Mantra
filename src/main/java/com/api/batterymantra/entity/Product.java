@@ -4,9 +4,7 @@ import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.Type;
 import org.hibernate.annotations.UuidGenerator;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -41,11 +39,7 @@ public class Product {
     private Brand brand;
 
     @ManyToMany(fetch = FetchType.LAZY)
-    @JoinTable(
-        name = "product_spec_units",
-        joinColumns = @JoinColumn(name = "product_id"),
-        inverseJoinColumns = @JoinColumn(name = "spec_unit_id")
-    )
+    @JoinTable(name = "product_spec_units", joinColumns = @JoinColumn(name = "product_id"), inverseJoinColumns = @JoinColumn(name = "spec_unit_id"))
     private Set<SpecUnit> specUnits = new HashSet<>();
 
     @ElementCollection

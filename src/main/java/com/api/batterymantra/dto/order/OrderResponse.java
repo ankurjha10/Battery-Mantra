@@ -35,4 +35,12 @@ public class OrderResponse {
     private PartnerResponse assignedPartner;
     private EngineerResponse assignedEngineer;
     private String deliverySecurityCode;
+    private LocalDateTime completedAt;
+    private String engineerNotes;
+    private String installedBatterySerialNumber;
+    private boolean oldBatteryCollected;
+    private String oldBatteryDetails;
+    private String cancellationReason;
+    private String couponCode;
+    private BigDecimal discountAmount;
 }

@@ -91,4 +91,23 @@ public class Orders {
     @Column(name = "discount_amount")
     private BigDecimal discountAmount;
 
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
+    @Column(name = "engineer_notes", columnDefinition = "TEXT")
+    private String engineerNotes;
+
+    @Column(name = "installed_battery_serial_number")
+    private String installedBatterySerialNumber;
+
+    @Column(name = "old_battery_collected", nullable = false)
+    @Builder.Default
+    private boolean oldBatteryCollected = false;
+
+    @Column(name = "old_battery_details")
+    private String oldBatteryDetails;
+
+    @Column(name = "cancellation_reason")
+    private String cancellationReason;
+
 }

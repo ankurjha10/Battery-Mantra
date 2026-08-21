@@ -5,15 +5,18 @@ import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.EngineerProfile;
 import com.api.batterymantra.entity.PartnerProfile;
 import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.enums.DutyStatus;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.exception.ResourceNotFoundException;
 import com.api.batterymantra.repository.EngineerProfileRepository;
 import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -135,6 +138,40 @@ public class EngineerService {
         engineerProfileRepository.save(profile);
     }
 
+    // ===== New methods for Engineer App =====
+
+    public EngineerResponse getEngineerProfileByUserId(UUID userId) {
+        EngineerProfile profile = engineerProfileRepository.findByUserUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Engineer profile not found"));
+        return mapToResponse(profile);
+    }
+
+    @Transactional
+    public EngineerResponse updateDutyStatus(UUID userId, DutyStatus status) {
+        if (status == DutyStatus.ON_JOB) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "ON_JOB status is managed by the system");
+        }
+        EngineerProfile profile = engineerProfileRepository.findByUserUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Engineer profile not found"));
+        profile.setDutyStatus(status);
+        return mapToResponse(engineerProfileRepository.save(profile));
+    }
+
+    public List<EngineerResponse> getAvailableEngineersByPartner(UUID partnerId) {
+        return engineerProfileRepository
+                .findByPartnerProfile_IdAndDutyStatusAndIsActiveTrue(partnerId, DutyStatus.ON_DUTY)
+                .stream().map(this::mapToResponse).toList();
+    }
+
+    @Transactional
+    public void updateFcmToken(UUID userId, String fcmToken) {
+        EngineerProfile profile = engineerProfileRepository.findByUserUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Engineer profile not found"));
+        profile.setFcmToken(fcmToken);
+        engineerProfileRepository.save(profile);
+    }
+
     private EngineerResponse mapToResponse(EngineerProfile profile) {
         return EngineerResponse.builder()
                 .id(profile.getId())
@@ -149,6 +186,7 @@ public class EngineerService {
                 .isActive(profile.isActive())
                 .partnerId(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getId() : null)
                 .partnerBusinessName(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getBusinessName() : null)
+                .dutyStatus(profile.getDutyStatus() != null ? profile.getDutyStatus().name() : null)
                 .createdAt(profile.getCreatedAt())
                 .build();
     }

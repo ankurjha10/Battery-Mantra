@@ -2,7 +2,6 @@ package com.api.batterymantra.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.databind.jsontype.impl.LaissezFaireSubTypeValidator;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import lombok.extern.slf4j.Slf4j;
@@ -33,8 +32,7 @@ public class RedisConfig implements CachingConfigurer {
         objectMapper.activateDefaultTyping(
                 LaissezFaireSubTypeValidator.instance,
                 ObjectMapper.DefaultTyping.EVERYTHING,
-                JsonTypeInfo.As.PROPERTY
-        );
+                JsonTypeInfo.As.PROPERTY);
 
         GenericJackson2JsonRedisSerializer serializer = new GenericJackson2JsonRedisSerializer(objectMapper);
 
@@ -65,12 +63,14 @@ public class RedisConfig implements CachingConfigurer {
 
             @Override
             public void handleCachePutError(RuntimeException exception, Cache cache, Object key, Object value) {
-                log.error("Redis cache PUT error for key '{}' in cache '{}': {}", key, cache.getName(), exception.getMessage());
+                log.error("Redis cache PUT error for key '{}' in cache '{}': {}", key, cache.getName(),
+                        exception.getMessage());
             }
 
             @Override
             public void handleCacheEvictError(RuntimeException exception, Cache cache, Object key) {
-                log.error("Redis cache EVICT error for key '{}' in cache '{}': {}", key, cache.getName(), exception.getMessage());
+                log.error("Redis cache EVICT error for key '{}' in cache '{}': {}", key, cache.getName(),
+                        exception.getMessage());
             }
 
             @Override

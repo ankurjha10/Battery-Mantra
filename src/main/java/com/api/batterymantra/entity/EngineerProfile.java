@@ -1,5 +1,6 @@
 package com.api.batterymantra.entity;
 
+import com.api.batterymantra.entity.enums.DutyStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
@@ -40,6 +41,14 @@ public class EngineerProfile {
     private String address;
 
     private String city;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "duty_status", nullable = false)
+    @Builder.Default
+    private DutyStatus dutyStatus = DutyStatus.OFF_DUTY;
+
+    @Column(name = "fcm_token")
+    private String fcmToken;
 
     @Builder.Default
     private boolean isActive = true;

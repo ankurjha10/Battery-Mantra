@@ -23,5 +23,6 @@ public class EngineerResponse {
     private boolean isActive;
     private UUID partnerId;
     private String partnerBusinessName;
+    private String dutyStatus;
     private LocalDateTime createdAt;
 }

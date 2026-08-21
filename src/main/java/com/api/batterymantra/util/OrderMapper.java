@@ -41,6 +41,16 @@ public class OrderMapper {
         response.setExchangeDiscount(order.getExchangeDiscount());
         response.setDeliverySecurityCode(order.getDeliverySecurityCode());
 
+        // Completion fields
+        response.setCompletedAt(order.getCompletedAt());
+        response.setEngineerNotes(order.getEngineerNotes());
+        response.setInstalledBatterySerialNumber(order.getInstalledBatterySerialNumber());
+        response.setOldBatteryCollected(order.isOldBatteryCollected());
+        response.setOldBatteryDetails(order.getOldBatteryDetails());
+        response.setCancellationReason(order.getCancellationReason());
+        response.setCouponCode(order.getCouponCode());
+        response.setDiscountAmount(order.getDiscountAmount());
+
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());
             response.setCustomerPhone(order.getShippingAddress().getPhoneNumber());
@@ -62,10 +72,13 @@ public class OrderMapper {
             itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
             return itemResponse;
         }).toList());
+
         if (order.getAssignedPartner() != null) {
             PartnerResponse p = PartnerResponse.builder()
                     .id(order.getAssignedPartner().getId())
                     .businessName(order.getAssignedPartner().getBusinessName())
+                    .contactPerson(order.getAssignedPartner().getContactPerson())
+                    .phoneNumber(order.getAssignedPartner().getUser().getPhoneNumber())
                     .build();
             response.setAssignedPartner(p);
         }
@@ -75,6 +88,9 @@ public class OrderMapper {
                     .id(order.getAssignedEngineer().getId())
                     .firstName(order.getAssignedEngineer().getFirstName())
                     .lastName(order.getAssignedEngineer().getLastName())
+                    .phoneNumber(order.getAssignedEngineer().getUser().getPhoneNumber())
+                    .dutyStatus(order.getAssignedEngineer().getDutyStatus() != null
+                            ? order.getAssignedEngineer().getDutyStatus().name() : null)
                     .build();
             response.setAssignedEngineer(e);
         }

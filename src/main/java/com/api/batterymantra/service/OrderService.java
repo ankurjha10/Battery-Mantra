@@ -1,6 +1,9 @@
 package com.api.batterymantra.service;
 
+import com.api.batterymantra.dto.engineer.EngineerCompleteJobRequest;
+import com.api.batterymantra.dto.engineer.EngineerFailJobRequest;
 import com.api.batterymantra.entity.enums.PaymentMethod;
+import com.api.batterymantra.entity.enums.DutyStatus;
 import com.api.batterymantra.repository.EngineerProfileRepository;
 import com.api.batterymantra.entity.enums.DeliveryMethod;
 import com.api.batterymantra.repository.PincodeRepository;
@@ -26,6 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -620,5 +624,189 @@ public class OrderService {
 
         order.setAssignedEngineer(engineer);
         return orderMapper.toOrderResponse(orderRepository.save(order));
+    }
+
+    // ===== ENGINEER Methods =====
+
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getEngineerOrders(UUID engineerUserId, String filter) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        List<OrderStatus> statuses;
+        if ("HISTORY".equalsIgnoreCase(filter)) {
+            statuses = List.of(OrderStatus.DELIVERED, OrderStatus.INSTALLED, OrderStatus.CANCELLED);
+        } else {
+            statuses = List.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING,
+                    OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY);
+        }
+
+        return orderRepository
+                .findByAssignedEngineer_IdAndOrderStatusInOrderByPlacedAtDesc(engineer.getId(), statuses)
+                .stream()
+                .filter(o -> !(o.getPaymentMethod() == PaymentMethod.ONLINE && o.getPaymentStatus() != PaymentStatus.PAID))
+                .map(orderMapper::toOrderResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public OrderResponse getEngineerOrderById(UUID orderId, UUID engineerUserId) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedEngineer() == null || !order.getAssignedEngineer().getId().equals(engineer.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This order is not assigned to you");
+        }
+
+        return orderMapper.toOrderResponse(order);
+    }
+
+    @Transactional
+    public OrderResponse startEngineerJob(UUID orderId, UUID engineerUserId) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedEngineer() == null || !order.getAssignedEngineer().getId().equals(engineer.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This order is not assigned to you");
+        }
+
+        validateStatusTransition(order, OrderStatus.OUT_FOR_DELIVERY);
+
+        // Generate security code if not already set
+        if (order.getDeliverySecurityCode() == null) {
+            order.setDeliverySecurityCode(String.valueOf(1000 + new Random().nextInt(9000)));
+        }
+
+        order.setOrderStatus(OrderStatus.OUT_FOR_DELIVERY);
+        engineer.setDutyStatus(DutyStatus.ON_JOB);
+        engineerProfileRepository.save(engineer);
+        Orders saved = orderRepository.save(order);
+
+        // Send dispatch SMS to customer
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getShippingAddress() != null
+                ? order.getShippingAddress().getFullName() : order.getCustomer().getUsername();
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderDispatchedSms(customerPhone, customerName, "Your Product",
+                    order.getOrderId().toString(),
+                    engineer.getFirstName() + " " + engineer.getLastName(),
+                    engineer.getUser().getPhoneNumber(),
+                    saved.getDeliverySecurityCode());
+        }
+
+        return orderMapper.toOrderResponse(saved);
+    }
+
+    @Transactional
+    public OrderResponse completeEngineerJob(UUID orderId, UUID engineerUserId, EngineerCompleteJobRequest request) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedEngineer() == null || !order.getAssignedEngineer().getId().equals(engineer.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This order is not assigned to you");
+        }
+
+        if (order.getOrderStatus() != OrderStatus.OUT_FOR_DELIVERY
+                && order.getOrderStatus() != OrderStatus.SHIPPED
+                && order.getOrderStatus() != OrderStatus.PROCESSING) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Order must be OUT_FOR_DELIVERY, SHIPPED, or PROCESSING to complete");
+        }
+
+        // Security code verification
+        if (order.getDeliverySecurityCode() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No security code generated for this order");
+        }
+        if (!order.getDeliverySecurityCode().equals(request.getSecurityCode().trim())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid security code. Please ask the customer for the correct 4-digit code.");
+        }
+
+        // Set completion fields
+        order.setOrderStatus(OrderStatus.INSTALLED);
+        order.setCompletedAt(LocalDateTime.now());
+        order.setInstalledBatterySerialNumber(request.getInstalledBatterySerialNumber());
+        order.setOldBatteryCollected(request.isOldBatteryCollected());
+        order.setOldBatteryDetails(request.getOldBatteryDetails());
+        order.setEngineerNotes(request.getEngineerNotes());
+
+        // Mark payment as PAID for COD orders
+        if (order.getPaymentMethod() == PaymentMethod.COD && order.getPaymentStatus() != PaymentStatus.PAID) {
+            order.setPaymentStatus(PaymentStatus.PAID);
+        }
+
+        // Reset engineer duty status to ON_DUTY
+        engineer.setDutyStatus(DutyStatus.ON_DUTY);
+        engineerProfileRepository.save(engineer);
+
+        Orders saved = orderRepository.save(order);
+
+        // Send delivery SMS
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getShippingAddress() != null
+                ? order.getShippingAddress().getFullName() : order.getCustomer().getUsername();
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderDeliveredSms(customerPhone, customerName, "Your Product", order.getOrderId().toString());
+        }
+
+        return orderMapper.toOrderResponse(saved);
+    }
+
+    @Transactional
+    public OrderResponse failEngineerJob(UUID orderId, UUID engineerUserId, EngineerFailJobRequest request) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedEngineer() == null || !order.getAssignedEngineer().getId().equals(engineer.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This order is not assigned to you");
+        }
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED || order.getOrderStatus() == OrderStatus.INSTALLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot fail a completed order");
+        }
+
+        // Build cancellation reason
+        String reason = request.getFailureReason();
+        if (request.getNotes() != null && !request.getNotes().isBlank()) {
+            reason += ": " + request.getNotes();
+        }
+        order.setCancellationReason(reason);
+        order.setOrderStatus(OrderStatus.CANCELLED);
+        order.setCompletedAt(LocalDateTime.now());
+
+        // Restore stock
+        for (OrderItems item : order.getOrderItems()) {
+            Product product = item.getProduct();
+            product.setProductStock(product.getProductStock() + item.getQuantity());
+            productRepository.save(product);
+        }
+
+        // Reset engineer duty status
+        engineer.setDutyStatus(DutyStatus.ON_DUTY);
+        engineerProfileRepository.save(engineer);
+
+        Orders saved = orderRepository.save(order);
+
+        // Send cancellation SMS/WhatsApp
+        String customerPhone = order.getCustomer().getPhoneNumber();
+        String customerName = order.getCustomer().getUsername();
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product",
+                    order.getOrderId().toString(), request.getFailureReason());
+        }
+
+        return orderMapper.toOrderResponse(saved);
     }
 }
