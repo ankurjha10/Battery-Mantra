@@ -41,3 +41,4 @@ deploy_key.pub
 seed_seo_pages.sql
 
 /vehicles-import/
+serviceAccountKey.json

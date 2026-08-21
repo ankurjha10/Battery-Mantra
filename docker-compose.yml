@@ -5,6 +5,8 @@ services:
       - "8090:8080"
     networks:
       - batterymantra-network
+    volumes:
+      - ./serviceAccountKey.json:/app/serviceAccountKey.json
     env_file:
       - .env
     depends_on:
