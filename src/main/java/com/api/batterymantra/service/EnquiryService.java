@@ -5,8 +5,11 @@ import com.api.batterymantra.dto.enquiry.CreateQuotationRequest;
 import com.api.batterymantra.dto.enquiry.EnquiryResponse;
 import com.api.batterymantra.entity.EnquiryRequest;
 import com.api.batterymantra.entity.enums.EnquiryStatus;
+import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.entity.enums.EnquiryType;
 import com.api.batterymantra.repository.EnquiryRequestRepository;
+import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -21,6 +24,8 @@ import java.util.stream.Collectors;
 public class EnquiryService {
 
     private final EnquiryRequestRepository enquiryRequestRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private EnquiryResponse toResponse(EnquiryRequest entity) {
         EnquiryResponse response = new EnquiryResponse();
@@ -58,6 +63,21 @@ public class EnquiryService {
         enquiry.setStatus(EnquiryStatus.PENDING);
 
         EnquiryRequest saved = enquiryRequestRepository.save(enquiry);
+
+        try {
+            List<User> admins = userRepository.findAllByRole(UserRole.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendPushNotification(
+                        admin.getUserId(),
+                        "New Enquiry Received",
+                        "New enquiry from " + request.getName() + " regarding " + request.getProductName() + ".",
+                        null
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification for enquiry: " + e.getMessage());
+        }
+
         return toResponse(saved);
     }
 
@@ -81,6 +101,21 @@ public class EnquiryService {
         enquiry.setStatus(EnquiryStatus.PENDING);
 
         EnquiryRequest saved = enquiryRequestRepository.save(enquiry);
+
+        try {
+            List<User> admins = userRepository.findAllByRole(UserRole.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendPushNotification(
+                        admin.getUserId(),
+                        "New Enquiry Received",
+                        "New enquiry from " + request.getContactPerson() + " regarding " + request.getProductName() + ".",
+                        null
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification for enquiry: " + e.getMessage());
+        }
+
         return toResponse(saved);
     }
 

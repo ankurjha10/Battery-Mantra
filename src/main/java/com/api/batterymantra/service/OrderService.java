@@ -406,6 +406,13 @@ public class OrderService {
             smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
         }
 
+        // Notify Admins about cancelled order
+        List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+        for (User admin : admins) {
+            String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+            notificationService.sendPushNotification(admin.getUserId(), "Order Cancelled", "Order #" + shortId + "... has been cancelled by customer.", null);
+        }
+
         return orderMapper.toOrderResponse(cancelledOrder);
     }
 
@@ -538,6 +545,17 @@ public class OrderService {
         order.setOrderStatus(newStatus);
         Orders updatedOrder = orderRepository.save(order);
 
+        try {
+            List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+            String orderIdStr = updatedOrder.getOrderId().toString();
+            String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+            for (User admin : admins) {
+                notificationService.sendPushNotification(admin.getUserId(), "Order Status Updated", "Order #" + shortId + "... has been updated to " + newStatus + " by Partner.", null);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification to admin: " + e.getMessage());
+        }
+
         // Send SMS
         String customerPhone = order.getCustomer().getPhoneNumber();
         String customerName = order.getCustomer().getUsername();
@@ -580,6 +598,17 @@ public class OrderService {
                 // Reduce the stock
                 product.setProductStock(product.getProductStock() - cartItem.getQuantity());
                 productRepository.save(product);
+                
+                if (product.getProductStock() <= 5) {
+                    try {
+                        List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+                        for (User admin : admins) {
+                            notificationService.sendPushNotification(admin.getUserId(), "Low Stock Alert ⚠️", "Stock for " + product.getProductName() + " is running low. Only " + product.getProductStock() + " left!", null);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("Failed to send push notification to admin: " + e.getMessage());
+                    }
+                }
             }
         }
         return cartItemList;
@@ -776,6 +805,17 @@ public class OrderService {
         engineerProfileRepository.save(engineer);
 
         Orders saved = orderRepository.save(order);
+
+        try {
+            List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
+            String orderIdStr = saved.getOrderId().toString();
+            String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+            for (User admin : admins) {
+                notificationService.sendPushNotification(admin.getUserId(), "Order Completed", "Order #" + shortId + "... has been marked as Installed.", null);
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification to admin: " + e.getMessage());
+        }
 
         // Send delivery SMS
         String customerPhone = order.getCustomer().getPhoneNumber();

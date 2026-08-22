@@ -3,8 +3,11 @@ package com.api.batterymantra.service;
 import com.api.batterymantra.dto.callback.CallbackResponse;
 import com.api.batterymantra.dto.callback.CreateCallbackRequest;
 import com.api.batterymantra.entity.CallbackRequest;
+import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.entity.enums.CallbackStatus;
 import com.api.batterymantra.repository.CallbackRequestRepository;
+import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -19,6 +22,8 @@ import java.util.stream.Collectors;
 public class CallbackRequestService {
 
     private final CallbackRequestRepository callbackRequestRepository;
+    private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
     private CallbackResponse toResponse(CallbackRequest request) {
         CallbackResponse response = new CallbackResponse();
@@ -40,6 +45,21 @@ public class CallbackRequestService {
         callback.setStatus(CallbackStatus.PENDING);
         
         CallbackRequest saved = callbackRequestRepository.save(callback);
+
+        try {
+            List<User> admins = userRepository.findAllByRole(UserRole.ADMIN);
+            for (User admin : admins) {
+                notificationService.sendPushNotification(
+                        admin.getUserId(),
+                        "New Callback Request",
+                        "A new callback request has been received from " + request.getMobileNumber() + ".",
+                        null
+                );
+            }
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification for callback: " + e.getMessage());
+        }
+
         return toResponse(saved);
     }
 
