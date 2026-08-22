@@ -40,8 +40,8 @@ public class NotificationController {
 
     @DeleteMapping
     public ResponseEntity<Void> clearNotifications(
-            @org.springframework.security.core.annotation.AuthenticationPrincipal com.api.batterymantra.security.UserPrincipal userPrincipal) {
-        notificationRepository.deleteAllByUserUserId(userPrincipal.getId());
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        notificationRepository.deleteAllByUserUserId(userPrincipal.getUser().getUserId());
         return ResponseEntity.ok().build();
     }
 }
