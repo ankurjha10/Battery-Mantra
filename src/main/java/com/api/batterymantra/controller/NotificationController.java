@@ -44,4 +44,10 @@ public class NotificationController {
         notificationRepository.deleteAllByUserUserId(userPrincipal.getUser().getUserId());
         return ResponseEntity.ok().build();
     }
+
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteNotification(@org.springframework.web.bind.annotation.PathVariable java.util.UUID id) {
+        notificationRepository.deleteById(id);
+        return ResponseEntity.ok().build();
+    }
 }
