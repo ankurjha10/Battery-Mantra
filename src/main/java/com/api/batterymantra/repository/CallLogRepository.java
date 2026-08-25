@@ -6,6 +6,6 @@ import java.util.List;
 import java.util.UUID;
 
 public interface CallLogRepository extends JpaRepository<CallLog, UUID> {
-    List<CallLog> findByOrderId(UUID orderId);
+    List<CallLog> findByOrderOrderId(UUID orderId);
     List<CallLog> findByEngineerId(UUID engineerId);
 }
