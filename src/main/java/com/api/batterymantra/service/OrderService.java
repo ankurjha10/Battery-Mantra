@@ -811,7 +811,7 @@ public class OrderService {
         // Deduct from Van Inventory (Warning if missing)
         for (OrderItems item : order.getOrderItems()) {
             java.util.Optional<EngineerInventory> optInv = engineerInventoryRepository
-                    .findByEngineerIdAndProductId(engineer.getId(), item.getProduct().getProductId());
+                    .findByEngineerIdAndProductProductId(engineer.getId(), item.getProduct().getProductId());
             if (optInv.isPresent() && optInv.get().getQuantity() >= item.getQuantity()) {
                 EngineerInventory inv = optInv.get();
                 inv.setQuantity(inv.getQuantity() - item.getQuantity());

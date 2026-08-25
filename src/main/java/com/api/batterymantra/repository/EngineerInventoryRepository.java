@@ -7,6 +7,6 @@ import java.util.UUID;
 import java.util.List;
 
 public interface EngineerInventoryRepository extends JpaRepository<EngineerInventory, UUID> {
-    Optional<EngineerInventory> findByEngineerIdAndProductId(UUID engineerId, UUID productId);
+    Optional<EngineerInventory> findByEngineerIdAndProductProductId(UUID engineerId, UUID productId);
     List<EngineerInventory> findByEngineerId(UUID engineerId);
 }

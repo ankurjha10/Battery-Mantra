@@ -45,7 +45,7 @@ public class EngineerInventoryService {
 
         // Add to Engineer Inventory
         EngineerInventory inventory = inventoryRepository
-                .findByEngineerIdAndProductId(request.getEngineerId(), request.getProductId())
+                .findByEngineerIdAndProductProductId(request.getEngineerId(), request.getProductId())
                 .orElse(EngineerInventory.builder()
                         .engineer(engineer)
                         .product(product)
@@ -61,7 +61,7 @@ public class EngineerInventoryService {
     @Transactional
     public EngineerInventoryResponse unloadStock(LoadUnloadStockRequest request) {
         EngineerInventory inventory = inventoryRepository
-                .findByEngineerIdAndProductId(request.getEngineerId(), request.getProductId())
+                .findByEngineerIdAndProductProductId(request.getEngineerId(), request.getProductId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory record not found for this engineer and product"));
 
         if (inventory.getQuantity() < request.getQuantity()) {
