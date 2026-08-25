@@ -4,11 +4,14 @@ import com.api.batterymantra.entity.Orders;
 import com.api.batterymantra.entity.enums.OrderStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 public interface OrderRepository extends JpaRepository<Orders, UUID> {
+    List<Orders> findByOrderStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime date);
+    
     List<Orders> findByCustomer_UserIdOrderByPlacedAtDesc(UUID customer);
     List<Orders> findByAssignedPartner_IdOrderByPlacedAtDesc(UUID partnerId);
     Optional<Orders> findByRazorpayOrderId(String razorpayOrderId);

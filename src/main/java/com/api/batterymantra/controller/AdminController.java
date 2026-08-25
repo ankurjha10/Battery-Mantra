@@ -43,6 +43,11 @@ import com.api.batterymantra.entity.enums.EnquiryType;
 import com.api.batterymantra.service.EnquiryService;
 
 import com.api.batterymantra.dto.admin.AdminCreateCustomerRequest;
+import com.api.batterymantra.service.EngineerAttendanceService;
+import com.api.batterymantra.dto.engineer.UpdateLeaveStatusRequest;
+import com.api.batterymantra.entity.EngineerAttendance;
+import com.api.batterymantra.entity.LeaveRequest;
+import com.api.batterymantra.entity.enums.LeaveStatus;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
 
 import jakarta.validation.Valid;
@@ -70,6 +75,7 @@ public class AdminController {
     private final BannerService bannerService;
     private final CallbackRequestService callbackRequestService;
     private final EnquiryService enquiryService;
+    private final EngineerAttendanceService attendanceService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -278,5 +284,20 @@ public class AdminController {
     public ResponseEntity<EnquiryResponse> updateEnquiryStatus(@PathVariable Long id,
                                                                 @RequestBody UpdateEnquiryStatusRequest request) {
         return ResponseEntity.ok(enquiryService.updateEnquiryStatus(id, request.getStatus()));
+    }
+
+    // --- Engineer Attendance & Leaves ---
+    @GetMapping("/engineers/{engineerId}/attendance")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EngineerAttendance>> getEngineerAttendance(@PathVariable UUID engineerId) {
+        return ResponseEntity.ok(attendanceService.getAttendanceByEngineerId(engineerId));
+    }
+
+    @PatchMapping("/leave-requests/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<LeaveRequest> updateLeaveStatus(@PathVariable UUID id,
+                                                           @RequestBody UpdateLeaveStatusRequest request) {
+        LeaveStatus status = LeaveStatus.valueOf(request.getStatus().toUpperCase());
+        return ResponseEntity.ok(attendanceService.updateLeaveStatus(id, status));
     }
 }

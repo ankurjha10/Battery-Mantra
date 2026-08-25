@@ -5,6 +5,8 @@ import com.api.batterymantra.dto.engineer.EngineerFailJobRequest;
 import com.api.batterymantra.entity.enums.PaymentMethod;
 import com.api.batterymantra.entity.enums.DutyStatus;
 import com.api.batterymantra.repository.EngineerProfileRepository;
+import com.api.batterymantra.repository.EngineerInventoryRepository;
+import com.api.batterymantra.repository.CallLogRepository;
 import com.api.batterymantra.entity.enums.DeliveryMethod;
 import com.api.batterymantra.repository.PincodeRepository;
 
@@ -51,6 +53,8 @@ public class OrderService {
     private final SmsService smsService;
     private final CouponService couponService;
     private final NotificationService notificationService;
+    private final EngineerInventoryRepository engineerInventoryRepository;
+    private final CallLogRepository callLogRepository;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -623,6 +627,9 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
 
         order.setAssignedPartner(partner);
+        if (order.getOrderStatus() == OrderStatus.PENDING) {
+            order.setOrderStatus(OrderStatus.PROCESSING);
+        }
         Orders savedOrder = orderRepository.save(order);
         
         notificationService.sendPushNotification(partner.getUser().getUserId(), "New Order Assigned", "Order #" + order.getOrderId() + " has been assigned to you.", null);
@@ -649,6 +656,9 @@ public class OrderService {
         }
 
         order.setAssignedEngineer(engineer);
+        if (order.getOrderStatus() == OrderStatus.PENDING) {
+            order.setOrderStatus(OrderStatus.PROCESSING);
+        }
         Orders savedOrder = orderRepository.save(order);
         
         notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
@@ -675,6 +685,9 @@ public class OrderService {
         }
 
         order.setAssignedEngineer(engineer);
+        if (order.getOrderStatus() == OrderStatus.PENDING) {
+            order.setOrderStatus(OrderStatus.PROCESSING);
+        }
         Orders savedOrder = orderRepository.save(order);
         
         notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
@@ -795,6 +808,21 @@ public class OrderService {
         order.setOldBatteryDetails(request.getOldBatteryDetails());
         order.setEngineerNotes(request.getEngineerNotes());
 
+        // Deduct from Van Inventory (Warning if missing)
+        for (OrderItems item : order.getOrderItems()) {
+            java.util.Optional<EngineerInventory> optInv = engineerInventoryRepository
+                    .findByEngineerIdAndProductId(engineer.getId(), item.getProduct().getProductId());
+            if (optInv.isPresent() && optInv.get().getQuantity() >= item.getQuantity()) {
+                EngineerInventory inv = optInv.get();
+                inv.setQuantity(inv.getQuantity() - item.getQuantity());
+                engineerInventoryRepository.save(inv);
+            } else {
+                System.err.println("WARNING: Engineer " + engineer.getUser().getUsername() + 
+                                   " completed order but had insufficient van inventory for product " + 
+                                   item.getProduct().getProductName());
+            }
+        }
+
         // Mark payment as PAID for COD orders
         if (order.getPaymentMethod() == PaymentMethod.COD && order.getPaymentStatus() != PaymentStatus.PAID) {
             order.setPaymentStatus(PaymentStatus.PAID);
@@ -875,5 +903,25 @@ public class OrderService {
         }
 
         return orderMapper.toOrderResponse(saved);
+    }
+
+    @Transactional
+    public void logCall(UUID orderId, UUID engineerUserId) {
+        EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
+
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getAssignedEngineer() == null || !order.getAssignedEngineer().getId().equals(engineer.getId())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "This order is not assigned to you");
+        }
+
+        CallLog log = CallLog.builder()
+                .order(order)
+                .engineer(engineer)
+                .build();
+        
+        callLogRepository.save(log);
     }
 }

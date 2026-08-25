@@ -9,6 +9,10 @@ import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.service.EngineerService;
 import com.api.batterymantra.service.OrderService;
+import com.api.batterymantra.service.EngineerAttendanceService;
+import com.api.batterymantra.dto.engineer.CreateLeaveRequest;
+import com.api.batterymantra.entity.EngineerAttendance;
+import com.api.batterymantra.entity.LeaveRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +31,7 @@ public class EngineerAppController {
 
     private final EngineerService engineerService;
     private final OrderService orderService;
+    private final EngineerAttendanceService attendanceService;
 
     @GetMapping("/profile")
     public ResponseEntity<EngineerResponse> getMyProfile(
@@ -91,5 +96,44 @@ public class EngineerAppController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         return ResponseEntity.ok(
                 orderService.failEngineerJob(orderId, userPrincipal.getUser().getUserId(), request));
+    }
+
+    @PostMapping("/orders/{orderId}/log-call")
+    public ResponseEntity<Void> logCall(
+            @PathVariable UUID orderId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        orderService.logCall(orderId, userPrincipal.getUser().getUserId());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/attendance/check-in")
+    public ResponseEntity<EngineerAttendance> checkIn(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(attendanceService.checkIn(userPrincipal.getUser().getUserId()));
+    }
+
+    @PostMapping("/attendance/check-out")
+    public ResponseEntity<EngineerAttendance> checkOut(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(attendanceService.checkOut(userPrincipal.getUser().getUserId()));
+    }
+
+    @GetMapping("/attendance")
+    public ResponseEntity<List<EngineerAttendance>> getMyAttendance(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(attendanceService.getMyAttendance(userPrincipal.getUser().getUserId()));
+    }
+
+    @PostMapping("/leave-requests")
+    public ResponseEntity<LeaveRequest> applyForLeave(
+            @Valid @RequestBody CreateLeaveRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(attendanceService.applyForLeave(userPrincipal.getUser().getUserId(), request));
+    }
+
+    @GetMapping("/leave-requests")
+    public ResponseEntity<List<LeaveRequest>> getMyLeaves(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        return ResponseEntity.ok(attendanceService.getMyLeaves(userPrincipal.getUser().getUserId()));
     }
 }
