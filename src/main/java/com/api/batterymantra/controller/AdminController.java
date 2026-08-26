@@ -311,16 +311,4 @@ public class AdminController {
         return ResponseEntity.ok(attendanceService.getAllLeaveRequests());
     }
 
-    // --- Engineer Inventory ---
-    @PostMapping("/engineer-inventory/load")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<EngineerInventoryResponse> loadEngineerInventory(@RequestBody @Valid LoadUnloadStockRequest request) {
-        return ResponseEntity.ok(engineerInventoryService.loadStock(request));
-    }
-
-    @PostMapping("/engineer-inventory/unload")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<EngineerInventoryResponse> unloadEngineerInventory(@RequestBody @Valid LoadUnloadStockRequest request) {
-        return ResponseEntity.ok(engineerInventoryService.unloadStock(request));
-    }
 }
