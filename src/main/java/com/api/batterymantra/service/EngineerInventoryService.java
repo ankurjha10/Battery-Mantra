@@ -15,7 +15,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -62,14 +61,16 @@ public class EngineerInventoryService {
     public EngineerInventoryResponse unloadStock(LoadUnloadStockRequest request) {
         EngineerInventory inventory = inventoryRepository
                 .findByEngineerIdAndProductProductId(request.getEngineerId(), request.getProductId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Inventory record not found for this engineer and product"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Inventory record not found for this engineer and product"));
 
         if (inventory.getQuantity() < request.getQuantity()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Engineer does not have that much stock to unload");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Engineer does not have that much stock to unload");
         }
 
         Product product = inventory.getProduct();
-        
+
         // Add back to main warehouse
         product.setProductStock(product.getProductStock() + request.getQuantity());
         productRepository.save(product);

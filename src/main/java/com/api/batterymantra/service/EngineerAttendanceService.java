@@ -105,4 +105,8 @@ public class EngineerAttendanceService {
         leave.setStatus(status);
         return leaveRepository.save(leave);
     }
+
+    public List<LeaveRequest> getAllLeaveRequests() {
+        return leaveRepository.findAll();
+    }
 }

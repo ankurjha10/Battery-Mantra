@@ -16,7 +16,6 @@ import com.api.batterymantra.entity.Cart;
 import com.api.batterymantra.entity.CartItem;
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.User;
-import com.api.batterymantra.repository.CartItemRepository;
 import com.api.batterymantra.repository.CartRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;

@@ -20,29 +20,31 @@ public class FirebaseConfig {
         try {
             // Check if Firebase is already initialized
             if (FirebaseApp.getApps().isEmpty()) {
-                // Try to load from root directory first
-                InputStream serviceAccount = null;
-                try {
-                    serviceAccount = new FileInputStream("serviceAccountKey.json");
-                } catch (Exception e) {
-                    log.warn("Could not find serviceAccountKey.json in root directory. Trying classpath.");
-                    serviceAccount = getClass().getClassLoader().getResourceAsStream("serviceAccountKey.json");
+                try (InputStream serviceAccount = getServiceAccountStream()) {
+                    if (serviceAccount == null) {
+                        log.error("Could not find serviceAccountKey.json. Firebase will not be initialized.");
+                        return;
+                    }
+
+                    FirebaseOptions options = FirebaseOptions.builder()
+                            .setCredentials(GoogleCredentials.fromStream(serviceAccount))
+                            .build();
+
+                    FirebaseApp.initializeApp(options);
+                    log.info("Firebase Admin SDK initialized successfully");
                 }
-
-                if (serviceAccount == null) {
-                    log.error("Could not find serviceAccountKey.json. Firebase will not be initialized.");
-                    return;
-                }
-
-                FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
-                        .build();
-
-                FirebaseApp.initializeApp(options);
-                log.info("Firebase Admin SDK initialized successfully");
             }
         } catch (IOException e) {
             log.error("Error initializing Firebase Admin SDK", e);
+        }
+    }
+
+    private InputStream getServiceAccountStream() {
+        try {
+            return new FileInputStream("serviceAccountKey.json");
+        } catch (Exception e) {
+            log.warn("Could not find serviceAccountKey.json in root directory. Trying classpath.");
+            return getClass().getClassLoader().getResourceAsStream("serviceAccountKey.json");
         }
     }
 }

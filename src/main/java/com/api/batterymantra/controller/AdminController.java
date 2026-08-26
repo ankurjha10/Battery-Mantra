@@ -49,6 +49,9 @@ import com.api.batterymantra.entity.EngineerAttendance;
 import com.api.batterymantra.entity.LeaveRequest;
 import com.api.batterymantra.entity.enums.LeaveStatus;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
+import com.api.batterymantra.service.EngineerInventoryService;
+import com.api.batterymantra.dto.engineer.EngineerInventoryResponse;
+import com.api.batterymantra.dto.engineer.LoadUnloadStockRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -76,6 +79,7 @@ public class AdminController {
     private final CallbackRequestService callbackRequestService;
     private final EnquiryService enquiryService;
     private final EngineerAttendanceService attendanceService;
+    private final EngineerInventoryService engineerInventoryService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -299,5 +303,24 @@ public class AdminController {
                                                            @RequestBody UpdateLeaveStatusRequest request) {
         LeaveStatus status = LeaveStatus.valueOf(request.getStatus().toUpperCase());
         return ResponseEntity.ok(attendanceService.updateLeaveStatus(id, status));
+    }
+
+    @GetMapping("/leave-requests")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<LeaveRequest>> getAllLeaveRequests() {
+        return ResponseEntity.ok(attendanceService.getAllLeaveRequests());
+    }
+
+    // --- Engineer Inventory ---
+    @PostMapping("/engineer-inventory/load")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EngineerInventoryResponse> loadEngineerInventory(@RequestBody @Valid LoadUnloadStockRequest request) {
+        return ResponseEntity.ok(engineerInventoryService.loadStock(request));
+    }
+
+    @PostMapping("/engineer-inventory/unload")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<EngineerInventoryResponse> unloadEngineerInventory(@RequestBody @Valid LoadUnloadStockRequest request) {
+        return ResponseEntity.ok(engineerInventoryService.unloadStock(request));
     }
 }
