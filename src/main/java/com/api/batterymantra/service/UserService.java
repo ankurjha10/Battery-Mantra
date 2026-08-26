@@ -3,7 +3,9 @@ package com.api.batterymantra.service;
 import com.api.batterymantra.dto.user.UpdatePasswordRequest;
 import com.api.batterymantra.dto.user.UpdateProfileRequest;
 import com.api.batterymantra.dto.user.UserProfileResponse;
+import com.api.batterymantra.dto.admin.AdminCreateSubAdminRequest;
 import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -79,5 +81,31 @@ public class UserService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
         user.setFcmToken(fcmToken);
         userRepository.save(user);
+    }
+
+    public UserProfileResponse createSubAdmin(AdminCreateSubAdminRequest request) {
+        if (userRepository.findByEmail(request.getEmail()) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already taken");
+        }
+        if (userRepository.findByPhoneNumber(request.getPhone()) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already taken");
+        }
+        
+        User user = User.builder()
+                .username(request.getName())
+                .email(request.getEmail())
+                .phoneNumber(request.getPhone())
+                .password(passwordEncoder.encode(request.getPassword()))
+                .role(UserRole.SUB_ADMIN)
+                .permissions(request.getPermissions())
+                .build();
+                
+        user = userRepository.save(user);
+        
+        return UserProfileResponse.builder()
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .build();
     }
 }

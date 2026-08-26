@@ -3,7 +3,10 @@ package com.api.batterymantra.controller;
 import com.api.batterymantra.dto.product.ProductListResponse;
 
 import com.api.batterymantra.dto.admin.UserResponse;
+import com.api.batterymantra.dto.admin.AdminCreateSubAdminRequest;
+import com.api.batterymantra.dto.user.UserProfileResponse;
 import com.api.batterymantra.service.AdminService;
+import com.api.batterymantra.service.UserService;
 
 import com.api.batterymantra.dto.category.CategoryListResponse;
 import com.api.batterymantra.dto.category.CreateCategoryRequest;
@@ -49,9 +52,6 @@ import com.api.batterymantra.entity.EngineerAttendance;
 import com.api.batterymantra.entity.LeaveRequest;
 import com.api.batterymantra.entity.enums.LeaveStatus;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
-import com.api.batterymantra.service.EngineerInventoryService;
-import com.api.batterymantra.dto.engineer.EngineerInventoryResponse;
-import com.api.batterymantra.dto.engineer.LoadUnloadStockRequest;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -79,13 +79,19 @@ public class AdminController {
     private final CallbackRequestService callbackRequestService;
     private final EnquiryService enquiryService;
     private final EngineerAttendanceService attendanceService;
-    private final EngineerInventoryService engineerInventoryService;
+    private final UserService userService;
 
     // --- Users ---
     @GetMapping("/users")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(adminService.getAllUsers());
+    }
+
+    @PostMapping("/sub-admins")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserProfileResponse> createSubAdmin(@RequestBody @Valid AdminCreateSubAdminRequest request) {
+        return new ResponseEntity<>(userService.createSubAdmin(request), HttpStatus.CREATED);
     }
 
     @PostMapping("/customers")
@@ -126,7 +132,7 @@ public class AdminController {
     @PutMapping("/brands/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BrandResponse> updateBrand(@PathVariable UUID id,
-                                                      @RequestBody @Valid BrandRequest brandRequest) {
+            @RequestBody @Valid BrandRequest brandRequest) {
         return ResponseEntity.ok(brandService.updateBrand(id, brandRequest));
     }
 
@@ -147,7 +153,7 @@ public class AdminController {
     @PutMapping("/vehicles/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VehicleResponse> updateVehicle(@PathVariable UUID id,
-                                                          @RequestBody CreateVehicleRequest request) {
+            @RequestBody CreateVehicleRequest request) {
         return ResponseEntity.ok(vehicleService.updateVehicle(id, request));
     }
 
@@ -250,7 +256,7 @@ public class AdminController {
     @PutMapping("/banners/id/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<BannerResponse> updateBanner(@PathVariable UUID id,
-                                                        @RequestBody @Valid UpdateBannerRequest request) {
+            @RequestBody @Valid UpdateBannerRequest request) {
         return ResponseEntity.ok(bannerService.updateBanner(id, request));
     }
 
@@ -271,7 +277,7 @@ public class AdminController {
     @PatchMapping("/callbacks/{callbackId}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CallbackResponse> updateCallbackStatus(@PathVariable Long callbackId,
-                                                                  @RequestBody UpdateCallbackStatusRequest request) {
+            @RequestBody UpdateCallbackStatusRequest request) {
         return ResponseEntity.ok(callbackRequestService.updateCallbackStatus(callbackId, request.getStatus()));
     }
 
@@ -286,7 +292,7 @@ public class AdminController {
     @PatchMapping("/enquiries/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<EnquiryResponse> updateEnquiryStatus(@PathVariable Long id,
-                                                                @RequestBody UpdateEnquiryStatusRequest request) {
+            @RequestBody UpdateEnquiryStatusRequest request) {
         return ResponseEntity.ok(enquiryService.updateEnquiryStatus(id, request.getStatus()));
     }
 
@@ -300,7 +306,7 @@ public class AdminController {
     @PatchMapping("/leave-requests/{id}/status")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<LeaveRequest> updateLeaveStatus(@PathVariable UUID id,
-                                                           @RequestBody UpdateLeaveStatusRequest request) {
+            @RequestBody UpdateLeaveStatusRequest request) {
         LeaveStatus status = LeaveStatus.valueOf(request.getStatus().toUpperCase());
         return ResponseEntity.ok(attendanceService.updateLeaveStatus(id, status));
     }
