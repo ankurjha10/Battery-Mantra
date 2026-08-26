@@ -4,9 +4,11 @@ import com.api.batterymantra.dto.user.UpdatePasswordRequest;
 import com.api.batterymantra.dto.user.UpdateProfileRequest;
 import com.api.batterymantra.dto.user.UserProfileResponse;
 import com.api.batterymantra.dto.admin.AdminCreateSubAdminRequest;
+import com.api.batterymantra.dto.admin.AdminUpdateSubAdminRequest;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.repository.UserRepository;
+import com.api.batterymantra.repository.RefreshTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,6 +22,7 @@ import java.util.UUID;
 public class UserService {
 
     private final UserRepository userRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
 
     public UserProfileResponse getUserProfile(UUID userId) {
@@ -107,5 +110,48 @@ public class UserService {
                 .email(user.getEmail())
                 .phoneNumber(user.getPhoneNumber())
                 .build();
+    }
+
+    public UserProfileResponse updateSubAdmin(UUID userId, AdminUpdateSubAdminRequest request) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Sub-Admin not found"));
+
+        if (user.getRole() != UserRole.SUB_ADMIN) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a Sub-Admin");
+        }
+
+        User existingPhoneUser = userRepository.findByPhoneNumber(request.getPhone());
+        if (existingPhoneUser != null && !existingPhoneUser.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already in use by another account");
+        }
+
+        user.setUsername(request.getName().trim());
+        user.setPhoneNumber(request.getPhone().trim());
+        user.setPermissions(request.getPermissions());
+
+        user = userRepository.save(user);
+
+        return UserProfileResponse.builder()
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .build();
+    }
+
+    public void deleteUser(UUID userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
+        
+        userRepository.delete(user);
+    }
+
+    public void toggleUserStatus(UUID userId, boolean isActive) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+        
+        user.setActive(isActive);
+        userRepository.save(user);
     }
 }

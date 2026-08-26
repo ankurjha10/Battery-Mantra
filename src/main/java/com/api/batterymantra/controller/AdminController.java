@@ -4,6 +4,7 @@ import com.api.batterymantra.dto.product.ProductListResponse;
 
 import com.api.batterymantra.dto.admin.UserResponse;
 import com.api.batterymantra.dto.admin.AdminCreateSubAdminRequest;
+import com.api.batterymantra.dto.admin.AdminUpdateSubAdminRequest;
 import com.api.batterymantra.dto.user.UserProfileResponse;
 import com.api.batterymantra.service.AdminService;
 import com.api.batterymantra.service.UserService;
@@ -92,6 +93,30 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserProfileResponse> createSubAdmin(@RequestBody @Valid AdminCreateSubAdminRequest request) {
         return new ResponseEntity<>(userService.createSubAdmin(request), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/sub-admins/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<UserProfileResponse> updateSubAdmin(
+            @PathVariable UUID userId,
+            @RequestBody @Valid AdminUpdateSubAdminRequest request) {
+        return ResponseEntity.ok(userService.updateSubAdmin(userId, request));
+    }
+
+    @DeleteMapping("/users/{userId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
+        userService.deleteUser(userId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/users/{userId}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> toggleUserStatus(
+            @PathVariable UUID userId,
+            @RequestParam boolean isActive) {
+        userService.toggleUserStatus(userId, isActive);
+        return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/customers")
