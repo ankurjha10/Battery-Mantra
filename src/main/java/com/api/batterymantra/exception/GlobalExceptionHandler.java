@@ -100,6 +100,19 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(error, HttpStatus.FORBIDDEN);
     }
 
+    @ExceptionHandler(org.springframework.web.server.ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatusException(
+            org.springframework.web.server.ResponseStatusException ex,
+            WebRequest request) {
+        ErrorResponse error = new ErrorResponse(
+                ex.getReason() != null ? ex.getReason() : ex.getMessage(),
+                ex.getStatusCode().value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(error, ex.getStatusCode());
+    }
+
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex,
