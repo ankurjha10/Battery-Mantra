@@ -34,5 +34,7 @@ public class UpdateProductRequest {
     @JsonProperty("isAutoAssignToPartner")
     private Boolean isAutoAssignToPartner;
 
+    private Integer displayOrder;
+
     private SeoMetadata seo;
 }

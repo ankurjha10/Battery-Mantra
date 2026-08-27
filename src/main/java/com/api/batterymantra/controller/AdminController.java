@@ -10,6 +10,7 @@ import com.api.batterymantra.service.AdminService;
 import com.api.batterymantra.service.UserService;
 
 import com.api.batterymantra.dto.category.CategoryListResponse;
+import com.api.batterymantra.dto.category.CategoryReorderRequest;
 import com.api.batterymantra.dto.category.CreateCategoryRequest;
 import com.api.batterymantra.dto.category.UpdateCategoryRequest;
 import com.api.batterymantra.service.CategoryService;
@@ -24,6 +25,7 @@ import com.api.batterymantra.service.VehicleService;
 
 import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
+import com.api.batterymantra.dto.product.ProductReorderRequest;
 import com.api.batterymantra.dto.product.UpdateProductRequest;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.service.ProductService;
@@ -147,6 +149,13 @@ public class AdminController {
         return ResponseEntity.ok(categoryService.updateCategory(id, category));
     }
 
+    @PutMapping("/categories/reorder")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> reorderCategories(@RequestBody List<CategoryReorderRequest> requests) {
+        categoryService.reorderCategories(requests);
+        return ResponseEntity.ok().build();
+    }
+
     // --- Brands ---
     @PostMapping("/brands")
     @PreAuthorize("hasRole('ADMIN')")
@@ -226,6 +235,13 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ProductDetailResponse> approveProduct(@PathVariable UUID id) {
         return ResponseEntity.ok(productService.approveProduct(id));
+    }
+
+    @PutMapping("/products/reorder")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> reorderProducts(@RequestBody List<ProductReorderRequest> requests) {
+        productService.reorderProducts(requests);
+        return ResponseEntity.ok().build();
     }
 
     // --- Orders ---

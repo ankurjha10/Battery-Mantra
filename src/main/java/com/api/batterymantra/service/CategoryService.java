@@ -162,4 +162,16 @@ public class CategoryService {
         categoryRepository.save(category);
         return toListResponse(category);
     }
+
+    @Transactional
+    @CacheEvict(value = "categories", allEntries = true)
+    public void reorderCategories(List<com.api.batterymantra.dto.category.CategoryReorderRequest> requests) {
+        for (var req : requests) {
+            Category category = categoryRepository.findById(req.getCategoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Category not found with id: " + req.getCategoryId()));
+            category.setDisplayOrder(req.getDisplayOrder());
+            categoryRepository.save(category);
+        }
+    }
 }

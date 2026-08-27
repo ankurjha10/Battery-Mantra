@@ -95,6 +95,9 @@ public class Product {
     @Column(name = "partner_business_name")
     private String partnerBusinessName;
 
+    @Column(name = "display_order")
+    private Integer displayOrder = 0;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 }

@@ -76,6 +76,7 @@ public class ProductService {
         res.setApproved(p.isApproved());
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
+        res.setDisplayOrder(p.getDisplayOrder());
 
         City currentCity = null;
         if (cityId != null) {
@@ -125,6 +126,7 @@ public class ProductService {
         res.setApproved(p.isApproved());
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
+        res.setDisplayOrder(p.getDisplayOrder());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -194,7 +196,10 @@ public class ProductService {
     @Cacheable(value = "products", key = "{'all', #cityId}")
     @Transactional(readOnly = true)
     public List<ProductListResponse> getAllProducts(UUID cityId) {
-        return productRepository.findAll().stream().map(p -> toListResponse(p, cityId)).toList();
+        return productRepository.findAll(
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder")
+                        .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
+        ).stream().map(p -> toListResponse(p, cityId)).toList();
     }
 
     @Cacheable(value = "products", key = "{#idOrSlug, #cityId}")
@@ -351,6 +356,10 @@ public class ProductService {
             product.setSeo(dto.getSeo());
         }
 
+        if (dto.getDisplayOrder() != null) {
+            product.setDisplayOrder(dto.getDisplayOrder());
+        }
+
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
                 City city = cityRepository.findById(cpd.getCityId())
@@ -460,6 +469,10 @@ public class ProductService {
             product.setSeo(dto.getSeo());
         }
 
+        if (dto.getDisplayOrder() != null) {
+            product.setDisplayOrder(dto.getDisplayOrder());
+        }
+
         if (dto.getCityPrices() != null) {
             product.getCityPrices().clear();
             for (CityPricingDto cpd : dto.getCityPrices()) {
@@ -554,5 +567,17 @@ public class ProductService {
 
         Product saved = productRepository.save(product);
         return toDetailResponse(saved, dto.getCityId());
+    }
+
+    @Transactional
+    @CacheEvict(value = "products", allEntries = true)
+    public void reorderProducts(List<com.api.batterymantra.dto.product.ProductReorderRequest> requests) {
+        for (var req : requests) {
+            Product product = productRepository.findById(req.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Product not found with id: " + req.getProductId()));
+            product.setDisplayOrder(req.getDisplayOrder());
+            productRepository.save(product);
+        }
     }
 }

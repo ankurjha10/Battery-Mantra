@@ -69,4 +69,19 @@ public class ProductSpecification {
         return (root, query, cb) ->
                 cb.like(cb.lower(root.get("productName")), "%" + keyword.toLowerCase() + "%");
     }
+
+    /**
+     * Default sorting: displayOrder ASC (nulls last), then createdAt DESC.
+     */
+    public static Specification<Product> defaultSort() {
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.orderBy(
+                        cb.asc(cb.coalesce(root.get("displayOrder"), Integer.MAX_VALUE)),
+                        cb.desc(root.get("createdAt"))
+                );
+            }
+            return cb.conjunction();
+        };
+    }
 }

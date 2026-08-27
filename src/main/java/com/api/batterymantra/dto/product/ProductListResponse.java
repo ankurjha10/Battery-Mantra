@@ -27,5 +27,6 @@ public class ProductListResponse {
     private boolean isApproved = true;
     private UUID createdByPartnerId;
     private String partnerBusinessName;
+    private Integer displayOrder;
     private SeoMetadata seo;
 }
