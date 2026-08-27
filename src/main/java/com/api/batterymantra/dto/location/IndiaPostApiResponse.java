@@ -39,6 +39,12 @@ public class IndiaPostApiResponse {
         @JsonProperty("State")
         private String state;
 
+        @JsonProperty("Region")
+        private String region;
+
+        @JsonProperty("Division")
+        private String division;
+
         @JsonProperty("Country")
         private String country;
 

@@ -182,25 +182,37 @@ public class LocationServiceImpl implements LocationService {
                 return buildNotServiceable();
             }
 
-            // Step 3: Extract location info from first PostOffice entry
-            IndiaPostApiResponse.PostOffice postOffice = response.getPostOffice().get(0);
-            String district = postOffice.getDistrict();
-            String block = postOffice.getBlock();
-            String state = postOffice.getState();
-
-            // Step 4: Match against our registered cities (case-insensitive)
+            // Step 3 & 4: Match against our registered cities using multiple fields from all PostOffice entries
             List<City> allCities = cityRepository.findAll();
-            Optional<City> matchedCity = allCities.stream()
-                    .filter(city -> city.getCityName().equalsIgnoreCase(district)
-                            || city.getCityName().equalsIgnoreCase(block)
-                            || city.getCityName().equalsIgnoreCase(state))
-                    .findFirst();
+            City matchedCity = null;
 
-            if (matchedCity.isEmpty()) {
+            outerLoop:
+            for (IndiaPostApiResponse.PostOffice postOffice : response.getPostOffice()) {
+                String[] apiFields = {
+                        postOffice.getName(),
+                        postOffice.getDistrict(),
+                        postOffice.getBlock(),
+                        postOffice.getRegion(),
+                        postOffice.getDivision(),
+                        postOffice.getState()
+                };
+
+                for (City city : allCities) {
+                    String cityNameLower = city.getCityName().toLowerCase();
+                    for (String field : apiFields) {
+                        if (field != null && field.toLowerCase().contains(cityNameLower)) {
+                            matchedCity = city;
+                            break outerLoop;
+                        }
+                    }
+                }
+            }
+
+            if (matchedCity == null) {
                 return buildNotServiceable();
             }
 
-            City city = matchedCity.get();
+            City city = matchedCity;
             int registeredPincodeCount = city.getPincodes() != null ? city.getPincodes().size() : 0;
 
             if (registeredPincodeCount == 0) {
