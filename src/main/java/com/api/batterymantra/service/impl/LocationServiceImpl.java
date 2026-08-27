@@ -11,6 +11,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
@@ -168,8 +172,20 @@ public class LocationServiceImpl implements LocationService {
         // Step 2: Pincode not in DB — call India Post API to resolve location
         try {
             RestTemplate restTemplate = new RestTemplate();
-            IndiaPostApiResponse[] responses = restTemplate.getForObject(
-                    INDIA_POST_API_URL + code, IndiaPostApiResponse[].class);
+            HttpHeaders headers = new HttpHeaders();
+            headers.set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+            headers.set("Accept", "application/json");
+
+            HttpEntity<String> entity = new HttpEntity<>(headers);
+
+            ResponseEntity<IndiaPostApiResponse[]> responseEntity = restTemplate.exchange(
+                    INDIA_POST_API_URL + code,
+                    HttpMethod.GET,
+                    entity,
+                    IndiaPostApiResponse[].class
+            );
+
+            IndiaPostApiResponse[] responses = responseEntity.getBody();
 
             if (responses == null || responses.length == 0) {
                 return buildNotServiceable();
