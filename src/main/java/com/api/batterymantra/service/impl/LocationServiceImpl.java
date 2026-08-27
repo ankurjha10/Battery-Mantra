@@ -8,20 +8,26 @@ import com.api.batterymantra.repository.CityRepository;
 import com.api.batterymantra.repository.PincodeRepository;
 import com.api.batterymantra.service.LocationService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class LocationServiceImpl implements LocationService {
 
     private final CityRepository cityRepository;
     private final PincodeRepository pincodeRepository;
+
+    private static final String INDIA_POST_API_URL = "https://api.postalpincode.in/pincode/";
 
     @Override
     @Transactional
@@ -150,14 +156,75 @@ public class LocationServiceImpl implements LocationService {
 
     @Override
     public PincodeCheckResponse checkPincode(String code) {
-        return pincodeRepository.findByCode(code)
-                .map(pincode -> PincodeCheckResponse.builder()
+        // Step 1: Check if pincode exists directly in our DB (area-specific match)
+        Optional<Pincode> dbPincode = pincodeRepository.findByCode(code);
+        if (dbPincode.isPresent()) {
+            return PincodeCheckResponse.builder()
+                    .isServiceable(true)
+                    .city(mapToCityDto(dbPincode.get().getCity()))
+                    .build();
+        }
+
+        // Step 2: Pincode not in DB — call India Post API to resolve location
+        try {
+            RestTemplate restTemplate = new RestTemplate();
+            IndiaPostApiResponse[] responses = restTemplate.getForObject(
+                    INDIA_POST_API_URL + code, IndiaPostApiResponse[].class);
+
+            if (responses == null || responses.length == 0) {
+                return buildNotServiceable();
+            }
+
+            IndiaPostApiResponse response = responses[0];
+            if (!"Success".equalsIgnoreCase(response.getStatus())
+                    || response.getPostOffice() == null
+                    || response.getPostOffice().isEmpty()) {
+                return buildNotServiceable();
+            }
+
+            // Step 3: Extract location info from first PostOffice entry
+            IndiaPostApiResponse.PostOffice postOffice = response.getPostOffice().get(0);
+            String district = postOffice.getDistrict();
+            String block = postOffice.getBlock();
+            String state = postOffice.getState();
+
+            // Step 4: Match against our registered cities (case-insensitive)
+            List<City> allCities = cityRepository.findAll();
+            Optional<City> matchedCity = allCities.stream()
+                    .filter(city -> city.getCityName().equalsIgnoreCase(district)
+                            || city.getCityName().equalsIgnoreCase(block)
+                            || city.getCityName().equalsIgnoreCase(state))
+                    .findFirst();
+
+            if (matchedCity.isEmpty()) {
+                return buildNotServiceable();
+            }
+
+            City city = matchedCity.get();
+            int registeredPincodeCount = city.getPincodes() != null ? city.getPincodes().size() : 0;
+
+            if (registeredPincodeCount == 0) {
+                // No specific pincodes registered → full-city delivery is ON
+                return PincodeCheckResponse.builder()
                         .isServiceable(true)
-                        .city(mapToCityDto(pincode.getCity()))
-                        .build())
-                .orElseGet(() -> PincodeCheckResponse.builder()
-                        .isServiceable(false)
-                        .city(null)
-                        .build());
+                        .city(mapToCityDto(city))
+                        .build();
+            } else {
+                // Admin restricted to specific pincodes, and this one wasn't in DB (step 1 failed)
+                return buildNotServiceable();
+            }
+
+        } catch (Exception e) {
+            log.error("Error calling India Post API for pincode {}: {}", code, e.getMessage());
+            return buildNotServiceable();
+        }
+    }
+
+    private PincodeCheckResponse buildNotServiceable() {
+        return PincodeCheckResponse.builder()
+                .isServiceable(false)
+                .city(null)
+                .build();
     }
 }
+
