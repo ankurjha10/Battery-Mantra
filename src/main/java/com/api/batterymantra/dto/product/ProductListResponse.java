@@ -28,5 +28,6 @@ public class ProductListResponse {
     private UUID createdByPartnerId;
     private String partnerBusinessName;
     private Integer displayOrder;
+    private String highlights;
     private SeoMetadata seo;
 }

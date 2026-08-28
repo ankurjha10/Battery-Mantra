@@ -98,6 +98,8 @@ public class Product {
     @Column(name = "display_order")
     private Integer displayOrder = 0;
 
+    private String highlights;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 }

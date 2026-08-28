@@ -26,6 +26,7 @@ import com.api.batterymantra.service.VehicleService;
 import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.dto.product.ProductReorderRequest;
+import com.api.batterymantra.dto.product.BulkProductUpdateRequest;
 import com.api.batterymantra.dto.product.UpdateProductRequest;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.service.ProductService;
@@ -241,6 +242,13 @@ public class AdminController {
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> reorderProducts(@RequestBody List<ProductReorderRequest> requests) {
         productService.reorderProducts(requests);
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/products/bulk-update")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> bulkUpdateProducts(@RequestBody List<BulkProductUpdateRequest> requests) {
+        productService.bulkUpdateProducts(requests);
         return ResponseEntity.ok().build();
     }
 

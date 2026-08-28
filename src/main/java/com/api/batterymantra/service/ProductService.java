@@ -77,6 +77,7 @@ public class ProductService {
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
         res.setDisplayOrder(p.getDisplayOrder());
+        res.setHighlights(p.getHighlights());
 
         City currentCity = null;
         if (cityId != null) {
@@ -127,6 +128,7 @@ public class ProductService {
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
         res.setDisplayOrder(p.getDisplayOrder());
+        res.setHighlights(p.getHighlights());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -579,5 +581,31 @@ public class ProductService {
             product.setDisplayOrder(req.getDisplayOrder());
             productRepository.save(product);
         }
+    }
+
+    @Transactional
+    @CacheEvict(value = "products", allEntries = true)
+    public void bulkUpdateProducts(List<com.api.batterymantra.dto.product.BulkProductUpdateRequest> requests) {
+        List<Product> updatedProducts = new ArrayList<>();
+        for (var req : requests) {
+            Product product = productRepository.findById(req.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Product not found with id: " + req.getProductId()));
+            
+            if (req.getProductPrice() != null) {
+                product.setProductPrice(req.getProductPrice());
+            }
+            if (req.getOriginalPrice() != null) {
+                product.setOriginalPrice(req.getOriginalPrice());
+            }
+            if (req.getExchangeDiscount() != null) {
+                product.setExchangeDiscount(req.getExchangeDiscount());
+            }
+            if (req.getHighlights() != null) {
+                product.setHighlights(req.getHighlights());
+            }
+            updatedProducts.add(product);
+        }
+        productRepository.saveAll(updatedProducts);
     }
 }
