@@ -113,4 +113,10 @@ public class Orders {
     @Column(name = "payment_mode")
     private String paymentMode;
 
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
 }

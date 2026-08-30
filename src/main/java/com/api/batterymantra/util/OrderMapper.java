@@ -52,6 +52,8 @@ public class OrderMapper {
         response.setCancellationReason(order.getCancellationReason());
         response.setCouponCode(order.getCouponCode());
         response.setDiscountAmount(order.getDiscountAmount());
+        response.setLatitude(order.getLatitude());
+        response.setLongitude(order.getLongitude());
 
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());
