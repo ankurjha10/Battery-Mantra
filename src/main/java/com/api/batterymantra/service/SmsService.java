@@ -177,8 +177,6 @@ public class SmsService {
     }
 
     public void sendOrderCancelledSms(String phone, String customerName, String productName, String orderId, String cancelReason) {
-        String templateId = "1707172906092467307"; // fallback to order delivered SMS template? Or maybe they don't have SMS template for cancel.
-        
         // WhatsApp Message
         sendWhatsapp(phone, "order_cancelled", customerName, orderId, cancelReason);
     }

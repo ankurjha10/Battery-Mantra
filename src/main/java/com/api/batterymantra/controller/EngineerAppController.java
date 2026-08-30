@@ -2,7 +2,6 @@ package com.api.batterymantra.controller;
 
 import com.api.batterymantra.dto.engineer.EngineerCompleteJobRequest;
 import com.api.batterymantra.dto.engineer.EngineerFailJobRequest;
-import com.api.batterymantra.dto.engineer.UpdateDutyStatusRequest;
 import com.api.batterymantra.dto.engineer.UpdateFcmTokenRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.dto.user.EngineerResponse;
@@ -22,6 +21,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.UUID;
+import com.api.batterymantra.dto.admin.UserResponse;
+import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.enums.DutyStatus;
 
 @RestController
 @RequestMapping("/api/engineer")
@@ -34,18 +36,49 @@ public class EngineerAppController {
     private final EngineerAttendanceService attendanceService;
 
     @GetMapping("/profile")
-    public ResponseEntity<EngineerResponse> getMyProfile(
+    public ResponseEntity<UserResponse> getMyProfile(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        return ResponseEntity.ok(
-                engineerService.getEngineerProfileByUserId(userPrincipal.getUser().getUserId()));
+        User user = userPrincipal.getUser();
+        EngineerResponse engineerResponse = engineerService.getEngineerProfileByUserId(user.getUserId());
+
+        UserResponse response = UserResponse.builder()
+                .userId(user.getUserId())
+                .name(engineerResponse.getFirstName() != null
+                        ? engineerResponse.getFirstName() + " " + engineerResponse.getLastName()
+                        : user.getUsername())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .isActive(user.isActive())
+                .role(user.getRole().name())
+                .createdAt(user.getCreatedAt())
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/duty-status")
-    public ResponseEntity<EngineerResponse> updateDutyStatus(
-            @Valid @RequestBody UpdateDutyStatusRequest request,
+    public ResponseEntity<UserResponse> updateDutyStatus(
+            @RequestParam boolean isOnDuty,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        return ResponseEntity.ok(
-                engineerService.updateDutyStatus(userPrincipal.getUser().getUserId(), request.getDutyStatus()));
+        DutyStatus status = isOnDuty
+                ? DutyStatus.ON_DUTY
+                : DutyStatus.OFF_DUTY;
+
+        EngineerResponse engineerResponse = engineerService.updateDutyStatus(userPrincipal.getUser().getUserId(),
+                status);
+        User user = userPrincipal.getUser();
+
+        UserResponse response = UserResponse.builder()
+                .userId(user.getUserId())
+                .name(engineerResponse.getFirstName() != null
+                        ? engineerResponse.getFirstName() + " " + engineerResponse.getLastName()
+                        : user.getUsername())
+                .email(user.getEmail())
+                .phoneNumber(user.getPhoneNumber())
+                .isActive(isOnDuty)
+                .role(user.getRole().name())
+                .createdAt(user.getCreatedAt())
+                .build();
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/fcm-token")

@@ -156,7 +156,7 @@ public class OrderService {
         // Calculating the Total Amount
         BigDecimal subTotal = orderItems.stream()
                 .map(item -> item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
         // Calculate Exchange Discount
         BigDecimal exchangeDiscount = BigDecimal.ZERO;

@@ -267,7 +267,7 @@ public class ProductService {
             vehicleRepository.findById(vehicleId).ifPresent(v -> {
                 if (v.getCapacity() != null && !v.getCapacity().isBlank()) {
                     vehicleCapacities.addAll(Arrays.stream(v.getCapacity().split(","))
-                            .map(String::trim)
+                            .map(s -> s.trim())
                             .filter(c -> !c.isEmpty())
                             .toList());
                 }

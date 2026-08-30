@@ -110,7 +110,7 @@ public class RazorpayService {
         BigDecimal subTotal = orderItems.stream()
                 .map(item -> item.getPriceAtPurchase()
                         .multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
 
         BigDecimal exchangeDiscount = BigDecimal.ZERO;
         for (CartItem cartItem : cartItemList) {

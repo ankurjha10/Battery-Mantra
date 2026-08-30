@@ -19,13 +19,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/auth")
-@SuppressWarnings("null")
 public class AuthController {
-
 
     private final AuthService authService;
 
@@ -35,28 +32,28 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest user){
+    public ResponseEntity<RegisterResponse> register(@RequestBody RegisterRequest user) {
         return ResponseEntity.ok(authService.register(user));
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest user){
+    public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest user) {
         return ResponseEntity.ok(authService.login(user));
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request){
+    public ResponseEntity<RefreshTokenResponse> refreshToken(@RequestBody RefreshTokenRequest request) {
         return ResponseEntity.ok(authService.refreshToken(request));
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<String> sendOtp(@RequestBody SendOtpRequest request){
+    public ResponseEntity<String> sendOtp(@RequestBody SendOtpRequest request) {
         authService.sendOtp(request);
         return ResponseEntity.ok("OTP sent successfully");
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<LoginResponse> verifyOtp(@RequestBody VerifyOtpRequest request){
+    public ResponseEntity<LoginResponse> verifyOtp(@RequestBody VerifyOtpRequest request) {
         return ResponseEntity.ok(authService.verifyOtp(request));
     }
 }

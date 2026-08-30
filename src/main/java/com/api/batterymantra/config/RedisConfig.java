@@ -22,7 +22,6 @@ import java.time.Duration;
 @Slf4j
 @Configuration
 @EnableCaching
-@SuppressWarnings("null")
 public class RedisConfig implements CachingConfigurer {
 
     @Bean

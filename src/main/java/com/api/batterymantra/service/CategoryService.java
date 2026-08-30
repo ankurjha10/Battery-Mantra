@@ -63,7 +63,7 @@ public class CategoryService {
 
         if (c.getProducts() != null) {
             res.products = c.getProducts().stream()
-                    .map(Product::getProductId)
+                    .map(p -> p.getProductId())
                     .toList();
         } else {
             res.products = new ArrayList<>();
@@ -119,7 +119,7 @@ public class CategoryService {
     public List<CategoryListResponse> getRootCategories() {
         return categoryRepository.findByParentIsNullOrderByDisplayOrderAsc()
                 .stream()
-                .sorted(java.util.Comparator.comparing(Category::getDisplayOrder).thenComparing(Category::getCategoryName))
+                .sorted(java.util.Comparator.comparing((Category c) -> c.getDisplayOrder()).thenComparing(c -> c.getCategoryName()))
                 .map(this::toListResponse)
                 .toList();
     }

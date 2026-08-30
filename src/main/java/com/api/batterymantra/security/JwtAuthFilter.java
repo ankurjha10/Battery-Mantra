@@ -17,7 +17,6 @@ import java.io.IOException;
 
 @Component
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final AuthUtil authUtil;

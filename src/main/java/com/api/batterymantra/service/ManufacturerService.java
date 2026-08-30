@@ -31,7 +31,7 @@ public class ManufacturerService {
             manufacturers = manufacturerRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "name")));
         }
         return manufacturers.stream()
-                .sorted(java.util.Comparator.comparing(Manufacturer::getDisplayOrder).thenComparing(Manufacturer::getName))
+                .sorted(java.util.Comparator.comparing((Manufacturer m) -> m.getDisplayOrder()).thenComparing(m -> m.getName()))
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
