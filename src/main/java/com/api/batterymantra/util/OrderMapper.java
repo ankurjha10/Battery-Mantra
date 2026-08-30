@@ -56,6 +56,8 @@ public class OrderMapper {
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());
             response.setCustomerPhone(order.getShippingAddress().getPhoneNumber());
+            response.setLatitude(order.getShippingAddress().getLatitude());
+            response.setLongitude(order.getShippingAddress().getLongitude());
         } else if (order.getCustomer() != null) {
             response.setCustomerName(order.getCustomer().getUsername());
             response.setCustomerPhone(order.getCustomer().getPhoneNumber());

@@ -43,4 +43,6 @@ public class OrderResponse {
     private String cancellationReason;
     private String couponCode;
     private BigDecimal discountAmount;
+    private Double latitude;
+    private Double longitude;
 }
