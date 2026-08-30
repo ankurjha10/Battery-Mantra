@@ -46,6 +46,10 @@ public class EngineerAttendanceService {
 
         attendance.setCheckInTime(LocalDateTime.now());
         attendance.setStatus(AttendanceStatus.PRESENT);
+        
+        engineer.setDutyStatus(com.api.batterymantra.entity.enums.DutyStatus.ON_DUTY);
+        engineerRepository.save(engineer);
+        
         return attendanceRepository.save(attendance);
     }
 
@@ -63,6 +67,10 @@ public class EngineerAttendanceService {
         }
 
         attendance.setCheckOutTime(LocalDateTime.now());
+        
+        engineer.setDutyStatus(com.api.batterymantra.entity.enums.DutyStatus.OFF_DUTY);
+        engineerRepository.save(engineer);
+        
         return attendanceRepository.save(attendance);
     }
 

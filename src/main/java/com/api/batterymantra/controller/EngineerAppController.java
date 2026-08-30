@@ -55,31 +55,6 @@ public class EngineerAppController {
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/duty-status")
-    public ResponseEntity<UserResponse> updateDutyStatus(
-            @RequestParam boolean isOnDuty,
-            @AuthenticationPrincipal UserPrincipal userPrincipal) {
-        DutyStatus status = isOnDuty
-                ? DutyStatus.ON_DUTY
-                : DutyStatus.OFF_DUTY;
-
-        EngineerResponse engineerResponse = engineerService.updateDutyStatus(userPrincipal.getUser().getUserId(),
-                status);
-        User user = userPrincipal.getUser();
-
-        UserResponse response = UserResponse.builder()
-                .userId(user.getUserId())
-                .name(engineerResponse.getFirstName() != null
-                        ? engineerResponse.getFirstName() + " " + engineerResponse.getLastName()
-                        : user.getUsername())
-                .email(user.getEmail())
-                .phoneNumber(user.getPhoneNumber())
-                .isActive(isOnDuty)
-                .role(user.getRole().name())
-                .createdAt(user.getCreatedAt())
-                .build();
-        return ResponseEntity.ok(response);
-    }
 
     @PatchMapping("/fcm-token")
     public ResponseEntity<Void> updateFcmToken(

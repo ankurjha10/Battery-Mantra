@@ -148,17 +148,6 @@ public class EngineerService {
         return mapToResponse(profile);
     }
 
-    @Transactional
-    public EngineerResponse updateDutyStatus(UUID userId, DutyStatus status) {
-        if (status == DutyStatus.ON_JOB) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "ON_JOB status is managed by the system");
-        }
-        EngineerProfile profile = engineerProfileRepository.findByUserUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Engineer profile not found"));
-        profile.setDutyStatus(status);
-        return mapToResponse(engineerProfileRepository.save(profile));
-    }
 
     public List<EngineerResponse> getAvailableEngineersByPartner(UUID partnerId) {
         return engineerProfileRepository
