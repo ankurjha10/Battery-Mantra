@@ -25,6 +25,7 @@ public class EngineerAttendance {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "engineer_id", nullable = false)
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private EngineerProfile engineer;
 
     @Column(nullable = false)
