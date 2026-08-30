@@ -60,6 +60,10 @@ public class Address {
     @Column(name = "is_deleted")
     private Boolean isDeleted = false;
 
+    private Double latitude;
+
+    private Double longitude;
+
     @CreationTimestamp
     private Date createdAt;
 }

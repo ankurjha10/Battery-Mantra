@@ -29,7 +29,4 @@ public class AdminCreateOrderRequest {
     private String deliveryMethod; // "HOME_INSTALLATION", "STORE_PICKUP", "STANDARD_DELIVERY"
 
     private LocalDate installationDate;
-
-    private Double latitude;
-    private Double longitude;
 }

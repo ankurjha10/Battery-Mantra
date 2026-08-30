@@ -108,8 +108,6 @@ public class OrderService {
                 .deliveryMethod(deliveryMethod)
                 .paymentMethod(paymentMethod)
                 .installationDate(request.getInstallationDate())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
                 .build();
 
         // Converting Cart Items to Order Items
@@ -274,8 +272,6 @@ public class OrderService {
                 .deliveryMethod(deliveryMethod)
                 .paymentMethod(paymentMethod)
                 .installationDate(request.getInstallationDate())
-                .latitude(request.getLatitude())
-                .longitude(request.getLongitude())
                 .build();
 
         List<OrderItems> orderItems = new ArrayList<>();

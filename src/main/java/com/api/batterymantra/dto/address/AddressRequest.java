@@ -21,4 +21,6 @@ public class AddressRequest {
     @NotBlank
     private String country;
     private boolean isDefault;
+    private Double latitude;
+    private Double longitude;
 }

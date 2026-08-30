@@ -20,7 +20,4 @@ public class CheckoutRequest {
     private LocalDate installationDate;
 
     private String couponCode;
-
-    private Double latitude;
-    private Double longitude;
 }

@@ -23,7 +23,6 @@ import java.util.List;
 import java.util.UUID;
 import com.api.batterymantra.dto.admin.UserResponse;
 import com.api.batterymantra.entity.User;
-import com.api.batterymantra.entity.enums.DutyStatus;
 
 @RestController
 @RequestMapping("/api/engineer")
@@ -54,7 +53,6 @@ public class EngineerAppController {
                 .build();
         return ResponseEntity.ok(response);
     }
-
 
     @PatchMapping("/fcm-token")
     public ResponseEntity<Void> updateFcmToken(

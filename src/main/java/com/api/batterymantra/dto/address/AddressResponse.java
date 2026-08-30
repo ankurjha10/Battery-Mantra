@@ -22,4 +22,6 @@ public class AddressResponse {
     private String postalCode;
     private String country;
     private boolean isDefault;
+    private Double latitude;
+    private Double longitude;
 }

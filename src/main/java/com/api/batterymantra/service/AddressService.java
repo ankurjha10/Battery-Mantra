@@ -36,6 +36,8 @@ public class AddressService {
         address.setState(request.getState());
         address.setPostalCode(request.getPostalCode());
         address.setCountry(request.getCountry());
+        address.setLatitude(request.getLatitude());
+        address.setLongitude(request.getLongitude());
 
         // If it's the first address, make it default
         List<Address> existingAddresses = addressRepository.findAllByUserUserIdAndIsDeletedFalse(userId);
@@ -71,6 +73,8 @@ public class AddressService {
         address.setState(request.getState());
         address.setPostalCode(request.getPostalCode());
         address.setCountry(request.getCountry());
+        address.setLatitude(request.getLatitude());
+        address.setLongitude(request.getLongitude());
 
         Address savedAddress = addressRepository.save(address);
         return toAddressResponse(savedAddress);
@@ -100,6 +104,8 @@ public class AddressService {
         response.setPostalCode(address.getPostalCode());
         response.setCountry(address.getCountry());
         response.setDefault(address.isDefault());
+        response.setLatitude(address.getLatitude());
+        response.setLongitude(address.getLongitude());
         return response;
     }
 }
