@@ -13,7 +13,6 @@ import com.api.batterymantra.dto.category.CategoryListResponse;
 import com.api.batterymantra.dto.category.CreateCategoryRequest;
 import com.api.batterymantra.dto.category.UpdateCategoryRequest;
 import com.api.batterymantra.entity.Category;
-import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.repository.CategoryRepository;
 
 import java.util.ArrayList;
@@ -113,13 +112,20 @@ public class CategoryService {
 
     @Cacheable(value = "categories")
     public List<CategoryListResponse> getAllCategories() {
-        return categoryRepository.findAll(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder").and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "categoryName"))).stream().map(this::toListResponse).toList();
+        return categoryRepository
+                .findAll(
+                        org.springframework.data.domain.Sort
+                                .by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder")
+                                .and(org.springframework.data.domain.Sort
+                                        .by(org.springframework.data.domain.Sort.Direction.ASC, "categoryName")))
+                .stream().map(this::toListResponse).toList();
     }
 
     public List<CategoryListResponse> getRootCategories() {
         return categoryRepository.findByParentIsNullOrderByDisplayOrderAsc()
                 .stream()
-                .sorted(java.util.Comparator.comparing((Category c) -> c.getDisplayOrder()).thenComparing(c -> c.getCategoryName()))
+                .sorted(java.util.Comparator.comparing((Category c) -> c.getDisplayOrder())
+                        .thenComparing(c -> c.getCategoryName()))
                 .map(this::toListResponse)
                 .toList();
     }

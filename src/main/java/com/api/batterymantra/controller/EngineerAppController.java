@@ -91,10 +91,10 @@ public class EngineerAppController {
 
     @GetMapping("/orders")
     public ResponseEntity<List<OrderResponse>> getAssignedOrders(
-            @RequestParam(defaultValue = "ACTIVE") String filter,
+            @RequestParam(defaultValue = "ACTIVE", name = "type") String type,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         return ResponseEntity.ok(
-                orderService.getEngineerOrders(userPrincipal.getUser().getUserId(), filter));
+                orderService.getEngineerOrders(userPrincipal.getUser().getUserId(), type));
     }
 
     @GetMapping("/orders/{orderId}")
@@ -111,6 +111,14 @@ public class EngineerAppController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         return ResponseEntity.ok(
                 orderService.startEngineerJob(orderId, userPrincipal.getUser().getUserId()));
+    }
+
+    @PostMapping("/orders/{orderId}/send-otp")
+    public ResponseEntity<String> sendCompletionOtp(
+            @PathVariable UUID orderId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        orderService.sendCompletionOtp(orderId);
+        return ResponseEntity.ok("OTP sent successfully");
     }
 
     @PostMapping("/orders/{orderId}/complete")

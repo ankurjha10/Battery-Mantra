@@ -6,11 +6,13 @@ import lombok.Data;
 @Data
 public class EngineerCompleteJobRequest {
 
-    @NotBlank(message = "Security OTP code is required")
-    private String securityCode;
+    @NotBlank(message = "OTP is required")
+    private String otp;
 
-    private String installedBatterySerialNumber;
+    @NotBlank(message = "Serial Number is required")
+    private String serialNumber;
+
     private boolean oldBatteryCollected;
-    private String oldBatteryDetails;
-    private String engineerNotes;
+
+    private String paymentMode;
 }

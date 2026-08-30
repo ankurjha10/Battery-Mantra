@@ -110,4 +110,7 @@ public class Orders {
     @Column(name = "cancellation_reason")
     private String cancellationReason;
 
+    @Column(name = "payment_mode")
+    private String paymentMode;
+
 }

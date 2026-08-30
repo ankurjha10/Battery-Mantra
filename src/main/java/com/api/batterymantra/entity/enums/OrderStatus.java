@@ -8,5 +8,10 @@ public enum OrderStatus {
     OUT_FOR_DELIVERY,
     DELIVERED,
     INSTALLED,
-    CANCELLED
+    CANCELLED,
+    ASSIGNED,
+    DISPATCHED,
+    ACCEPTED,
+    COMPLETED,
+    FAILED
 }

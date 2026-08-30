@@ -16,7 +16,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@SuppressWarnings("null")
 public class FaqService {
 
     private final FaqRepository faqRepository;
@@ -42,7 +41,7 @@ public class FaqService {
         faq.setPageType(request.getPageType());
         faq.setTitle(request.getTitle());
         faq.setDescription(request.getDescription());
-        
+
         if (request.getIsActive() != null) {
             faq.setActive(request.getIsActive());
         }

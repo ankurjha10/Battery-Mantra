@@ -27,7 +27,9 @@ import com.api.batterymantra.util.OrderMapper;
 import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
+import java.util.concurrent.TimeUnit;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -55,6 +57,7 @@ public class OrderService {
     private final NotificationService notificationService;
     private final EngineerInventoryRepository engineerInventoryRepository;
     private final CallLogRepository callLogRepository;
+    private final StringRedisTemplate redisTemplate;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -698,16 +701,20 @@ public class OrderService {
     // ===== ENGINEER Methods =====
 
     @Transactional(readOnly = true)
-    public List<OrderResponse> getEngineerOrders(UUID engineerUserId, String filter) {
+    public List<OrderResponse> getEngineerOrders(UUID engineerUserId, String type) {
         EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
 
         List<OrderStatus> statuses;
-        if ("HISTORY".equalsIgnoreCase(filter)) {
-            statuses = List.of(OrderStatus.DELIVERED, OrderStatus.INSTALLED, OrderStatus.CANCELLED);
+        if ("HISTORY".equalsIgnoreCase(type)) {
+            statuses = List.of(
+                    OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.CANCELLED, OrderStatus.FAILED, OrderStatus.INSTALLED
+            );
         } else {
-            statuses = List.of(OrderStatus.PENDING, OrderStatus.CONFIRMED, OrderStatus.PROCESSING,
-                    OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY);
+            statuses = List.of(
+                    OrderStatus.ASSIGNED, OrderStatus.DISPATCHED, OrderStatus.PENDING, OrderStatus.ACCEPTED,
+                    OrderStatus.CONFIRMED, OrderStatus.PROCESSING, OrderStatus.SHIPPED, OrderStatus.OUT_FOR_DELIVERY
+            );
         }
 
         return orderRepository
@@ -772,6 +779,27 @@ public class OrderService {
         return orderMapper.toOrderResponse(saved);
     }
 
+    public void sendCompletionOtp(UUID orderId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        String phone = order.getCustomer().getPhoneNumber();
+        if (phone == null || phone.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer phone number is missing");
+        }
+        
+        // Generate 6-digit OTP
+        String otp = String.format("%06d", new Random().nextInt(1000000));
+        
+        // Store in Redis (Key: order_completion_otp:{orderId})
+        String redisKey = "order_completion_otp:" + orderId;
+        redisTemplate.opsForValue().set(redisKey, otp, 10, TimeUnit.MINUTES);
+        
+        // Send SMS
+        String name = order.getCustomer().getUsername() != null ? order.getCustomer().getUsername() : "Customer";
+        smsService.sendOtp(phone, name, otp);
+    }
+
     @Transactional
     public OrderResponse completeEngineerJob(UUID orderId, UUID engineerUserId, EngineerCompleteJobRequest request) {
         EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
@@ -791,22 +819,25 @@ public class OrderService {
                     "Order must be OUT_FOR_DELIVERY, SHIPPED, or PROCESSING to complete");
         }
 
-        // Security code verification
-        if (order.getDeliverySecurityCode() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "No security code generated for this order");
+        // Redis OTP verification
+        String redisKey = "order_completion_otp:" + orderId;
+        String storedOtp = redisTemplate.opsForValue().get(redisKey);
+        
+        if (storedOtp == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "OTP expired or not sent");
         }
-        if (!order.getDeliverySecurityCode().equals(request.getSecurityCode().trim())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Invalid security code. Please ask the customer for the correct 4-digit code.");
+        if (!storedOtp.equals(request.getOtp().trim())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid OTP");
         }
+        // Delete OTP
+        redisTemplate.delete(redisKey);
 
         // Set completion fields
-        order.setOrderStatus(OrderStatus.INSTALLED);
+        order.setOrderStatus(OrderStatus.COMPLETED);
         order.setCompletedAt(LocalDateTime.now());
-        order.setInstalledBatterySerialNumber(request.getInstalledBatterySerialNumber());
+        order.setInstalledBatterySerialNumber(request.getSerialNumber());
         order.setOldBatteryCollected(request.isOldBatteryCollected());
-        order.setOldBatteryDetails(request.getOldBatteryDetails());
-        order.setEngineerNotes(request.getEngineerNotes());
+        order.setPaymentMode(request.getPaymentMode());
 
         // Deduct from Van Inventory (Warning if missing)
         for (OrderItems item : order.getOrderItems()) {
