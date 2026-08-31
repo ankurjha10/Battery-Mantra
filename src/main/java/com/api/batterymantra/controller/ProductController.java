@@ -55,6 +55,24 @@ public class ProductController {
                 specKey, specValue, keyword, pageable, cityId));
     }
 
+    @GetMapping("/aggregations")
+    public ResponseEntity<com.api.batterymantra.dto.product.ProductAggregationsResponse> getProductAggregations(
+            @RequestParam(required = false) List<UUID> categoryId,
+            @RequestParam(required = false) List<UUID> brandId,
+            @RequestParam(required = false) UUID vehicleId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<String> capacity,
+            @RequestParam(required = false) List<String> warranty,
+            @RequestParam(required = false) String specKey,
+            @RequestParam(required = false) String specValue,
+            @RequestParam(required = false) String keyword) {
+
+        return ResponseEntity.ok(productService.getProductAggregations(
+                categoryId, brandId, vehicleId, minPrice, maxPrice, capacity, warranty,
+                specKey, specValue, keyword));
+    }
+
     @GetMapping("/id/{id}")
     public ResponseEntity<ProductDetailResponse> getProductById(@PathVariable String id, @RequestParam(required = false) UUID cityId) {
         return ResponseEntity.ok(productService.getProductByIdOrSlug(id, cityId));

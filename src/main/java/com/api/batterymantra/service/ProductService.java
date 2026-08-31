@@ -240,12 +240,11 @@ public class ProductService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public Page<ProductListResponse> filterProducts(List<UUID> categoryIdsInput, List<UUID> brandIds, UUID vehicleId,
+    private Specification<Product> buildFilterSpecification(List<UUID> categoryIdsInput, List<UUID> brandIds, UUID vehicleId,
                                                      BigDecimal minPrice, BigDecimal maxPrice,
                                                      List<String> capacities, List<String> warranties,
                                                      String specKey, String specValue,
-                                                     String keyword, Pageable pageable, UUID cityId) {
+                                                     String keyword) {
         Specification<Product> spec = Specification.allOf();
 
         if (categoryIdsInput != null && !categoryIdsInput.isEmpty()) {
@@ -296,8 +295,64 @@ public class ProductService {
         if (keyword != null && !keyword.isBlank()) {
             spec = spec.and(ProductSpecification.hasNameContaining(keyword));
         }
+        
+        return spec;
+    }
 
+    @Transactional(readOnly = true)
+    public Page<ProductListResponse> filterProducts(List<UUID> categoryIdsInput, List<UUID> brandIds, UUID vehicleId,
+                                                     BigDecimal minPrice, BigDecimal maxPrice,
+                                                     List<String> capacities, List<String> warranties,
+                                                     String specKey, String specValue,
+                                                     String keyword, Pageable pageable, UUID cityId) {
+        Specification<Product> spec = buildFilterSpecification(categoryIdsInput, brandIds, vehicleId, minPrice, maxPrice, capacities, warranties, specKey, specValue, keyword);
         return productRepository.findAll(spec, pageable).map(p -> toListResponse(p, cityId));
+    }
+
+    @Transactional(readOnly = true)
+    public com.api.batterymantra.dto.product.ProductAggregationsResponse getProductAggregations(List<UUID> categoryIdsInput, List<UUID> brandIds, UUID vehicleId,
+                                                     BigDecimal minPrice, BigDecimal maxPrice,
+                                                     List<String> capacities, List<String> warranties,
+                                                     String specKey, String specValue,
+                                                     String keyword) {
+        Specification<Product> spec = buildFilterSpecification(categoryIdsInput, brandIds, vehicleId, minPrice, maxPrice, capacities, warranties, specKey, specValue, keyword);
+        List<Product> products = productRepository.findAll(spec);
+
+        List<com.api.batterymantra.dto.brand.BrandResponse> availableBrands = products.stream()
+                .map(p -> p.getBrand())
+                .filter(java.util.Objects::nonNull)
+                .map(b -> com.api.batterymantra.dto.brand.BrandResponse.builder()
+                        .brandId(b.getBrandId())
+                        .brandName(b.getBrandName())
+                        .brandLogo(b.getBrandLogo())
+                        .featured(b.isFeatured())
+                        .description(b.getDescription())
+                        .productCount(b.getProductCount())
+                        .build())
+                .distinct()
+                .toList();
+
+        List<String> availableCapacities = products.stream()
+                .map(p -> p.getCapacity())
+                .filter(c -> c != null && !c.isBlank())
+                .distinct()
+                .toList();
+
+        List<String> availableWarranties = products.stream()
+                .flatMap(p -> p.getSpecUnits().stream())
+                .filter(u -> u.getSpecAttribute() != null &&
+                             u.getSpecAttribute().getName() != null &&
+                             u.getSpecAttribute().getName().toLowerCase().contains("warranty"))
+                .map(u -> u.getValue())
+                .filter(v -> v != null && !v.isBlank())
+                .distinct()
+                .toList();
+
+        return com.api.batterymantra.dto.product.ProductAggregationsResponse.builder()
+                .brands(availableBrands)
+                .capacities(availableCapacities)
+                .warranties(availableWarranties)
+                .build();
     }
 
     @Transactional

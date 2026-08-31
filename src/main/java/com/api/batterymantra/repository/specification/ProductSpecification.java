@@ -36,8 +36,8 @@ public class ProductSpecification {
     public static Specification<Product> hasWarrantyIn(List<String> warranties) {
         return (root, query, cb) -> {
             var specUnitsJoin = root.join("specUnits");
-            return specUnitsJoin.get("unitValue").in(warranties);
-            // Assuming unitValue contains the "60 Months" string.
+            return specUnitsJoin.get("value").in(warranties);
+            // Assuming value contains the "60 Months" string.
         };
     }
 

@@ -12,11 +12,9 @@ import com.api.batterymantra.repository.EngineerProfileRepository;
 import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.UUID;
@@ -64,7 +62,7 @@ public class EngineerService {
                 .city(request.getCity())
                 .isActive(true)
                 .build();
-        
+
         profile = engineerProfileRepository.save(profile);
         return mapToResponse(profile);
     }
@@ -99,7 +97,7 @@ public class EngineerService {
     public EngineerResponse updateEngineer(UUID id, CreateEngineerRequest request) {
         EngineerProfile profile = engineerProfileRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Engineer not found"));
-        
+
         User user = profile.getUser();
         user.setEmail(request.getEmail());
         user.setUsername(request.getEmail());
@@ -114,13 +112,13 @@ public class EngineerService {
         profile.setAlternatePhone(request.getAlternatePhone());
         profile.setAddress(request.getAddress());
         profile.setCity(request.getCity());
-        
+
         if (request.getActive() != null) {
             profile.setActive(request.getActive());
             user.setActive(request.getActive());
             userRepository.save(user);
         }
-        
+
         if (request.getPartnerId() != null) {
             PartnerProfile partnerProfile = partnerProfileRepository.findById(request.getPartnerId()).orElse(null);
             profile.setPartnerProfile(partnerProfile);
@@ -147,7 +145,6 @@ public class EngineerService {
                 .orElseThrow(() -> new ResourceNotFoundException("Engineer profile not found"));
         return mapToResponse(profile);
     }
-
 
     public List<EngineerResponse> getAvailableEngineersByPartner(UUID partnerId) {
         return engineerProfileRepository
@@ -176,7 +173,8 @@ public class EngineerService {
                 .city(profile.getCity())
                 .isActive(profile.isActive())
                 .partnerId(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getId() : null)
-                .partnerBusinessName(profile.getPartnerProfile() != null ? profile.getPartnerProfile().getBusinessName() : null)
+                .partnerBusinessName(
+                        profile.getPartnerProfile() != null ? profile.getPartnerProfile().getBusinessName() : null)
                 .dutyStatus(profile.getDutyStatus() != null ? profile.getDutyStatus().name() : null)
                 .createdAt(profile.getCreatedAt())
                 .build();
