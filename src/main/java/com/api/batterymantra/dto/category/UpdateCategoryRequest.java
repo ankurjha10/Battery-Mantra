@@ -11,4 +11,5 @@ public class UpdateCategoryRequest {
     public String iconUrl;
     public Integer displayOrder;
     public UUID parentId;
+    public Boolean removeParent;
 }

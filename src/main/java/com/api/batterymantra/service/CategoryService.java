@@ -158,7 +158,9 @@ public class CategoryService {
         if (dto.displayOrder != null)
             category.setDisplayOrder(dto.displayOrder);
 
-        if (dto.parentId != null) {
+        if (Boolean.TRUE.equals(dto.removeParent)) {
+            category.setParent(null);
+        } else if (dto.parentId != null) {
             Category parent = categoryRepository.findById(dto.parentId)
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Parent category not found with id: " + dto.parentId));
