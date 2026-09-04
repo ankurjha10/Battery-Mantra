@@ -27,7 +27,7 @@ public class Category {
     @Column(name = "category_name", nullable = false, length = 100, unique = true)
     private String categoryName;
 
-    @Column(name = "category_description")
+    @Column(name = "category_description", columnDefinition = "TEXT")
     private String categoryDescription;
 
     @Column(name = "icon_url")
