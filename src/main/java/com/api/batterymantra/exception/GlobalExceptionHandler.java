@@ -33,10 +33,40 @@ public class GlobalExceptionHandler {
             DataIntegrityViolationException ex,
             WebRequest request) {
         
-        String message = "Cannot perform operation: This record is referenced by other data or violates a unique constraint.";
+        String rootMsg = ex.getMostSpecificCause() != null 
+                ? ex.getMostSpecificCause().getMessage() 
+                : (ex.getMessage() != null ? ex.getMessage() : "");
+        String lowerMsg = rootMsg.toLowerCase();
         
-        if (ex.getMessage() != null && ex.getMessage().toLowerCase().contains("duplicate")) {
-            message = "This record already exists. Please use a unique value (e.g. unique coupon code).";
+        String message;
+        
+        if (lowerMsg.contains("value too long") || lowerMsg.contains("too long") || lowerMsg.contains("string data, right truncation")) {
+            // Extract column name if possible
+            String col = "";
+            try {
+                int idx = lowerMsg.indexOf("\"");
+                if (idx >= 0) {
+                    int end = lowerMsg.indexOf("\"", idx + 1);
+                    if (end > idx) col = " (" + rootMsg.substring(idx + 1, end) + ")";
+                }
+            } catch (Exception ignored) {}
+            message = "The text you entered is too long for the field" + col + ". Please shorten it and try again.";
+        } else if (lowerMsg.contains("duplicate") || lowerMsg.contains("unique") || lowerMsg.contains("already exists") || lowerMsg.contains("unique_violation")) {
+            // Try to extract which field caused the duplicate
+            String field = "";
+            try {
+                if (lowerMsg.contains("category_name")) field = " (Category Name)";
+                else if (lowerMsg.contains("brand_name")) field = " (Brand Name)";
+                else if (lowerMsg.contains("seo_slug")) field = " (SEO Slug)";
+                else if (lowerMsg.contains("coupon_code")) field = " (Coupon Code)";
+            } catch (Exception ignored) {}
+            message = "A record with this value already exists" + field + ". Please use a unique value.";
+        } else if (lowerMsg.contains("foreign key") || lowerMsg.contains("referenced") || lowerMsg.contains("constraint")) {
+            message = "This record cannot be modified or deleted because it is linked to other data. Please remove those references first.";
+        } else if (lowerMsg.contains("not-null") || lowerMsg.contains("null value")) {
+            message = "A required field is missing. Please fill in all required fields and try again.";
+        } else {
+            message = "Could not save the data. Please check your input and try again.";
         }
         
         ErrorResponse error = new ErrorResponse(
@@ -117,9 +147,9 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleGlobalException(
             Exception ex,
             WebRequest request) {
-        ex.printStackTrace(); // Log the actual exception trace
+        ex.printStackTrace(); // Log the actual exception trace for debugging
         ErrorResponse error = new ErrorResponse(
-                "An error occurred: " + ex.getMessage(),
+                "Something went wrong. Please try again later or contact support if the issue persists.",
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 LocalDateTime.now(),
                 request.getDescription(false).replace("uri=", "")
