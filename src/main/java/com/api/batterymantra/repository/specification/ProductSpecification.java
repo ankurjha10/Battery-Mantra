@@ -114,4 +114,20 @@ public class ProductSpecification {
             return cb.conjunction();
         };
     }
+
+    /**
+     * Sort by categoryBrandDisplayOrder ASC (nulls/zero last), then createdAt DESC.
+     * Used when both category and brand filters are applied simultaneously.
+     */
+    public static Specification<Product> sortByCategoryBrandOrder() {
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.orderBy(
+                        cb.asc(cb.coalesce(root.get("categoryBrandDisplayOrder"), Integer.MAX_VALUE)),
+                        cb.desc(root.get("createdAt"))
+                );
+            }
+            return cb.conjunction();
+        };
+    }
 }

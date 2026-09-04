@@ -40,6 +40,7 @@ public class ProductDetailResponse {
     private Integer globalDisplayOrder;
     private Integer categoryDisplayOrder;
     private Integer brandDisplayOrder;
+    private Integer categoryBrandDisplayOrder;
     private String highlights;
     private SeoMetadata seo;
 }

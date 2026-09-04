@@ -104,6 +104,9 @@ public class Product {
     @Column(name = "brand_display_order")
     private Integer brandDisplayOrder = 0;
 
+    @Column(name = "category_brand_display_order")
+    private Integer categoryBrandDisplayOrder = 0;
+
     private String highlights;
 
     @Embedded

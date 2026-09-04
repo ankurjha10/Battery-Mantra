@@ -37,6 +37,7 @@ public class UpdateProductRequest {
     private Integer globalDisplayOrder;
     private Integer categoryDisplayOrder;
     private Integer brandDisplayOrder;
+    private Integer categoryBrandDisplayOrder;
 
     private SeoMetadata seo;
 }

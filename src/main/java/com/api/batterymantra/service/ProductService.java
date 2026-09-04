@@ -79,6 +79,7 @@ public class ProductService {
         res.setGlobalDisplayOrder(p.getGlobalDisplayOrder());
         res.setCategoryDisplayOrder(p.getCategoryDisplayOrder());
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
+        res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
 
         City currentCity = null;
@@ -132,6 +133,7 @@ public class ProductService {
         res.setGlobalDisplayOrder(p.getGlobalDisplayOrder());
         res.setCategoryDisplayOrder(p.getCategoryDisplayOrder());
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
+        res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
 
         if (p.getCityPrices() != null) {
@@ -315,7 +317,9 @@ public class ProductService {
         boolean hasCategory = categoryIdsInput != null && !categoryIdsInput.isEmpty();
         boolean hasBrand = brandIds != null && !brandIds.isEmpty();
 
-        if (hasCategory) {
+        if (hasCategory && hasBrand) {
+            spec = spec.and(ProductSpecification.sortByCategoryBrandOrder());
+        } else if (hasCategory) {
             spec = spec.and(ProductSpecification.sortByCategoryOrder());
         } else if (hasBrand) {
             spec = spec.and(ProductSpecification.sortByBrandOrder());
@@ -439,6 +443,9 @@ public class ProductService {
         if (dto.getBrandDisplayOrder() != null) {
             product.setBrandDisplayOrder(dto.getBrandDisplayOrder());
         }
+        if (dto.getCategoryBrandDisplayOrder() != null) {
+            product.setCategoryBrandDisplayOrder(dto.getCategoryBrandDisplayOrder());
+        }
 
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
@@ -555,6 +562,8 @@ public class ProductService {
             product.setCategoryDisplayOrder(dto.getCategoryDisplayOrder());
         if (dto.getBrandDisplayOrder() != null)
             product.setBrandDisplayOrder(dto.getBrandDisplayOrder());
+        if (dto.getCategoryBrandDisplayOrder() != null)
+            product.setCategoryBrandDisplayOrder(dto.getCategoryBrandDisplayOrder());
 
         if (dto.getCityPrices() != null) {
             product.getCityPrices().clear();
@@ -667,6 +676,9 @@ public class ProductService {
                     break;
                 case "BRAND":
                     product.setBrandDisplayOrder(req.getOrderValue());
+                    break;
+                case "CATEGORY_BRAND":
+                    product.setCategoryBrandDisplayOrder(req.getOrderValue());
                     break;
                 case "GLOBAL":
                 default:
