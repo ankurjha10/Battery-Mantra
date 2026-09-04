@@ -36,7 +36,9 @@ public class CreateProductRequest {
     @JsonProperty("isAutoAssignToPartner")
     private Boolean isAutoAssignToPartner;
 
-    private Integer displayOrder;
+    private Integer globalDisplayOrder;
+    private Integer categoryDisplayOrder;
+    private Integer brandDisplayOrder;
 
     private SeoMetadata seo;
 }

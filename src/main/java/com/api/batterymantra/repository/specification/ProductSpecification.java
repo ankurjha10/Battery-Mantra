@@ -71,13 +71,43 @@ public class ProductSpecification {
     }
 
     /**
-     * Default sorting: displayOrder ASC (nulls last), then createdAt DESC.
+     * Sort by globalDisplayOrder ASC (nulls/zero last), then createdAt DESC.
      */
-    public static Specification<Product> defaultSort() {
+    public static Specification<Product> sortByGlobalOrder() {
         return (root, query, cb) -> {
             if (query != null) {
                 query.orderBy(
-                        cb.asc(cb.coalesce(root.get("displayOrder"), Integer.MAX_VALUE)),
+                        cb.asc(cb.coalesce(root.get("globalDisplayOrder"), Integer.MAX_VALUE)),
+                        cb.desc(root.get("createdAt"))
+                );
+            }
+            return cb.conjunction();
+        };
+    }
+
+    /**
+     * Sort by categoryDisplayOrder ASC (nulls/zero last), then createdAt DESC.
+     */
+    public static Specification<Product> sortByCategoryOrder() {
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.orderBy(
+                        cb.asc(cb.coalesce(root.get("categoryDisplayOrder"), Integer.MAX_VALUE)),
+                        cb.desc(root.get("createdAt"))
+                );
+            }
+            return cb.conjunction();
+        };
+    }
+
+    /**
+     * Sort by brandDisplayOrder ASC (nulls/zero last), then createdAt DESC.
+     */
+    public static Specification<Product> sortByBrandOrder() {
+        return (root, query, cb) -> {
+            if (query != null) {
+                query.orderBy(
+                        cb.asc(cb.coalesce(root.get("brandDisplayOrder"), Integer.MAX_VALUE)),
                         cb.desc(root.get("createdAt"))
                 );
             }

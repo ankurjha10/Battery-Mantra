@@ -76,7 +76,9 @@ public class ProductService {
         res.setApproved(p.isApproved());
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
-        res.setDisplayOrder(p.getDisplayOrder());
+        res.setGlobalDisplayOrder(p.getGlobalDisplayOrder());
+        res.setCategoryDisplayOrder(p.getCategoryDisplayOrder());
+        res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
 
         City currentCity = null;
@@ -127,7 +129,9 @@ public class ProductService {
         res.setApproved(p.isApproved());
         res.setCreatedByPartnerId(p.getCreatedByPartnerId());
         res.setPartnerBusinessName(p.getPartnerBusinessName());
-        res.setDisplayOrder(p.getDisplayOrder());
+        res.setGlobalDisplayOrder(p.getGlobalDisplayOrder());
+        res.setCategoryDisplayOrder(p.getCategoryDisplayOrder());
+        res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
 
         if (p.getCityPrices() != null) {
@@ -199,7 +203,7 @@ public class ProductService {
     @Transactional(readOnly = true)
     public List<ProductListResponse> getAllProducts(UUID cityId) {
         return productRepository.findAll(
-                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "displayOrder")
+                org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.ASC, "globalDisplayOrder")
                         .and(org.springframework.data.domain.Sort.by(org.springframework.data.domain.Sort.Direction.DESC, "createdAt"))
         ).stream().map(p -> toListResponse(p, cityId)).toList();
     }
@@ -306,6 +310,19 @@ public class ProductService {
                                                      String specKey, String specValue,
                                                      String keyword, Pageable pageable, UUID cityId) {
         Specification<Product> spec = buildFilterSpecification(categoryIdsInput, brandIds, vehicleId, minPrice, maxPrice, capacities, warranties, specKey, specValue, keyword);
+
+        // Apply context-aware sorting based on filter parameters
+        boolean hasCategory = categoryIdsInput != null && !categoryIdsInput.isEmpty();
+        boolean hasBrand = brandIds != null && !brandIds.isEmpty();
+
+        if (hasCategory) {
+            spec = spec.and(ProductSpecification.sortByCategoryOrder());
+        } else if (hasBrand) {
+            spec = spec.and(ProductSpecification.sortByBrandOrder());
+        } else {
+            spec = spec.and(ProductSpecification.sortByGlobalOrder());
+        }
+
         return productRepository.findAll(spec, pageable).map(p -> toListResponse(p, cityId));
     }
 
@@ -413,8 +430,14 @@ public class ProductService {
             product.setSeo(dto.getSeo());
         }
 
-        if (dto.getDisplayOrder() != null) {
-            product.setDisplayOrder(dto.getDisplayOrder());
+        if (dto.getGlobalDisplayOrder() != null) {
+            product.setGlobalDisplayOrder(dto.getGlobalDisplayOrder());
+        }
+        if (dto.getCategoryDisplayOrder() != null) {
+            product.setCategoryDisplayOrder(dto.getCategoryDisplayOrder());
+        }
+        if (dto.getBrandDisplayOrder() != null) {
+            product.setBrandDisplayOrder(dto.getBrandDisplayOrder());
         }
 
         if (dto.getCityPrices() != null) {
@@ -526,9 +549,12 @@ public class ProductService {
             product.setSeo(dto.getSeo());
         }
 
-        if (dto.getDisplayOrder() != null) {
-            product.setDisplayOrder(dto.getDisplayOrder());
-        }
+        if (dto.getGlobalDisplayOrder() != null)
+            product.setGlobalDisplayOrder(dto.getGlobalDisplayOrder());
+        if (dto.getCategoryDisplayOrder() != null)
+            product.setCategoryDisplayOrder(dto.getCategoryDisplayOrder());
+        if (dto.getBrandDisplayOrder() != null)
+            product.setBrandDisplayOrder(dto.getBrandDisplayOrder());
 
         if (dto.getCityPrices() != null) {
             product.getCityPrices().clear();
@@ -633,7 +659,20 @@ public class ProductService {
             Product product = productRepository.findById(req.getProductId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Product not found with id: " + req.getProductId()));
-            product.setDisplayOrder(req.getDisplayOrder());
+
+            String context = req.getOrderContext() != null ? req.getOrderContext().toUpperCase() : "GLOBAL";
+            switch (context) {
+                case "CATEGORY":
+                    product.setCategoryDisplayOrder(req.getOrderValue());
+                    break;
+                case "BRAND":
+                    product.setBrandDisplayOrder(req.getOrderValue());
+                    break;
+                case "GLOBAL":
+                default:
+                    product.setGlobalDisplayOrder(req.getOrderValue());
+                    break;
+            }
             productRepository.save(product);
         }
     }

@@ -37,7 +37,9 @@ public class ProductDetailResponse {
     private boolean isApproved = true;
     private UUID createdByPartnerId;
     private String partnerBusinessName;
-    private Integer displayOrder;
+    private Integer globalDisplayOrder;
+    private Integer categoryDisplayOrder;
+    private Integer brandDisplayOrder;
     private String highlights;
     private SeoMetadata seo;
 }

@@ -95,8 +95,14 @@ public class Product {
     @Column(name = "partner_business_name")
     private String partnerBusinessName;
 
-    @Column(name = "display_order")
-    private Integer displayOrder = 0;
+    @Column(name = "global_display_order")
+    private Integer globalDisplayOrder = 0;
+
+    @Column(name = "category_display_order")
+    private Integer categoryDisplayOrder = 0;
+
+    @Column(name = "brand_display_order")
+    private Integer brandDisplayOrder = 0;
 
     private String highlights;
 
