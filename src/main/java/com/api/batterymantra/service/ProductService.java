@@ -71,6 +71,18 @@ public class ProductService {
         res.setProductCategory(p.getProductCategory().getCategoryName());
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
         res.setCapacity(p.getCapacity());
+        
+        if (p.getSpecUnits() != null) {
+            for (com.api.batterymantra.entity.SpecUnit unit : p.getSpecUnits()) {
+                if (unit.getSpecAttribute() != null && unit.getSpecAttribute().getName() != null) {
+                    if (unit.getSpecAttribute().getName().toLowerCase().contains("capacity")) {
+                        res.setCapacityAh(unit.getValue());
+                        break;
+                    }
+                }
+            }
+        }
+        
         res.setAdditionalImages(p.getAdditionalImages() != null ? new ArrayList<>(p.getAdditionalImages()) : new ArrayList<>());
         res.setAutoAssignToPartner(p.isAutoAssignToPartner());
         res.setApproved(p.isApproved());

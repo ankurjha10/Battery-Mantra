@@ -21,6 +21,7 @@ public class ProductListResponse {
     private List<String> additionalImages;
     private String productCategory;
     private String capacity;
+    private String capacityAh;
     @JsonProperty("isAutoAssignToPartner")
     private boolean isAutoAssignToPartner;
     @JsonProperty("isApproved")
