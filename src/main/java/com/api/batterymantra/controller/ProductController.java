@@ -41,13 +41,16 @@ public class ProductController {
             @RequestParam(required = false) String keyword,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
-            @RequestParam(defaultValue = "productName") String sortBy,
+            @RequestParam(required = false) String sortBy,
             @RequestParam(defaultValue = "asc") String sortDir,
             @RequestParam(required = false) UUID cityId) {
 
-        Sort sort = sortDir.equalsIgnoreCase("desc")
-                ? Sort.by(sortBy).descending()
-                : Sort.by(sortBy).ascending();
+        Sort sort = Sort.unsorted();
+        if (sortBy != null && !sortBy.isBlank() && !sortBy.equalsIgnoreCase("relevance")) {
+            sort = sortDir.equalsIgnoreCase("desc")
+                    ? Sort.by(sortBy).descending()
+                    : Sort.by(sortBy).ascending();
+        }
         Pageable pageable = PageRequest.of(page, size, sort);
 
         return ResponseEntity.ok(productService.filterProducts(
