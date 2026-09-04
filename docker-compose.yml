@@ -18,6 +18,7 @@ services:
 
   postgres:
     image: postgres:17.6
+    container_name: postgres
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
