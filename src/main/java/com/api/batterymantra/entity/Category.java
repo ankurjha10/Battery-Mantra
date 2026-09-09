@@ -8,6 +8,7 @@ import org.hibernate.annotations.UuidGenerator;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import com.api.batterymantra.enums.ClickAction;
 
 @Getter
 @Setter
@@ -35,6 +36,10 @@ public class Category {
 
     @Column(name = "display_order")
     private Integer displayOrder;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "click_action")
+    private ClickAction clickAction = ClickAction.AUTO;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_id")

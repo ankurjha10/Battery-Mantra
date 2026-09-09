@@ -13,6 +13,7 @@ import com.api.batterymantra.dto.category.CategoryListResponse;
 import com.api.batterymantra.dto.category.CreateCategoryRequest;
 import com.api.batterymantra.dto.category.UpdateCategoryRequest;
 import com.api.batterymantra.entity.Category;
+import com.api.batterymantra.enums.ClickAction;
 import com.api.batterymantra.repository.CategoryRepository;
 
 import java.util.ArrayList;
@@ -33,6 +34,7 @@ public class CategoryService {
         res.iconUrl = c.getIconUrl();
         res.displayOrder = c.getDisplayOrder();
         res.parentId = c.getParent() != null ? c.getParent().getCategoryId() : null;
+        res.clickAction = c.getClickAction();
         if (c.getSubCategories() != null) {
             res.subCategories = c.getSubCategories().stream()
                     .map(this::toListResponse)
@@ -51,6 +53,7 @@ public class CategoryService {
         res.iconUrl = c.getIconUrl();
         res.displayOrder = c.getDisplayOrder();
         res.parentId = c.getParent() != null ? c.getParent().getCategoryId() : null;
+        res.clickAction = c.getClickAction();
 
         if (c.getSubCategories() != null) {
             res.subCategories = c.getSubCategories().stream()
@@ -78,6 +81,11 @@ public class CategoryService {
         category.setCategoryDescription(dto.categoryDescription);
         category.setIconUrl(dto.iconUrl);
         category.setDisplayOrder(dto.displayOrder);
+        if (dto.clickAction != null) {
+            category.setClickAction(dto.clickAction);
+        } else {
+            category.setClickAction(ClickAction.AUTO);
+        }
 
         if (dto.parentId != null) {
             Category parent = categoryRepository.findById(dto.parentId)
@@ -157,6 +165,9 @@ public class CategoryService {
 
         if (dto.displayOrder != null)
             category.setDisplayOrder(dto.displayOrder);
+
+        if (dto.clickAction != null)
+            category.setClickAction(dto.clickAction);
 
         if (Boolean.TRUE.equals(dto.removeParent)) {
             category.setParent(null);
