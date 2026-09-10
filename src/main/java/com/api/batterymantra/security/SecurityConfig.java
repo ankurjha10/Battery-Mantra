@@ -95,8 +95,8 @@ public class SecurityConfig {
                         // Address — CUSTOMER only
                         .requestMatchers("/api/address/**").hasRole("CUSTOMER")
 
-                        // Payments — CUSTOMER only
-                        .requestMatchers("/api/payments/**").hasRole("CUSTOMER")
+                        // Payments — CUSTOMER and ENGINEER
+                        .requestMatchers("/api/payments/**").hasAnyRole("CUSTOMER", "ENGINEER")
 
                         // Orders — CUSTOMER endpoints + ADMIN endpoints (fine-grained via @PreAuthorize)
                         .requestMatchers("/api/orders/admin/**").hasRole("ADMIN")

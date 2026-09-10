@@ -50,7 +50,7 @@ public class PaymentController {
      * POST /api/payments/razorpay/generate-qr/{orderId}
      */
     @PostMapping("/generate-qr/{orderId}")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ENGINEER')")
     public ResponseEntity<QrCodeResponse> generateQrCode(
             @PathVariable UUID orderId) {
         QrCodeResponse response = razorpayService.generateQrCode(orderId);
@@ -62,7 +62,7 @@ public class PaymentController {
      * GET /api/payments/razorpay/status/{orderId}
      */
     @GetMapping("/status/{orderId}")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'ENGINEER')")
     public ResponseEntity<Map<String, Object>> checkQrPaymentStatus(
             @PathVariable UUID orderId) {
         Map<String, Object> status = razorpayService.checkQrPaymentStatus(orderId);
