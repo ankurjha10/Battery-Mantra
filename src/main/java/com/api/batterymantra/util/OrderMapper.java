@@ -41,7 +41,13 @@ public class OrderMapper {
         }
         response.setInstallationDate(order.getInstallationDate());
         response.setExchangeDiscount(order.getExchangeDiscount());
-        response.setDeliverySecurityCode(order.getDeliverySecurityCode());
+        org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"))) {
+            response.setDeliverySecurityCode(order.getDeliverySecurityCode());
+        } else {
+            response.setDeliverySecurityCode(null);
+        }
 
         // Completion fields
         response.setCompletedAt(order.getCompletedAt());
