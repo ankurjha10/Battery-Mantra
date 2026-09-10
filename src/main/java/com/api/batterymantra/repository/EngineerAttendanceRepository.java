@@ -10,4 +10,5 @@ import java.util.UUID;
 public interface EngineerAttendanceRepository extends JpaRepository<EngineerAttendance, UUID> {
     Optional<EngineerAttendance> findByEngineerIdAndDate(UUID engineerId, LocalDate date);
     List<EngineerAttendance> findByEngineerIdOrderByDateDesc(UUID engineerId);
+    Optional<EngineerAttendance> findFirstByEngineerIdOrderByDateDesc(UUID engineerId);
 }

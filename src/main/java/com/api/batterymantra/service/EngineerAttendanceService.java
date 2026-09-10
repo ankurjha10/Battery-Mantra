@@ -33,19 +33,23 @@ public class EngineerAttendanceService {
         EngineerProfile engineer = engineerRepository.findByUserUserId(engineerUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
 
-        LocalDate today = LocalDate.now();
-        EngineerAttendance attendance = attendanceRepository.findByEngineerIdAndDate(engineer.getId(), today)
-                .orElse(EngineerAttendance.builder()
-                        .engineer(engineer)
-                        .date(today)
-                        .build());
-
-        if (attendance.getCheckInTime() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already checked in today");
+        java.util.Optional<EngineerAttendance> latestOpt = attendanceRepository.findFirstByEngineerIdOrderByDateDesc(engineer.getId());
+        if (latestOpt.isPresent()) {
+            EngineerAttendance latest = latestOpt.get();
+            if (latest.getCheckOutTime() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Please check out of your active shift first.");
+            }
+            if (LocalDate.now().equals(latest.getDate())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already completed shift for today");
+            }
         }
 
-        attendance.setCheckInTime(LocalDateTime.now());
-        attendance.setStatus(AttendanceStatus.PRESENT);
+        EngineerAttendance attendance = EngineerAttendance.builder()
+                .engineer(engineer)
+                .date(LocalDate.now())
+                .checkInTime(LocalDateTime.now())
+                .status(AttendanceStatus.PRESENT)
+                .build();
         
         engineer.setDutyStatus(com.api.batterymantra.entity.enums.DutyStatus.ON_DUTY);
         engineerRepository.save(engineer);
@@ -58,20 +62,19 @@ public class EngineerAttendanceService {
         EngineerProfile engineer = engineerRepository.findByUserUserId(engineerUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));
 
-        LocalDate today = LocalDate.now();
-        EngineerAttendance attendance = attendanceRepository.findByEngineerIdAndDate(engineer.getId(), today)
+        EngineerAttendance latestAttendance = attendanceRepository.findFirstByEngineerIdOrderByDateDesc(engineer.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Must check in first"));
 
-        if (attendance.getCheckOutTime() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Already checked out today");
+        if (latestAttendance.getCheckOutTime() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Must check in first");
         }
 
-        attendance.setCheckOutTime(LocalDateTime.now());
+        latestAttendance.setCheckOutTime(LocalDateTime.now());
         
         engineer.setDutyStatus(com.api.batterymantra.entity.enums.DutyStatus.OFF_DUTY);
         engineerRepository.save(engineer);
         
-        return attendanceRepository.save(attendance);
+        return attendanceRepository.save(latestAttendance);
     }
 
     @Transactional
