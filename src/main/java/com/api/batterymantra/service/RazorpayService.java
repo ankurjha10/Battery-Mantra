@@ -3,6 +3,7 @@ package com.api.batterymantra.service;
 import com.api.batterymantra.config.RazorpayConfig;
 import com.api.batterymantra.dto.payment.CreateRazorpayOrderRequest;
 import com.api.batterymantra.dto.payment.PaymentVerificationResponse;
+import com.api.batterymantra.dto.payment.QrCodeResponse;
 import com.api.batterymantra.dto.payment.RazorpayOrderResponse;
 import com.api.batterymantra.dto.payment.VerifyPaymentRequest;
 import com.api.batterymantra.entity.*;
@@ -12,6 +13,7 @@ import com.api.batterymantra.entity.enums.PaymentMethod;
 import com.api.batterymantra.entity.enums.PaymentStatus;
 import com.api.batterymantra.repository.*;
 import com.razorpay.Order;
+import com.razorpay.QrCode;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
@@ -25,8 +27,10 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @Service
@@ -280,6 +284,143 @@ public class RazorpayService {
         }
     }
 
+    /**
+     * Generates a Razorpay UPI QR Code for an existing COD order.
+     * The QR code is single-use, fixed-amount, and expires in 30 minutes.
+     */
+    @Transactional
+    public QrCodeResponse generateQrCode(UUID orderId) {
+        // 1. Fetch the order
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Order not found: " + orderId));
+
+        // 2. If already paid, reject the request
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Order is already paid. Cannot generate QR code.");
+        }
+
+        // 3. Build the Razorpay QR code request
+        long amountInPaise = order.getTotalAmount()
+                .multiply(BigDecimal.valueOf(100)).longValue();
+
+        // close_by = current time + 30 minutes (Unix timestamp in seconds)
+        long closeBy = Instant.now().plusSeconds(30 * 60).getEpochSecond();
+
+        JSONObject qrRequest = new JSONObject();
+        qrRequest.put("type", "upi_qr");
+        qrRequest.put("name", "Order " + order.getOrderId());
+        qrRequest.put("usage", "single_use");
+        qrRequest.put("fixed_amount", true);
+        qrRequest.put("payment_amount", amountInPaise);
+        qrRequest.put("description", "Payment for Order " + order.getOrderId());
+        qrRequest.put("close_by", closeBy);
+
+        JSONObject notes = new JSONObject();
+        notes.put("order_id", order.getOrderId().toString());
+        qrRequest.put("notes", notes);
+
+        // 4. Call Razorpay to create the QR code
+        QrCode qrCode;
+        try {
+            qrCode = razorpayClient.qrCode.create(qrRequest);
+        } catch (RazorpayException e) {
+            log.error("Failed to create Razorpay QR code for order {}: {}",
+                    orderId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to generate QR code: " + e.getMessage());
+        }
+
+        // 5. Extract response fields
+        String qrCodeId = qrCode.get("id");
+        String imageUrl = qrCode.get("image_url");
+
+        // 6. Persist QR code details on the order
+        order.setQrCodeId(qrCodeId);
+        order.setQrCodeImageUrl(imageUrl);
+        orderRepository.save(order);
+
+        log.info("QR code generated for order {}: qrCodeId={}, imageUrl={}",
+                orderId, qrCodeId, imageUrl);
+
+        return new QrCodeResponse(qrCodeId, imageUrl);
+    }
+
+    /**
+     * Checks the payment status of a QR code for the given order.
+     * If payment has been received, updates the order to PAID / ONLINE.
+     */
+    @Transactional
+    public Map<String, Object> checkQrPaymentStatus(UUID orderId) {
+        // 1. Fetch the order
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Order not found: " + orderId));
+
+        // 2. If already paid, return immediately
+        if (order.getPaymentStatus() == PaymentStatus.PAID) {
+            return Map.of(
+                    "orderId", order.getOrderId().toString(),
+                    "paymentStatus", "PAID",
+                    "message", "Payment already received."
+            );
+        }
+
+        // 3. Ensure a QR code was generated for this order
+        String qrCodeId = order.getQrCodeId();
+        if (qrCodeId == null || qrCodeId.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "No QR code generated for this order. Generate one first.");
+        }
+
+        // 4. Fetch QR code status from Razorpay
+        QrCode qrCode;
+        try {
+            qrCode = razorpayClient.qrCode.fetch(qrCodeId);
+        } catch (RazorpayException e) {
+            log.error("Failed to fetch QR code status for order {}: {}",
+                    orderId, e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to fetch QR code status: " + e.getMessage());
+        }
+
+        // 5. Check if payment has been received
+        String qrStatus = qrCode.get("status");
+        int paymentsAmountReceived = qrCode.has("payments_amount_received")
+                ? ((Number) qrCode.get("payments_amount_received")).intValue() : 0;
+        int paymentAmount = qrCode.has("payment_amount")
+                ? ((Number) qrCode.get("payment_amount")).intValue() : 0;
+
+        if (paymentsAmountReceived >= paymentAmount && paymentAmount > 0) {
+            // Payment received — update order
+            order.setPaymentStatus(PaymentStatus.PAID);
+            order.setPaymentMethod(PaymentMethod.ONLINE);
+            order.setOrderStatus(OrderStatus.CONFIRMED);
+            orderRepository.save(order);
+
+            log.info("QR payment confirmed for order {}: received={} paise",
+                    orderId, paymentsAmountReceived);
+
+            return Map.of(
+                    "orderId", order.getOrderId().toString(),
+                    "paymentStatus", "PAID",
+                    "qrStatus", qrStatus,
+                    "amountReceived", paymentsAmountReceived,
+                    "message", "Payment received successfully."
+            );
+        }
+
+        // Payment not yet received
+        return Map.of(
+                "orderId", order.getOrderId().toString(),
+                "paymentStatus", order.getPaymentStatus().name(),
+                "qrStatus", qrStatus,
+                "amountReceived", paymentsAmountReceived,
+                "message", "Payment not yet received. Please complete the UPI payment."
+        );
+    }
+
     private String calculateHmacSha256(String data, String secret) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
@@ -303,3 +444,4 @@ public class RazorpayService {
         }
     }
 }
+

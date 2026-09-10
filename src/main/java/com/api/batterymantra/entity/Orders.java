@@ -113,4 +113,10 @@ public class Orders {
     @Column(name = "payment_mode")
     private String paymentMode;
 
+    @Column(name = "qr_code_id")
+    private String qrCodeId;
+
+    @Column(name = "qr_code_image_url", length = 1024)
+    private String qrCodeImageUrl;
+
 }
