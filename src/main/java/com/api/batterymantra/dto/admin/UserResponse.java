@@ -20,4 +20,6 @@ public class UserResponse {
     private boolean isActive;
     private String role;
     private LocalDateTime createdAt;
+    private Integer totalJobsCompleted;
+    private String assignedPartnerName;
 }

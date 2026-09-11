@@ -726,6 +726,12 @@ public class OrderService {
     }
 
     @Transactional(readOnly = true)
+    public long getEngineerCompletedJobsCount(UUID engineerId) {
+        return orderRepository.countByAssignedEngineer_IdAndOrderStatusIn(engineerId,
+                List.of(OrderStatus.COMPLETED, OrderStatus.DELIVERED, OrderStatus.INSTALLED));
+    }
+
+    @Transactional(readOnly = true)
     public OrderResponse getEngineerOrderById(UUID orderId, UUID engineerUserId) {
         EngineerProfile engineer = engineerProfileRepository.findByUserUserId(engineerUserId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Engineer profile not found"));

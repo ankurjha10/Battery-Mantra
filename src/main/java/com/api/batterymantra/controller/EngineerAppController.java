@@ -40,6 +40,8 @@ public class EngineerAppController {
         User user = userPrincipal.getUser();
         EngineerResponse engineerResponse = engineerService.getEngineerProfileByUserId(user.getUserId());
 
+        long completedJobs = orderService.getEngineerCompletedJobsCount(engineerResponse.getId());
+
         UserResponse response = UserResponse.builder()
                 .userId(user.getUserId())
                 .name(engineerResponse.getFirstName() != null
@@ -50,6 +52,8 @@ public class EngineerAppController {
                 .isActive(user.isActive())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
+                .totalJobsCompleted((int) completedJobs)
+                .assignedPartnerName(engineerResponse.getPartnerBusinessName())
                 .build();
         return ResponseEntity.ok(response);
     }

@@ -27,5 +27,6 @@ public interface OrderRepository extends JpaRepository<Orders, UUID> {
     long countByOrderStatus(OrderStatus status);
     long countByAssignedPartner_IdAndOrderStatus(UUID partnerId, OrderStatus status);
     long countByAssignedEngineer_IdAndOrderStatus(UUID engineerId, OrderStatus status);
+    long countByAssignedEngineer_IdAndOrderStatusIn(UUID engineerId, List<OrderStatus> statuses);
     long countByAssignedPartnerIsNull();
 }
