@@ -32,6 +32,7 @@ public class CategoryService {
         res.categoryName = c.getCategoryName();
         res.categoryDescription = c.getCategoryDescription();
         res.iconUrl = c.getIconUrl();
+        res.bannerUrl = c.getBannerUrl();
         res.displayOrder = c.getDisplayOrder();
         res.parentId = c.getParent() != null ? c.getParent().getCategoryId() : null;
         res.clickAction = c.getClickAction();
@@ -51,6 +52,7 @@ public class CategoryService {
         res.categoryName = c.getCategoryName();
         res.categoryDescription = c.getCategoryDescription();
         res.iconUrl = c.getIconUrl();
+        res.bannerUrl = c.getBannerUrl();
         res.displayOrder = c.getDisplayOrder();
         res.parentId = c.getParent() != null ? c.getParent().getCategoryId() : null;
         res.clickAction = c.getClickAction();
@@ -80,6 +82,7 @@ public class CategoryService {
         category.setCategoryName(dto.categoryName);
         category.setCategoryDescription(dto.categoryDescription);
         category.setIconUrl(dto.iconUrl);
+        category.setBannerUrl(dto.bannerUrl);
         category.setDisplayOrder(dto.displayOrder);
         if (dto.clickAction != null) {
             category.setClickAction(dto.clickAction);
@@ -162,6 +165,9 @@ public class CategoryService {
 
         if (dto.iconUrl != null)
             category.setIconUrl(dto.iconUrl);
+
+        if (dto.bannerUrl != null)
+            category.setBannerUrl(dto.bannerUrl);
 
         if (dto.displayOrder != null)
             category.setDisplayOrder(dto.displayOrder);

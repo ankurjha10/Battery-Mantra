@@ -10,6 +10,7 @@ public class UpdateCategoryRequest {
     public String categoryName;
     public String categoryDescription;
     public String iconUrl;
+    public String bannerUrl;
     public Integer displayOrder;
     public UUID parentId;
     public Boolean removeParent;

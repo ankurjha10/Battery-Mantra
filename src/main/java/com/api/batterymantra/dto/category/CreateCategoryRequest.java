@@ -10,6 +10,7 @@ public class CreateCategoryRequest {
     public String categoryName;
     public String categoryDescription;
     public String iconUrl;
+    public String bannerUrl;
     public Integer displayOrder;
     public UUID parentId;
     public ClickAction clickAction;
