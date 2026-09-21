@@ -57,6 +57,11 @@ import com.api.batterymantra.entity.LeaveRequest;
 import com.api.batterymantra.entity.enums.LeaveStatus;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
 
+import com.api.batterymantra.dto.reel.CreateReelRequest;
+import com.api.batterymantra.dto.reel.UpdateReelRequest;
+import com.api.batterymantra.dto.reel.ReelResponse;
+import com.api.batterymantra.service.InstagramReelService;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -84,6 +89,7 @@ public class AdminController {
     private final EnquiryService enquiryService;
     private final EngineerAttendanceService attendanceService;
     private final UserService userService;
+    private final InstagramReelService reelService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -366,4 +372,30 @@ public class AdminController {
         return ResponseEntity.ok(attendanceService.getAllLeaveRequests());
     }
 
+    // --- Instagram Reels ---
+    @GetMapping("/reels")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<ReelResponse>> getAllReels() {
+        return ResponseEntity.ok(reelService.getAllReels());
+    }
+
+    @PostMapping("/reels")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ReelResponse> createReel(@RequestBody @Valid CreateReelRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(reelService.createReel(request));
+    }
+
+    @PutMapping("/reels/id/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ReelResponse> updateReel(@PathVariable UUID id,
+            @RequestBody @Valid UpdateReelRequest request) {
+        return ResponseEntity.ok(reelService.updateReel(id, request));
+    }
+
+    @DeleteMapping("/reels/id/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteReel(@PathVariable UUID id) {
+        reelService.deleteReel(id);
+        return ResponseEntity.noContent().build();
+    }
 }
