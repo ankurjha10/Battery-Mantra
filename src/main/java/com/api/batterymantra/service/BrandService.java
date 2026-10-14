@@ -30,6 +30,7 @@ public class BrandService {
                 .brandLogo(brand.getBrandLogo())
                 .featured(brand.isFeatured())
                 .description(brand.getDescription())
+                .dealerDescription(brand.getDealerDescription())
                 .productCount(brand.getProductCount() != null ? brand.getProductCount() : 0)
                 .build();
     }
@@ -68,6 +69,7 @@ public class BrandService {
         brand.setBrandLogo(brandRequest.getBrandLogo());
         brand.setFeatured(brandRequest.isFeatured());
         brand.setDescription(brandRequest.getDescription());
+        brand.setDealerDescription(brandRequest.getDealerDescription());
 
         Brand saved = brandRepository.save(brand);
         return toBrandResponse(saved);
@@ -90,6 +92,10 @@ public class BrandService {
         
         if (brandRequest.getDescription() != null)
             brand.setDescription(brandRequest.getDescription());
+
+        if (brandRequest.getDealerDescription() != null) {
+            brand.setDealerDescription(brandRequest.getDealerDescription());
+        }
 
         Brand saved = brandRepository.save(brand);
         return toBrandResponse(saved);

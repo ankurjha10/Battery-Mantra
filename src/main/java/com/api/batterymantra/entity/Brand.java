@@ -32,6 +32,10 @@ public class Brand {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "dealer_description", columnDefinition = "TEXT")
+    private String dealerDescription;
+
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 

@@ -360,6 +360,7 @@ public class ProductService {
                         .brandLogo(b.getBrandLogo())
                         .featured(b.isFeatured())
                         .description(b.getDescription())
+                        .dealerDescription(b.getDealerDescription())
                         .productCount(b.getProductCount())
                         .build())
                 .distinct()

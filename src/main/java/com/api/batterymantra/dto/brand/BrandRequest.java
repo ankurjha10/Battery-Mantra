@@ -9,4 +9,5 @@ public class BrandRequest {
     private String brandLogo;
     private boolean featured;
     private String description;
+    private String dealerDescription;
 }

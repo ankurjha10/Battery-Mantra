@@ -18,5 +18,6 @@ public class BrandResponse {
     private String brandLogo;
     private boolean featured;
     private String description;
+    private String dealerDescription;
     private Integer productCount;
 }
