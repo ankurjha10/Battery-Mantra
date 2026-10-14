@@ -80,6 +80,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasRole("ADMIN")
 
+                        // Brand Contents — read public
+                        .requestMatchers(HttpMethod.GET, "/api/brand-contents/**").permitAll()
+
                         // Manufacturers — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/manufacturers/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/manufacturers/**").hasRole("ADMIN")
