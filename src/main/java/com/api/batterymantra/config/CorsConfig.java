@@ -20,17 +20,14 @@ public class CorsConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
 
-        // Use patterns to support Vercel wildcard subdomains (e.g., https://*.vercel.app)
+        // Use patterns to support domains and wildcard subdomains (e.g., https://*.batterymantra.com, https://*.vercel.app)
         config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(Arrays.asList(
                 "GET", "POST", "PUT", "DELETE",
-                "PATCH", "OPTIONS"
+                "PATCH", "OPTIONS", "HEAD"
         ));
-        config.setAllowedHeaders(Arrays.asList(
-                "Authorization", "Content-Type",
-                "Accept", "Origin", "X-Requested-With"
-        ));
-        config.setExposedHeaders(List.of("Authorization"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "Content-Disposition"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 
