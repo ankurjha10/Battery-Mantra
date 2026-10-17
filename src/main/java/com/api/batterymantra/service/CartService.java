@@ -181,6 +181,9 @@ public class CartService {
         productResponse.setExchangeDiscount(product.getExchangeDiscount());
         productResponse.setProductImage(product.getProductImage());
         productResponse.setProductCategory(product.getProductCategory().getCategoryName());
+        if (product.getProductCategory() != null) {
+            productResponse.setCategoryId(product.getProductCategory().getCategoryId());
+        }
         productResponse.setBrandName(product.getBrand() != null ? product.getBrand().getBrandName() : null);
 
         response.setProduct(productResponse);

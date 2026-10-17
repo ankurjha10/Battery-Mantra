@@ -26,6 +26,10 @@ public class DeliveryTimeService {
     private final CategoryRepository categoryRepository;
     private final CityRepository cityRepository;
 
+    public List<DeliveryTimeResponse> getDeliveryTimesByCity(UUID cityId) {
+        return deliveryTimeRepository.findByCity_CityId(cityId).stream().map(this::mapToResponse).collect(Collectors.toList());
+    }
+
     public List<DeliveryTimeResponse> getAllDeliveryTimes() {
         return deliveryTimeRepository.findAll().stream().map(this::mapToResponse).collect(Collectors.toList());
     }

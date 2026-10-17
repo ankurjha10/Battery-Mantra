@@ -125,11 +125,8 @@ public class BulkPricingService {
                     .findFirst();
 
             if (existingPricingOpt.isPresent()) {
-                // If it exists, should we overwrite it? Yes, matrix takes precedence, or if user manually supplied it, we might want to keep it?
-                // For simplicity, we overwrite it. But wait, if user provided specific prices in the DTO, they might be overwritten.
-                // We'll only set it if the user didn't explicitly set a different price?
-                // Actually, if the matrix exists, it represents the rule. We apply it.
                 existingPricingOpt.get().setPrice(newPrice);
+                existingPricingOpt.get().setStock(product.getProductStock());
             } else {
                 ProductCityPricing newPricing = new ProductCityPricing();
                 newPricing.setProduct(product);

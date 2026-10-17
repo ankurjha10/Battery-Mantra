@@ -20,6 +20,7 @@ public class ProductListResponse {
     private String productImage;
     private List<String> additionalImages;
     private String productCategory;
+    private UUID categoryId;
     private String capacity;
     private String capacityAh;
     @JsonProperty("isAutoAssignToPartner")

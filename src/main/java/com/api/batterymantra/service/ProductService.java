@@ -69,6 +69,9 @@ public class ProductService {
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
         res.setProductCategory(p.getProductCategory().getCategoryName());
+        if (p.getProductCategory() != null) {
+            res.setCategoryId(p.getProductCategory().getCategoryId());
+        }
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
         res.setCapacity(p.getCapacity());
         
@@ -590,6 +593,12 @@ public class ProductService {
                 pricing.setExchangeDiscount(cpd.getExchangeDiscount() != null ? cpd.getExchangeDiscount() : BigDecimal.ZERO);
                 pricing.setStock(cpd.getStock());
                 product.getCityPrices().add(pricing);
+            }
+        } else if (dto.getProductStock() != null) {
+            // When master stock changes and admin didn't explicitly provide city prices,
+            // propagate the new stock to all existing city pricing entries
+            for (ProductCityPricing cp : product.getCityPrices()) {
+                cp.setStock(dto.getProductStock());
             }
         }
 

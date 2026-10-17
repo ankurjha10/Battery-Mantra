@@ -10,4 +10,5 @@ import java.util.UUID;
 @Repository
 public interface DeliveryTimeRepository extends JpaRepository<DeliveryTime, UUID> {
     Optional<DeliveryTime> findByCategory_CategoryIdAndCity_CityId(UUID categoryId, UUID cityId);
+    java.util.List<DeliveryTime> findByCity_CityId(UUID cityId);
 }

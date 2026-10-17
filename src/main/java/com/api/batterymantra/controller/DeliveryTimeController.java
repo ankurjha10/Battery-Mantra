@@ -30,6 +30,11 @@ public class DeliveryTimeController {
         return ResponseEntity.ok(deliveryTimeService.updateDeliveryTimes(requests));
     }
 
+    @GetMapping("/public/delivery-times/city/{cityId}")
+    public ResponseEntity<List<DeliveryTimeResponse>> getDeliveryTimesByCity(@PathVariable UUID cityId) {
+        return ResponseEntity.ok(deliveryTimeService.getDeliveryTimesByCity(cityId));
+    }
+
     @GetMapping("/public/delivery-time")
     public ResponseEntity<DeliveryTimeResponse> getDeliveryTime(
             @RequestParam UUID categoryId, 
