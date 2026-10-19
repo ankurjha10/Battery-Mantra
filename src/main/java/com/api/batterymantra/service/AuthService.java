@@ -22,6 +22,7 @@ import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.UserRole;
+import com.api.batterymantra.exception.TokenRefreshException;
 import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.security.AuthUtil;
 
@@ -200,6 +201,9 @@ public class AuthService {
     }
 
     public RefreshTokenResponse refreshToken(RefreshTokenRequest request) {
+        if (request == null || request.getRefreshToken() == null || request.getRefreshToken().trim().isEmpty()) {
+            throw new TokenRefreshException("Refresh token is required");
+        }
         RefreshToken refreshToken = refreshTokenService.verifyRefreshToken(request.getRefreshToken());
         User user = refreshToken.getUser();
         String accessToken = authUtil.generateAccessToken(user);
