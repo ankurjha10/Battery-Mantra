@@ -41,6 +41,7 @@ public class OrderResponse {
     private boolean oldBatteryCollected;
     private String oldBatteryDetails;
     private String cancellationReason;
+    private String cancelledBy;
     private String couponCode;
     private BigDecimal discountAmount;
     private Double latitude;

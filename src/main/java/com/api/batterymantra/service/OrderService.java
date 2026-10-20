@@ -432,8 +432,12 @@ public class OrderService {
         return orderMapper.toOrderResponse(order);
     }
 
-    @Transactional
     public OrderResponse cancelOrder(UUID orderId, UUID customerId) {
+        return cancelOrder(orderId, customerId, "Cancelled by customer");
+    }
+
+    @Transactional
+    public OrderResponse cancelOrder(UUID orderId, UUID customerId, String reason) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
@@ -453,21 +457,24 @@ public class OrderService {
         }
 
         order.setOrderStatus(OrderStatus.CANCELLED);
+        order.setCancellationReason(reason != null && !reason.isBlank() ? reason : "Cancelled by customer");
+        order.setCancelledBy("CUSTOMER");
+        order.setCompletedAt(LocalDateTime.now());
         Orders cancelledOrder = orderRepository.save(order);
 
-        // Send SMS
+        // Send SMS with actual reason
         String customerPhone = order.getCustomer().getPhoneNumber();
         String customerName = order.getCustomer().getUsername();
         String orderIdStr = order.getOrderId().toString();
         if (customerPhone != null && !customerPhone.isBlank()) {
-            smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
+            smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Battery Order", orderIdStr, order.getCancellationReason());
         }
 
         // Notify Admins about cancelled order
         List<User> admins = userRepository.findAllByRole(com.api.batterymantra.entity.enums.UserRole.ADMIN);
         for (User admin : admins) {
             String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
-            notificationService.sendPushNotification(admin.getUserId(), "Order Cancelled", "Order #" + shortId + "... has been cancelled by customer.", null);
+            notificationService.sendPushNotification(admin.getUserId(), "Order Cancelled", "Order #" + shortId + " cancelled by customer. Reason: " + order.getCancellationReason(), null);
         }
 
         return orderMapper.toOrderResponse(cancelledOrder);
@@ -489,8 +496,12 @@ public class OrderService {
     /**
      * Update order status (ADMIN only)
      */
-    @Transactional
     public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus) {
+        return updateOrderStatus(orderId, newStatus, null);
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(UUID orderId, OrderStatus newStatus, String cancellationReason) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
@@ -510,6 +521,11 @@ public class OrderService {
                 product.setProductStock(product.getProductStock() + item.getQuantity());
                 productRepository.save(product);
             }
+            order.setCancellationReason(cancellationReason != null && !cancellationReason.isBlank() 
+                ? cancellationReason 
+                : "Cancelled by fulfillment team");
+            order.setCancelledBy("ADMIN");
+            order.setCompletedAt(LocalDateTime.now());
         }
 
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
@@ -538,7 +554,7 @@ public class OrderService {
             } else if (newStatus == OrderStatus.DELIVERED) {
                 smsService.sendOrderDeliveredSms(customerPhone, customerName, "Your Product", orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
-                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
+                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Battery Order", orderIdStr, updatedOrder.getCancellationReason());
             }
         }
 
@@ -593,6 +609,18 @@ public class OrderService {
 
         validateStatusTransition(order, newStatus);
 
+        // If cancelling, restore stock
+        if (newStatus == OrderStatus.CANCELLED && order.getOrderStatus() != OrderStatus.CANCELLED) {
+            for (OrderItems item : order.getOrderItems()) {
+                Product product = item.getProduct();
+                product.setProductStock(product.getProductStock() + item.getQuantity());
+                productRepository.save(product);
+            }
+            order.setCancellationReason("Cancelled by partner branch");
+            order.setCancelledBy("PARTNER");
+            order.setCompletedAt(LocalDateTime.now());
+        }
+
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
         if ((newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.OUT_FOR_DELIVERY) && order.getDeliverySecurityCode() == null) {
             String securityCode = String.valueOf(1000 + new Random().nextInt(9000));
@@ -630,7 +658,7 @@ public class OrderService {
             } else if (newStatus == OrderStatus.DELIVERED) {
                 smsService.sendOrderDeliveredSms(customerPhone, customerName, "Your Product", orderIdStr);
             } else if (newStatus == OrderStatus.CANCELLED) {
-                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Product", orderIdStr, "N/A");
+                smsService.sendOrderCancelledSms(customerPhone, customerName, "Your Battery Order", orderIdStr, updatedOrder.getCancellationReason());
             }
         }
 
@@ -965,6 +993,7 @@ public class OrderService {
             reason += ": " + request.getNotes();
         }
         order.setCancellationReason(reason);
+        order.setCancelledBy("ENGINEER");
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCompletedAt(LocalDateTime.now());
 

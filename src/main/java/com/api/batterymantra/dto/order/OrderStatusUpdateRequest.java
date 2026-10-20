@@ -8,4 +8,5 @@ import lombok.Data;
 public class OrderStatusUpdateRequest {
     @NotNull(message = "Order status must not be null")
     private OrderStatus orderStatus;
+    private String cancellationReason;
 }

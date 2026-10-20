@@ -1,5 +1,6 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.order.CancelOrderRequest;
 import com.api.batterymantra.dto.order.CheckoutRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.entity.UserPrincipal;
@@ -53,12 +54,24 @@ public class OrderController {
         return ResponseEntity.ok(orderResponse);
     }
 
-    @DeleteMapping("/{orderId}/cancel")
+    @PostMapping("/{orderId}/cancel")
     @PreAuthorize("hasRole('CUSTOMER')")
     public ResponseEntity<OrderResponse> cancelOrder(
             @PathVariable UUID orderId,
+            @RequestBody(required = false) CancelOrderRequest request,
             @AuthenticationPrincipal UserPrincipal userDetails) {
         UUID customerId = userDetails.getUser().getUserId();
-        return ResponseEntity.ok(orderService.cancelOrder(orderId, customerId));
+        String reason = (request != null) ? request.getReason() : "Cancelled by customer";
+        return ResponseEntity.ok(orderService.cancelOrder(orderId, customerId, reason));
+    }
+
+    // Keep DELETE endpoint as fallback backward-compatibility
+    @DeleteMapping("/{orderId}/cancel")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<OrderResponse> cancelOrderDelete(
+            @PathVariable UUID orderId,
+            @AuthenticationPrincipal UserPrincipal userDetails) {
+        UUID customerId = userDetails.getUser().getUserId();
+        return ResponseEntity.ok(orderService.cancelOrder(orderId, customerId, "Cancelled by customer"));
     }
 }

@@ -56,6 +56,7 @@ public class OrderMapper {
         response.setOldBatteryCollected(order.isOldBatteryCollected());
         response.setOldBatteryDetails(order.getOldBatteryDetails());
         response.setCancellationReason(order.getCancellationReason());
+        response.setCancelledBy(order.getCancelledBy());
         response.setCouponCode(order.getCouponCode());
         response.setDiscountAmount(order.getDiscountAmount());
         response.setSelectedCity(order.getSelectedCity());

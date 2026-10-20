@@ -276,7 +276,7 @@ public class AdminController {
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable UUID orderId,
             @RequestBody @Valid OrderStatusUpdateRequest request) {
-        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getOrderStatus()));
+        return ResponseEntity.ok(orderService.updateOrderStatus(orderId, request.getOrderStatus(), request.getCancellationReason()));
     }
 
     @PatchMapping("/orders/{orderId}/assign-partner")
