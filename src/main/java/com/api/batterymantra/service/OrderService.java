@@ -19,6 +19,7 @@ import com.api.batterymantra.entity.enums.OrderStatus;
 import com.api.batterymantra.entity.enums.PaymentStatus;
 import com.api.batterymantra.repository.AddressRepository;
 import com.api.batterymantra.repository.CartRepository;
+import com.api.batterymantra.repository.CityRepository;
 import com.api.batterymantra.repository.OrderRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;
@@ -51,6 +52,7 @@ public class OrderService {
     private final PartnerProfileRepository partnerProfileRepository;
     private final EngineerProfileRepository engineerProfileRepository;
     private final PincodeRepository pincodeRepository;
+    private final CityRepository cityRepository;
     private final OrderMapper orderMapper;
     private final SmsService smsService;
     private final CouponService couponService;
@@ -111,16 +113,51 @@ public class OrderService {
                 .selectedCity(request.getSelectedCity())
                 .build();
 
+        // Resolve Target City for Dynamic Pricing
+        UUID targetCityId = null;
+        // 1. Pehle request.getSelectedCity() se check karo
+        if (request.getSelectedCity() != null && !request.getSelectedCity().isBlank()) {
+            var cityOpt = cityRepository.findByCityNameIgnoreCase(request.getSelectedCity().trim());
+            if (cityOpt.isPresent()) {
+                targetCityId = cityOpt.get().getCityId();
+            }
+        }
+        // 2. Fallback: Shipping address ke Pincode se city resolve karo
+        if (targetCityId == null && address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
+            var pincodeOpt = pincodeRepository.findByCode(address.getPostalCode().trim());
+            if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
+                targetCityId = pincodeOpt.get().getCity().getCityId();
+            }
+        }
+        // 3. Fallback: Shipping address ke City Name se
+        if (targetCityId == null && address.getCity() != null && !address.getCity().isBlank()) {
+            var cityOpt = cityRepository.findByCityNameIgnoreCase(address.getCity().trim());
+            if (cityOpt.isPresent()) {
+                targetCityId = cityOpt.get().getCityId();
+            }
+        }
+
         // Converting Cart Items to Order Items
         List<OrderItems> orderItems = new ArrayList<>();
         boolean shouldAutoAssign = false;
 
         for (CartItem cartItem : cartItemList) {
+            BigDecimal itemPrice = cartItem.getProduct().getProductPrice();
+            if (targetCityId != null && cartItem.getProduct().getCityPrices() != null) {
+                final UUID finalCityId = targetCityId;
+                var cpOpt = cartItem.getProduct().getCityPrices().stream()
+                        .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
+                        .findFirst();
+                if (cpOpt.isPresent() && cpOpt.get().getPrice() != null) {
+                    itemPrice = cpOpt.get().getPrice();
+                }
+            }
+
             OrderItems items = OrderItems.builder()
                     .order(orders)
                     .product(cartItem.getProduct())
                     .quantity(cartItem.getQuantity())
-                    .priceAtPurchase(cartItem.getProduct().getProductPrice())
+                    .priceAtPurchase(itemPrice) // City Price yahan save hoga!
                     .build();
 
             if (cartItem.getProduct().isAutoAssignToPartner()) {
@@ -165,9 +202,21 @@ public class OrderService {
         // Calculate Exchange Discount
         BigDecimal exchangeDiscount = BigDecimal.ZERO;
         for (CartItem cartItem : cartItemList) {
-            if (cartItem.isExchangeOldBattery() && cartItem.getProduct().getExchangeDiscount() != null) {
-                exchangeDiscount = exchangeDiscount.add(cartItem.getProduct().getExchangeDiscount()
-                        .multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            if (cartItem.isExchangeOldBattery()) {
+                BigDecimal disc = cartItem.getProduct().getExchangeDiscount() != null
+                        ? cartItem.getProduct().getExchangeDiscount()
+                        : BigDecimal.ZERO;
+                if (targetCityId != null && cartItem.getProduct().getCityPrices() != null) {
+                    final UUID finalCityId = targetCityId;
+                    var cpOpt = cartItem.getProduct().getCityPrices().stream()
+                            .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
+                            .findFirst();
+                    if (cpOpt.isPresent() && cpOpt.get().getExchangeDiscount() != null
+                            && cpOpt.get().getExchangeDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                        disc = cpOpt.get().getExchangeDiscount();
+                    }
+                }
+                exchangeDiscount = exchangeDiscount.add(disc.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
             }
         }
 

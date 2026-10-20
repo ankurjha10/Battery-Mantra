@@ -32,6 +32,11 @@ public class CartService {
     private final ProductRepository productRepository;
 
     public CartResponse getCart(UUID userId) {
+        return getCart(userId, null);
+    }
+
+    @Transactional
+    public CartResponse getCart(UUID userId, UUID cityId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
@@ -41,7 +46,7 @@ public class CartService {
                     return cartRepository.save(newCart);
                 });
 
-        return mapToCartResponse(cart);
+        return mapToCartResponse(cart, cityId);
     }
 
     @Transactional
@@ -132,6 +137,10 @@ public class CartService {
     }
 
     private CartResponse mapToCartResponse(Cart cart) {
+        return mapToCartResponse(cart, null);
+    }
+
+    private CartResponse mapToCartResponse(Cart cart, UUID cityId) {
         CartResponse response = new CartResponse();
         response.setCartId(cart.getCartId());
         response.setUserId(cart.getCustomer().getUserId());
@@ -141,15 +150,34 @@ public class CartService {
 
         if (cart.getCartItems() != null) {
             response.setCartItems(cart.getCartItems().stream()
-                    .map(this::mapToCartItemResponse)
+                    .map(item -> mapToCartItemResponse(item, cityId))
                     .toList());
 
             for (CartItem item : cart.getCartItems()) {
-                subTotal = subTotal
-                        .add(item.getProduct().getProductPrice().multiply(BigDecimal.valueOf(item.getQuantity())));
-                if (item.isExchangeOldBattery() && item.getProduct().getExchangeDiscount() != null) {
-                    exchangeDiscount = exchangeDiscount.add(
-                            item.getProduct().getExchangeDiscount().multiply(BigDecimal.valueOf(item.getQuantity())));
+                BigDecimal itemPrice = item.getProduct().getProductPrice();
+                BigDecimal itemExchange = item.getProduct().getExchangeDiscount() != null
+                        ? item.getProduct().getExchangeDiscount()
+                        : BigDecimal.ZERO;
+
+                // City-wise pricing override if cityId is provided
+                if (cityId != null && item.getProduct().getCityPrices() != null) {
+                    var cpOpt = item.getProduct().getCityPrices().stream()
+                            .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(cityId))
+                            .findFirst();
+                    if (cpOpt.isPresent()) {
+                        var cp = cpOpt.get();
+                        if (cp.getPrice() != null) {
+                            itemPrice = cp.getPrice();
+                        }
+                        if (cp.getExchangeDiscount() != null && cp.getExchangeDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                            itemExchange = cp.getExchangeDiscount();
+                        }
+                    }
+                }
+
+                subTotal = subTotal.add(itemPrice.multiply(BigDecimal.valueOf(item.getQuantity())));
+                if (item.isExchangeOldBattery()) {
+                    exchangeDiscount = exchangeDiscount.add(itemExchange.multiply(BigDecimal.valueOf(item.getQuantity())));
                 }
             }
         } else {
@@ -168,6 +196,10 @@ public class CartService {
     }
 
     private CartItemResponse mapToCartItemResponse(CartItem cartItem) {
+        return mapToCartItemResponse(cartItem, null);
+    }
+
+    private CartItemResponse mapToCartItemResponse(CartItem cartItem, UUID cityId) {
         CartItemResponse response = new CartItemResponse();
         response.setCartItemId(cartItem.getCartItemId());
         response.setQuantity(cartItem.getQuantity());
@@ -177,11 +209,31 @@ public class CartService {
         Product product = cartItem.getProduct();
         productResponse.setProductId(product.getProductId());
         productResponse.setProductName(product.getProductName());
-        productResponse.setProductPrice(product.getProductPrice());
-        productResponse.setExchangeDiscount(product.getExchangeDiscount());
+
+        BigDecimal itemPrice = product.getProductPrice();
+        BigDecimal itemExchange = product.getExchangeDiscount() != null ? product.getExchangeDiscount() : BigDecimal.ZERO;
+
+        // City-wise pricing override if cityId is provided
+        if (cityId != null && product.getCityPrices() != null) {
+            var cpOpt = product.getCityPrices().stream()
+                    .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(cityId))
+                    .findFirst();
+            if (cpOpt.isPresent()) {
+                var cp = cpOpt.get();
+                if (cp.getPrice() != null) {
+                    itemPrice = cp.getPrice();
+                }
+                if (cp.getExchangeDiscount() != null && cp.getExchangeDiscount().compareTo(BigDecimal.ZERO) > 0) {
+                    itemExchange = cp.getExchangeDiscount();
+                }
+            }
+        }
+
+        productResponse.setProductPrice(itemPrice);
+        productResponse.setExchangeDiscount(itemExchange);
         productResponse.setProductImage(product.getProductImage());
-        productResponse.setProductCategory(product.getProductCategory().getCategoryName());
         if (product.getProductCategory() != null) {
+            productResponse.setProductCategory(product.getProductCategory().getCategoryName());
             productResponse.setCategoryId(product.getProductCategory().getCategoryId());
         }
         productResponse.setBrandName(product.getBrand() != null ? product.getBrand().getBrandName() : null);

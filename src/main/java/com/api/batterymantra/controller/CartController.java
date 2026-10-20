@@ -23,9 +23,11 @@ public class CartController {
 
     @GetMapping
     @PreAuthorize("hasRole('CUSTOMER')")
-    public ResponseEntity<CartResponse> getCart(@AuthenticationPrincipal UserPrincipal userPrincipal) {
+    public ResponseEntity<CartResponse> getCart(
+            @AuthenticationPrincipal UserPrincipal userPrincipal,
+            @RequestParam(required = false) UUID cityId) {
         UUID userId = userPrincipal.getUser().getUserId();
-        return ResponseEntity.ok(cartService.getCart(userId));
+        return ResponseEntity.ok(cartService.getCart(userId, cityId));
     }
 
     @PostMapping("/add")
