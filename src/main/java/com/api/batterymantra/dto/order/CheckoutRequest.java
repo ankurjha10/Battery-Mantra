@@ -20,4 +20,6 @@ public class CheckoutRequest {
     private LocalDate installationDate;
 
     private String couponCode;
+
+    private String selectedCity;
 }

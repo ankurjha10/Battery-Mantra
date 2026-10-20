@@ -119,4 +119,7 @@ public class Orders {
     @Column(name = "qr_code_image_url", length = 1024)
     private String qrCodeImageUrl;
 
+    @Column(name = "selected_city")
+    private String selectedCity;
+
 }

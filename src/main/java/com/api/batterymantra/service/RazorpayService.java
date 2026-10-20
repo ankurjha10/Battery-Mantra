@@ -162,6 +162,7 @@ public class RazorpayService {
                 .razorpayOrderId(razorpayOrderId)
                 .totalAmount(total)
                 .exchangeDiscount(exchangeDiscount)
+                .selectedCity(request.getSelectedCity())
                 .build();
 
         // 8. Auto-assign partner (same logic as COD checkout)

@@ -45,4 +45,5 @@ public class OrderResponse {
     private BigDecimal discountAmount;
     private Double latitude;
     private Double longitude;
+    private String selectedCity;
 }

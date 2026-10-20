@@ -108,6 +108,7 @@ public class OrderService {
                 .deliveryMethod(deliveryMethod)
                 .paymentMethod(paymentMethod)
                 .installationDate(request.getInstallationDate())
+                .selectedCity(request.getSelectedCity())
                 .build();
 
         // Converting Cart Items to Order Items

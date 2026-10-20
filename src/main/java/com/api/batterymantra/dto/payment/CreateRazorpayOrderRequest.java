@@ -16,4 +16,6 @@ public class CreateRazorpayOrderRequest {
     private String deliveryMethod;
 
     private LocalDate installationDate;
+
+    private String selectedCity;
 }
