@@ -65,9 +65,44 @@ public class ProductSpecification {
                 );
     }
 
+    public static Specification<Product> hasKeyword(String keyword) {
+        return (root, query, cb) -> {
+            if (keyword == null || keyword.trim().isEmpty()) {
+                return cb.conjunction();
+            }
+
+            String cleanKeyword = keyword.trim().toLowerCase();
+            jakarta.persistence.criteria.Join<Product, com.api.batterymantra.entity.Brand> brandJoin = root.join("brand", jakarta.persistence.criteria.JoinType.LEFT);
+
+            // 1. Direct partial match on searchKeywords or productName or brand
+            jakarta.persistence.criteria.Predicate directMatch = cb.or(
+                cb.like(cb.lower(root.get("productName")), "%" + cleanKeyword + "%"),
+                cb.like(cb.lower(root.get("searchKeywords")), "%" + cleanKeyword + "%"),
+                cb.like(cb.lower(brandJoin.get("brandName")), "%" + cleanKeyword + "%")
+            );
+
+            // 2. Multi-token split (e.g., "exide 35 wagonr")
+            String[] tokens = cleanKeyword.split("\\s+");
+            if (tokens.length > 1) {
+                java.util.List<jakarta.persistence.criteria.Predicate> tokenPredicates = new java.util.ArrayList<>();
+                for (String token : tokens) {
+                    String pattern = "%" + token + "%";
+                    tokenPredicates.add(cb.or(
+                        cb.like(cb.lower(root.get("productName")), pattern),
+                        cb.like(cb.lower(root.get("searchKeywords")), pattern),
+                        cb.like(cb.lower(root.get("capacity")), pattern),
+                        cb.like(cb.lower(brandJoin.get("brandName")), pattern)
+                    ));
+                }
+                return cb.or(directMatch, cb.and(tokenPredicates.toArray(new jakarta.persistence.criteria.Predicate[0])));
+            } else {
+                return directMatch;
+            }
+        };
+    }
+
     public static Specification<Product> hasNameContaining(String keyword) {
-        return (root, query, cb) ->
-                cb.like(cb.lower(root.get("productName")), "%" + keyword.toLowerCase() + "%");
+        return hasKeyword(keyword);
     }
 
     /**

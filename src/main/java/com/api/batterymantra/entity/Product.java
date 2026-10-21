@@ -109,6 +109,9 @@ public class Product {
 
     private String highlights;
 
+    @Column(name = "search_keywords", columnDefinition = "TEXT")
+    private String searchKeywords;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
 }

@@ -43,4 +43,5 @@ public class ProductDetailResponse {
     private Integer categoryBrandDisplayOrder;
     private String highlights;
     private SeoMetadata seo;
+    private String searchKeywords;
 }

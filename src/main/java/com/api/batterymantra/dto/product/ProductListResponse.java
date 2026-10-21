@@ -35,4 +35,5 @@ public class ProductListResponse {
     private Integer categoryBrandDisplayOrder;
     private String highlights;
     private SeoMetadata seo;
+    private String searchKeywords;
 }

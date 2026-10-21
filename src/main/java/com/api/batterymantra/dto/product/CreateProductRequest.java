@@ -42,4 +42,5 @@ public class CreateProductRequest {
     private Integer categoryBrandDisplayOrder;
 
     private SeoMetadata seo;
+    private String searchKeywords;
 }

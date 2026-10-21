@@ -40,4 +40,5 @@ public class UpdateProductRequest {
     private Integer categoryBrandDisplayOrder;
 
     private SeoMetadata seo;
+    private String searchKeywords;
 }

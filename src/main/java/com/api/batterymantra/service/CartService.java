@@ -237,6 +237,7 @@ public class CartService {
             productResponse.setCategoryId(product.getProductCategory().getCategoryId());
         }
         productResponse.setBrandName(product.getBrand() != null ? product.getBrand().getBrandName() : null);
+        productResponse.setSearchKeywords(product.getSearchKeywords());
 
         response.setProduct(productResponse);
         return response;

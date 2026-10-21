@@ -96,6 +96,7 @@ public class ProductService {
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
+        res.setSearchKeywords(p.getSearchKeywords());
 
         City currentCity = null;
         if (cityId != null) {
@@ -150,6 +151,7 @@ public class ProductService {
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
+        res.setSearchKeywords(p.getSearchKeywords());
 
         if (p.getCityPrices() != null) {
             res.setCityPrices(p.getCityPrices().stream().map(cp -> {
@@ -314,7 +316,7 @@ public class ProductService {
             spec = spec.and(ProductSpecification.hasSpec(specKey, specValue));
         }
         if (keyword != null && !keyword.isBlank()) {
-            spec = spec.and(ProductSpecification.hasNameContaining(keyword));
+            spec = spec.and(ProductSpecification.hasKeyword(keyword));
         }
         
         return spec;
@@ -463,6 +465,10 @@ public class ProductService {
             product.setCategoryBrandDisplayOrder(dto.getCategoryBrandDisplayOrder());
         }
 
+        if (dto.getSearchKeywords() != null) {
+            product.setSearchKeywords(dto.getSearchKeywords());
+        }
+
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
                 City city = cityRepository.findById(cpd.getCityId())
@@ -580,6 +586,9 @@ public class ProductService {
             product.setBrandDisplayOrder(dto.getBrandDisplayOrder());
         if (dto.getCategoryBrandDisplayOrder() != null)
             product.setCategoryBrandDisplayOrder(dto.getCategoryBrandDisplayOrder());
+
+        if (dto.getSearchKeywords() != null)
+            product.setSearchKeywords(dto.getSearchKeywords());
 
         if (dto.getCityPrices() != null) {
             product.getCityPrices().clear();
