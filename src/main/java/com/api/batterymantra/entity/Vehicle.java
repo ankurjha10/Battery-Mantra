@@ -42,6 +42,24 @@ public class Vehicle {
     @JoinColumn(name = "manufacturer_id")
     private Manufacturer manufacturer;
 
+    @Column(name = "slug")
+    private String slug;
+
+    public String getSlug() {
+        if (slug != null && !slug.trim().isEmpty()) {
+            return slug;
+        }
+        String make = manufacturer != null ? manufacturer.getName() : "";
+        String fuelName = fuel != null ? fuel.getFuelName() : "";
+        String modelName = model != null ? model : "";
+        return (make + "-" + modelName + (fuelName.isEmpty() ? "" : "-" + fuelName))
+                .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
+
 }
 
 

@@ -2,6 +2,8 @@ package com.api.batterymantra.service;
 
 import com.api.batterymantra.dto.vehicle.CreateVehicleRequest;
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
+import com.api.batterymantra.dto.vehicle.UpdateVehicleRequest;
+import com.api.batterymantra.entity.Fuel;
 import com.api.batterymantra.entity.Vehicle;
 import com.api.batterymantra.repository.CategoryRepository;
 import com.api.batterymantra.repository.FuelRepository;
@@ -32,6 +34,7 @@ public class VehicleService {
         VehicleResponse res = new VehicleResponse();
         res.setVehicleId(v.getVehicleId());
         res.setModel(v.getModel());
+        res.setSlug(v.getSlug());
         if (v.getFuel() != null) {
             res.setFuelId(v.getFuel().getFuelId());
             res.setFuelName(v.getFuel().getFuelName());
@@ -58,6 +61,14 @@ public class VehicleService {
                 .map(this::toResponse)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Vehicle not found with id: " + vehicleId));
+    }
+
+    @Cacheable(value = "vehicles", key = "'slug-' + #slug")
+    public VehicleResponse getVehicleBySlug(String slug) {
+        return vehicleRepository.findBySlug(slug)
+                .map(this::toResponse)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Vehicle not found with slug: " + slug));
     }
 
     @Cacheable(value = "vehicles", key = "#make + '-' + #model")
@@ -87,9 +98,24 @@ public class VehicleService {
         if (dto.getManufacturerId() != null) {
             manufacturerRepository.findById(dto.getManufacturerId()).ifPresent(vehicle::setManufacturer);
         }
+        Fuel fuel = null;
         if (dto.getFuelId() != null) {
-            fuelRepository.findById(dto.getFuelId()).ifPresent(vehicle::setFuel);
+            fuel = fuelRepository.findById(dto.getFuelId()).orElse(null);
+            if (fuel != null) {
+                vehicle.setFuel(fuel);
+            }
         }
+
+        String slug = dto.getSlug();
+        if (slug == null || slug.trim().isEmpty()) {
+            String fuelName = fuel != null ? fuel.getFuelName() : "";
+            String makeName = dto.getMake() != null && !dto.getMake().trim().isEmpty()
+                    ? dto.getMake()
+                    : (vehicle.getManufacturer() != null ? vehicle.getManufacturer().getName() : "");
+            slug = (makeName + "-" + dto.getModel() + (fuelName.isEmpty() ? "" : "-" + fuelName))
+                    .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+        }
+        vehicle.setSlug(slug);
 
         Vehicle saved = vehicleRepository.save(vehicle);
         return toResponse(saved);
@@ -97,7 +123,7 @@ public class VehicleService {
 
     @Transactional
     @CacheEvict(value = "vehicles", allEntries = true)
-    public VehicleResponse updateVehicle(UUID vehicleId, CreateVehicleRequest dto) {
+    public VehicleResponse updateVehicle(UUID vehicleId, UpdateVehicleRequest dto) {
         Vehicle vehicle = vehicleRepository.findById(vehicleId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Vehicle not found with id: " + vehicleId));
@@ -114,7 +140,6 @@ public class VehicleService {
         if (dto.getCapacity() != null)
             vehicle.setCapacity(dto.getCapacity());
 
-
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);
         }
@@ -125,8 +150,37 @@ public class VehicleService {
             fuelRepository.findById(dto.getFuelId()).ifPresent(vehicle::setFuel);
         }
 
+        if (dto.getSlug() != null && !dto.getSlug().trim().isEmpty()) {
+            vehicle.setSlug(dto.getSlug().trim().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", ""));
+        } else if (vehicle.getSlug() == null || vehicle.getSlug().trim().isEmpty()) {
+            String fuelName = vehicle.getFuel() != null ? vehicle.getFuel().getFuelName() : "";
+            String makeName = dto.getMake() != null && !dto.getMake().trim().isEmpty()
+                    ? dto.getMake()
+                    : (vehicle.getManufacturer() != null ? vehicle.getManufacturer().getName() : "");
+            String modelName = vehicle.getModel() != null ? vehicle.getModel() : "";
+            String slug = (makeName + "-" + modelName + (fuelName.isEmpty() ? "" : "-" + fuelName))
+                    .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
+            vehicle.setSlug(slug);
+        }
+
         Vehicle saved = vehicleRepository.save(vehicle);
         return toResponse(saved);
+    }
+
+    @Transactional
+    @CacheEvict(value = "vehicles", allEntries = true)
+    public VehicleResponse updateVehicle(UUID vehicleId, CreateVehicleRequest dto) {
+        UpdateVehicleRequest updateDto = new UpdateVehicleRequest();
+        updateDto.setMake(dto.getMake());
+        updateDto.setModel(dto.getModel());
+        updateDto.setFuelId(dto.getFuelId());
+        updateDto.setVehicleType(dto.getVehicleType());
+        updateDto.setImageUrl(dto.getImageUrl());
+        updateDto.setCapacity(dto.getCapacity());
+        updateDto.setCategoryId(dto.getCategoryId());
+        updateDto.setManufacturerId(dto.getManufacturerId());
+        updateDto.setSlug(dto.getSlug());
+        return updateVehicle(vehicleId, updateDto);
     }
 
     @Transactional

@@ -20,6 +20,7 @@ import com.api.batterymantra.dto.brand.BrandResponse;
 import com.api.batterymantra.service.BrandService;
 
 import com.api.batterymantra.dto.vehicle.CreateVehicleRequest;
+import com.api.batterymantra.dto.vehicle.UpdateVehicleRequest;
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import com.api.batterymantra.service.VehicleService;
 
@@ -194,7 +195,7 @@ public class AdminController {
     @PutMapping("/vehicles/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<VehicleResponse> updateVehicle(@PathVariable UUID id,
-            @RequestBody CreateVehicleRequest request) {
+            @RequestBody UpdateVehicleRequest request) {
         return ResponseEntity.ok(vehicleService.updateVehicle(id, request));
     }
 

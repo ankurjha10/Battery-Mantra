@@ -367,6 +367,7 @@ public class ProductService {
                         .description(b.getDescription())
                         .dealerDescription(b.getDealerDescription())
                         .productCount(b.getProductCount())
+                        .slug(b.getSlug())
                         .build())
                 .distinct()
                 .toList();

@@ -26,6 +26,11 @@ public class VehicleController {
         return ResponseEntity.ok(vehicleService.getVehicleById(id));
     }
 
+    @GetMapping("/slug/{slug}")
+    public ResponseEntity<VehicleResponse> getVehicleBySlug(@PathVariable String slug) {
+        return ResponseEntity.ok(vehicleService.getVehicleBySlug(slug));
+    }
+
     @GetMapping("/search")
     public ResponseEntity<List<VehicleResponse>> searchVehicles(
             @RequestParam(required = false) String make,

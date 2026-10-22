@@ -20,4 +20,5 @@ public class BrandResponse {
     private String description;
     private String dealerDescription;
     private Integer productCount;
+    private String slug;
 }

@@ -36,8 +36,25 @@ public class Brand {
     private String dealerDescription;
 
 
+    @Column(name = "slug")
+    private String slug;
+
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
+
+    public String getSlug() {
+        if (slug != null && !slug.trim().isEmpty()) {
+            return slug;
+        }
+        if (seo != null && seo.getSlug() != null && !seo.getSlug().trim().isEmpty()) {
+            return seo.getSlug();
+        }
+        return brandName != null ? brandName.toLowerCase().replace(" ", "-") : null;
+    }
+
+    public void setSlug(String slug) {
+        this.slug = slug;
+    }
 
     @org.hibernate.annotations.Formula("(select cast(count(*) as int) from products p where p.brand_id = brand_id and p.is_approved = true)")
     private Integer productCount;

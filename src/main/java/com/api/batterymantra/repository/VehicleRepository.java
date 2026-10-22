@@ -11,5 +11,5 @@ import java.util.UUID;
 public interface VehicleRepository extends JpaRepository<Vehicle, UUID> {
     List<Vehicle> findByManufacturerNameIgnoreCase(String make);
     List<Vehicle> findByManufacturerNameIgnoreCaseAndModelIgnoreCase(String make, String model);
-
+    java.util.Optional<Vehicle> findBySlug(String slug);
 }
