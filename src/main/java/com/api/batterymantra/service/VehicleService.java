@@ -35,6 +35,7 @@ public class VehicleService {
         res.setVehicleId(v.getVehicleId());
         res.setModel(v.getModel());
         res.setSlug(v.getSlug());
+        res.setDescription(v.getDescription());
         if (v.getFuel() != null) {
             res.setFuelId(v.getFuel().getFuelId());
             res.setFuelName(v.getFuel().getFuelName());
@@ -91,6 +92,7 @@ public class VehicleService {
         vehicle.setVehicleType(dto.getVehicleType());
         vehicle.setImageUrl(dto.getImageUrl());
         vehicle.setCapacity(dto.getCapacity());
+        vehicle.setDescription(dto.getDescription());
 
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);
@@ -108,11 +110,10 @@ public class VehicleService {
 
         String slug = dto.getSlug();
         if (slug == null || slug.trim().isEmpty()) {
-            String fuelName = fuel != null ? fuel.getFuelName() : "";
             String makeName = dto.getMake() != null && !dto.getMake().trim().isEmpty()
                     ? dto.getMake()
                     : (vehicle.getManufacturer() != null ? vehicle.getManufacturer().getName() : "");
-            slug = (makeName + "-" + dto.getModel() + (fuelName.isEmpty() ? "" : "-" + fuelName))
+            slug = (makeName + "-" + dto.getModel())
                     .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
         }
         vehicle.setSlug(slug);
@@ -139,6 +140,7 @@ public class VehicleService {
 
         if (dto.getCapacity() != null)
             vehicle.setCapacity(dto.getCapacity());
+        vehicle.setDescription(dto.getDescription());
 
         if (dto.getCategoryId() != null) {
             categoryRepository.findById(dto.getCategoryId()).ifPresent(vehicle::setCategory);
@@ -153,12 +155,11 @@ public class VehicleService {
         if (dto.getSlug() != null && !dto.getSlug().trim().isEmpty()) {
             vehicle.setSlug(dto.getSlug().trim().toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", ""));
         } else if (vehicle.getSlug() == null || vehicle.getSlug().trim().isEmpty()) {
-            String fuelName = vehicle.getFuel() != null ? vehicle.getFuel().getFuelName() : "";
             String makeName = dto.getMake() != null && !dto.getMake().trim().isEmpty()
                     ? dto.getMake()
                     : (vehicle.getManufacturer() != null ? vehicle.getManufacturer().getName() : "");
             String modelName = vehicle.getModel() != null ? vehicle.getModel() : "";
-            String slug = (makeName + "-" + modelName + (fuelName.isEmpty() ? "" : "-" + fuelName))
+            String slug = (makeName + "-" + modelName)
                     .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
             vehicle.setSlug(slug);
         }
@@ -179,6 +180,7 @@ public class VehicleService {
         updateDto.setCapacity(dto.getCapacity());
         updateDto.setCategoryId(dto.getCategoryId());
         updateDto.setManufacturerId(dto.getManufacturerId());
+        updateDto.setDescription(dto.getDescription());
         updateDto.setSlug(dto.getSlug());
         return updateVehicle(vehicleId, updateDto);
     }

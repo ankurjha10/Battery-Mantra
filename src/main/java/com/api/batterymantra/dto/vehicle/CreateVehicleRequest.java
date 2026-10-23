@@ -16,6 +16,7 @@ public class CreateVehicleRequest {
     
     private UUID categoryId;
     private UUID manufacturerId;
+    private String description;
     private String slug;
 }
 

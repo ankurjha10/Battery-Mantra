@@ -16,5 +16,6 @@ public class UpdateVehicleRequest {
 
     private UUID categoryId;
     private UUID manufacturerId;
+    private String description;
     private String slug;
 }

@@ -42,6 +42,9 @@ public class Vehicle {
     @JoinColumn(name = "manufacturer_id")
     private Manufacturer manufacturer;
 
+    @Column(name = "description", columnDefinition = "TEXT")
+    private String description;
+
     @Column(name = "slug")
     private String slug;
 
@@ -50,9 +53,8 @@ public class Vehicle {
             return slug;
         }
         String make = manufacturer != null ? manufacturer.getName() : "";
-        String fuelName = fuel != null ? fuel.getFuelName() : "";
         String modelName = model != null ? model : "";
-        return (make + "-" + modelName + (fuelName.isEmpty() ? "" : "-" + fuelName))
+        return (make + "-" + modelName)
                 .toLowerCase().replaceAll("[^a-z0-9]+", "-").replaceAll("^-+|-+$", "");
     }
 
