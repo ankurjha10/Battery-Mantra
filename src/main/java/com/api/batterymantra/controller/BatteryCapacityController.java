@@ -26,13 +26,13 @@ public class BatteryCapacityController {
     }
 
     // Admin endpoints
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     @PostMapping("/api/admin/capacities")
     public ResponseEntity<CapacityResponse> createCapacity(@Valid @RequestBody CapacityRequest request) {
         return new ResponseEntity<>(capacityService.createCapacity(request), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     @PutMapping("/api/admin/capacities/{id}")
     public ResponseEntity<CapacityResponse> updateCapacity(
             @PathVariable UUID id,
@@ -40,7 +40,7 @@ public class BatteryCapacityController {
         return ResponseEntity.ok(capacityService.updateCapacity(id, request));
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     @DeleteMapping("/api/admin/capacities/{id}")
     public ResponseEntity<Void> deleteCapacity(@PathVariable UUID id) {
         capacityService.deleteCapacity(id);

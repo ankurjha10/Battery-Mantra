@@ -23,19 +23,19 @@ public class FuelController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Fuel> createFuel(@RequestBody Fuel fuel) {
         return ResponseEntity.ok(fuelService.createFuel(fuel));
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Fuel> updateFuel(@PathVariable UUID id, @RequestBody Fuel fuel) {
         return ResponseEntity.ok(fuelService.updateFuel(id, fuel));
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteFuel(@PathVariable UUID id) {
         fuelService.deleteFuel(id);
         return ResponseEntity.ok().build();

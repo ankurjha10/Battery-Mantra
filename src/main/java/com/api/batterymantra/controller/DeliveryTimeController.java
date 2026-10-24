@@ -18,13 +18,13 @@ public class DeliveryTimeController {
 
     private final DeliveryTimeService deliveryTimeService;
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     @GetMapping("/admin/delivery-time")
     public ResponseEntity<List<DeliveryTimeResponse>> getAllDeliveryTimes() {
         return ResponseEntity.ok(deliveryTimeService.getAllDeliveryTimes());
     }
 
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     @PutMapping("/admin/delivery-time")
     public ResponseEntity<List<DeliveryTimeResponse>> updateDeliveryTimes(@RequestBody List<DeliveryTimeRequest> requests) {
         return ResponseEntity.ok(deliveryTimeService.updateDeliveryTimes(requests));

@@ -23,7 +23,7 @@ public class AddressController {
     private final AddressService addressService;
 
     @PostMapping
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CUSTOMER') or hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<AddressResponse> addAddress(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @Valid @RequestBody AddressRequest request) {
@@ -33,7 +33,7 @@ public class AddressController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CUSTOMER') or hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<AddressResponse>> getUserAddresses(
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         UUID userId = userPrincipal.getUser().getUserId();
@@ -42,7 +42,7 @@ public class AddressController {
     }
 
     @PutMapping("/{addressId}")
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CUSTOMER') or hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<AddressResponse> updateAddress(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable UUID addressId,
@@ -53,7 +53,7 @@ public class AddressController {
     }
 
     @DeleteMapping("/{addressId}")
-    @PreAuthorize("hasRole('CUSTOMER') or hasRole('ADMIN')")
+    @PreAuthorize("hasRole('CUSTOMER') or hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteAddress(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable UUID addressId) {

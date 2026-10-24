@@ -74,36 +74,36 @@ public class SecurityConfig {
 
                         // Products — read public, write ADMIN (fine-grained via @PreAuthorize)
                         .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Categories — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PATCH, "/api/categories/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Brands — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/brands/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/brands/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Brand Contents — read public
                         .requestMatchers(HttpMethod.GET, "/api/brand-contents/**").permitAll()
 
                         // Manufacturers — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/manufacturers/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/manufacturers/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/manufacturers/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/manufacturers/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Vehicles — read public, write ADMIN
                         .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").hasRole("ADMIN")
-                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Cart — CUSTOMER only
                         .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
@@ -115,7 +115,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/**").hasAnyRole("CUSTOMER", "ENGINEER")
 
                         // Orders — CUSTOMER endpoints + ADMIN endpoints (fine-grained via @PreAuthorize)
-                        .requestMatchers("/api/orders/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/orders/admin/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers("/api/orders/**").hasRole("CUSTOMER")
 
                         // Engineer App APIs
@@ -125,7 +125,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/partner/**").hasRole("PARTNER")
 
                         // Admin APIs
-                        .requestMatchers("/api/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // User Profile & Settings
                         .requestMatchers("/api/user/**").authenticated()
@@ -143,6 +143,18 @@ public class SecurityConfig {
                         ).permitAll()
 
                         .anyRequest().authenticated()
+                )
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"message\":\"Full authentication is required to access this resource\",\"status\":401}");
+                        })
+                        .accessDeniedHandler((request, response, accessDeniedException) -> {
+                            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"message\":\"Access denied. You do not have permission to perform this action.\",\"status\":403}");
+                        })
                 )
                 .addFilterBefore(rateLimitingFilter,
                         UsernamePasswordAuthenticationFilter.class)

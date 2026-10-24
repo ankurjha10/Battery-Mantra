@@ -19,7 +19,7 @@ public class BulkPricingController {
     private final BulkPricingService bulkPricingService;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<BulkPricingResponse>> getMatrix(
             @RequestParam UUID categoryId,
             @RequestParam UUID brandId) {
@@ -27,7 +27,7 @@ public class BulkPricingController {
     }
 
     @PutMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<BulkPricingResponse> updateMatrix(@RequestBody BulkPricingRequest request) {
         return ResponseEntity.ok(bulkPricingService.updateMatrix(request));
     }

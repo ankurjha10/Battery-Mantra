@@ -43,7 +43,7 @@ public class OrderMapper {
         response.setExchangeDiscount(order.getExchangeDiscount());
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN"))) {
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_SUB_ADMIN") || a.getAuthority().equals("SUB_ADMIN"))) {
             response.setDeliverySecurityCode(order.getDeliverySecurityCode());
         } else {
             response.setDeliverySecurityCode(null);

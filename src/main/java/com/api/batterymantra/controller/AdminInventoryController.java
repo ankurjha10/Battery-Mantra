@@ -15,7 +15,7 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/admin/engineer-inventory")
 @RequiredArgsConstructor
-@PreAuthorize("hasRole('ADMIN')")
+@PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
 public class AdminInventoryController {
 
     private final EngineerInventoryService inventoryService;

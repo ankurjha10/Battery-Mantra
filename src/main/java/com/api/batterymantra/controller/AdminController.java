@@ -94,19 +94,19 @@ public class AdminController {
 
     // --- Users ---
     @GetMapping("/users")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         return ResponseEntity.ok(adminService.getAllUsers());
     }
 
     @PostMapping("/sub-admins")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<UserProfileResponse> createSubAdmin(@RequestBody @Valid AdminCreateSubAdminRequest request) {
         return new ResponseEntity<>(userService.createSubAdmin(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/sub-admins/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<UserProfileResponse> updateSubAdmin(
             @PathVariable UUID userId,
             @RequestBody @Valid AdminUpdateSubAdminRequest request) {
@@ -114,14 +114,14 @@ public class AdminController {
     }
 
     @DeleteMapping("/users/{userId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteUser(@PathVariable UUID userId) {
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/users/{userId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> toggleUserStatus(
             @PathVariable UUID userId,
             @RequestParam boolean isActive) {
@@ -130,27 +130,27 @@ public class AdminController {
     }
 
     @PostMapping("/customers")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<UserResponse> createCustomer(@RequestBody @Valid AdminCreateCustomerRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createCustomer(request));
     }
 
     // --- Categories ---
     @PostMapping("/categories")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<CategoryListResponse> addCategory(@RequestBody CreateCategoryRequest category) {
         return ResponseEntity.status(HttpStatus.CREATED).body(categoryService.addCategory(category));
     }
 
     @DeleteMapping("/categories/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteCategoryById(@PathVariable UUID id) {
         categoryService.deleteCategoryById(id);
         return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/categories/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<CategoryListResponse> updateCategoryById(
             @PathVariable UUID id,
             @RequestBody UpdateCategoryRequest category) {
@@ -158,7 +158,7 @@ public class AdminController {
     }
 
     @PutMapping("/categories/reorder")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> reorderCategories(@RequestBody List<CategoryReorderRequest> requests) {
         categoryService.reorderCategories(requests);
         return ResponseEntity.ok().build();
@@ -166,20 +166,20 @@ public class AdminController {
 
     // --- Brands ---
     @PostMapping("/brands")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<BrandResponse> createBrand(@RequestBody @Valid BrandRequest brandRequest) {
         return ResponseEntity.status(HttpStatus.CREATED).body(brandService.createBrand(brandRequest));
     }
 
     @PutMapping("/brands/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<BrandResponse> updateBrand(@PathVariable UUID id,
             @RequestBody @Valid BrandRequest brandRequest) {
         return ResponseEntity.ok(brandService.updateBrand(id, brandRequest));
     }
 
     @DeleteMapping("/brands/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteBrand(@PathVariable UUID id) {
         brandService.deleteBrand(id);
         return ResponseEntity.noContent().build();
@@ -187,20 +187,20 @@ public class AdminController {
 
     // --- Vehicles ---
     @PostMapping("/vehicles")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<VehicleResponse> createVehicle(@RequestBody CreateVehicleRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(vehicleService.createVehicle(request));
     }
 
     @PutMapping("/vehicles/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<VehicleResponse> updateVehicle(@PathVariable UUID id,
             @RequestBody UpdateVehicleRequest request) {
         return ResponseEntity.ok(vehicleService.updateVehicle(id, request));
     }
 
     @DeleteMapping("/vehicles/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteVehicle(@PathVariable UUID id) {
         vehicleService.deleteVehicle(id);
         return ResponseEntity.noContent().build();
@@ -208,7 +208,7 @@ public class AdminController {
 
     // --- Products ---
     @PostMapping("/products")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<ProductDetailResponse> addProduct(
             @RequestBody CreateProductRequest product,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -216,7 +216,7 @@ public class AdminController {
     }
 
     @PatchMapping("/products/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<ProductDetailResponse> updateProduct(
             @PathVariable UUID id,
             @RequestBody UpdateProductRequest product,
@@ -225,7 +225,7 @@ public class AdminController {
     }
 
     @DeleteMapping("/products/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteProduct(
             @PathVariable UUID id,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
@@ -234,26 +234,26 @@ public class AdminController {
     }
 
     @GetMapping("/products/pending-approvals")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<ProductListResponse>> getPendingApprovalProducts() {
         return ResponseEntity.ok(productService.getPendingApprovalProducts());
     }
 
     @PatchMapping("/products/{id}/approve")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<ProductDetailResponse> approveProduct(@PathVariable UUID id) {
         return ResponseEntity.ok(productService.approveProduct(id));
     }
 
     @PutMapping("/products/reorder")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> reorderProducts(@RequestBody List<ProductReorderRequest> requests) {
         productService.reorderProducts(requests);
         return ResponseEntity.ok().build();
     }
 
     @PutMapping("/products/bulk-update")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> bulkUpdateProducts(@RequestBody List<BulkProductUpdateRequest> requests) {
         productService.bulkUpdateProducts(requests);
         return ResponseEntity.ok().build();
@@ -261,19 +261,19 @@ public class AdminController {
 
     // --- Orders ---
     @GetMapping("/orders")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
         return ResponseEntity.ok(orderService.getAllOrders());
     }
 
     @PostMapping("/orders")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid AdminCreateOrderRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createAdminOrder(request));
     }
 
     @PatchMapping("/orders/{orderId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable UUID orderId,
             @RequestBody @Valid OrderStatusUpdateRequest request) {
@@ -281,7 +281,7 @@ public class AdminController {
     }
 
     @PatchMapping("/orders/{orderId}/assign-partner")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<OrderResponse> assignOrderToPartner(
             @PathVariable UUID orderId,
             @RequestParam UUID partnerId) {
@@ -289,7 +289,7 @@ public class AdminController {
     }
 
     @PatchMapping("/orders/{orderId}/assign-engineer")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<OrderResponse> assignOrderToEngineer(
             @PathVariable UUID orderId,
             @RequestParam UUID engineerId) {
@@ -298,26 +298,26 @@ public class AdminController {
 
     // --- Banners ---
     @GetMapping("/banners")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<BannerResponse>> getAllBanners() {
         return ResponseEntity.ok(bannerService.getAllBanners());
     }
 
     @PostMapping("/banners")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<BannerResponse> createBanner(@RequestBody @Valid CreateBannerRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(bannerService.createBanner(request));
     }
 
     @PutMapping("/banners/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<BannerResponse> updateBanner(@PathVariable UUID id,
             @RequestBody @Valid UpdateBannerRequest request) {
         return ResponseEntity.ok(bannerService.updateBanner(id, request));
     }
 
     @DeleteMapping("/banners/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteBanner(@PathVariable UUID id) {
         bannerService.deleteBanner(id);
         return ResponseEntity.noContent().build();
@@ -325,13 +325,13 @@ public class AdminController {
 
     // --- Callbacks ---
     @GetMapping("/callbacks")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<CallbackResponse>> getAllCallbacks() {
         return ResponseEntity.ok(callbackRequestService.getAllCallbackRequests());
     }
 
     @PatchMapping("/callbacks/{callbackId}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<CallbackResponse> updateCallbackStatus(@PathVariable Long callbackId,
             @RequestBody UpdateCallbackStatusRequest request) {
         return ResponseEntity.ok(callbackRequestService.updateCallbackStatus(callbackId, request.getStatus()));
@@ -339,14 +339,14 @@ public class AdminController {
 
     // --- Enquiries ---
     @GetMapping("/enquiries")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<EnquiryResponse>> getAllEnquiries(
             @RequestParam(required = false) EnquiryType type) {
         return ResponseEntity.ok(enquiryService.getAllEnquiries(type));
     }
 
     @PatchMapping("/enquiries/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<EnquiryResponse> updateEnquiryStatus(@PathVariable Long id,
             @RequestBody UpdateEnquiryStatusRequest request) {
         return ResponseEntity.ok(enquiryService.updateEnquiryStatus(id, request.getStatus()));
@@ -354,13 +354,13 @@ public class AdminController {
 
     // --- Engineer Attendance & Leaves ---
     @GetMapping("/engineers/{engineerId}/attendance")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<EngineerAttendance>> getEngineerAttendance(@PathVariable UUID engineerId) {
         return ResponseEntity.ok(attendanceService.getAttendanceByEngineerId(engineerId));
     }
 
     @PatchMapping("/leave-requests/{id}/status")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<LeaveRequest> updateLeaveStatus(@PathVariable UUID id,
             @RequestBody UpdateLeaveStatusRequest request) {
         LeaveStatus status = LeaveStatus.valueOf(request.getStatus().toUpperCase());
@@ -368,33 +368,33 @@ public class AdminController {
     }
 
     @GetMapping("/leave-requests")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<LeaveRequest>> getAllLeaveRequests() {
         return ResponseEntity.ok(attendanceService.getAllLeaveRequests());
     }
 
     // --- Instagram Reels ---
     @GetMapping("/reels")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<ReelResponse>> getAllReels() {
         return ResponseEntity.ok(reelService.getAllReels());
     }
 
     @PostMapping("/reels")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<ReelResponse> createReel(@RequestBody @Valid CreateReelRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(reelService.createReel(request));
     }
 
     @PutMapping("/reels/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<ReelResponse> updateReel(@PathVariable UUID id,
             @RequestBody @Valid UpdateReelRequest request) {
         return ResponseEntity.ok(reelService.updateReel(id, request));
     }
 
     @DeleteMapping("/reels/id/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteReel(@PathVariable UUID id) {
         reelService.deleteReel(id);
         return ResponseEntity.noContent().build();

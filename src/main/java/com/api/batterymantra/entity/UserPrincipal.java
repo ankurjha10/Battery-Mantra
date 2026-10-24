@@ -20,7 +20,16 @@ public class UserPrincipal implements UserDetails {
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        java.util.List<GrantedAuthority> authorities = new java.util.ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_" + user.getRole().name()));
+        if (user.getPermissions() != null) {
+            for (String perm : user.getPermissions()) {
+                if (perm != null && !perm.isBlank()) {
+                    authorities.add(new SimpleGrantedAuthority(perm.trim()));
+                }
+            }
+        }
+        return authorities;
     }
 
     @Override

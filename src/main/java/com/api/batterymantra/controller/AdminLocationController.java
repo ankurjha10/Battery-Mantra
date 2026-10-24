@@ -22,25 +22,25 @@ public class AdminLocationController {
     // --- Cities ---
     
     @PostMapping("/cities")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<CityDto> createCity(@RequestBody @Valid CreateCityRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(locationService.createCity(request));
     }
 
     @GetMapping("/cities")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<CityDto>> getAllCities() {
         return ResponseEntity.ok(locationService.getAllCities());
     }
 
     @PutMapping("/cities/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<CityDto> updateCity(@PathVariable UUID id, @RequestBody @Valid UpdateCityRequest request) {
         return ResponseEntity.ok(locationService.updateCity(id, request));
     }
 
     @DeleteMapping("/cities/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deleteCity(@PathVariable UUID id) {
         locationService.deleteCity(id);
         return ResponseEntity.noContent().build();
@@ -49,7 +49,7 @@ public class AdminLocationController {
     // --- Pincodes ---
 
     @PostMapping("/cities/{cityId}/pincodes")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<PincodeDto>> addPincodes(
             @PathVariable UUID cityId, 
             @RequestBody @Valid AddPincodeRequest request) {
@@ -57,13 +57,13 @@ public class AdminLocationController {
     }
 
     @GetMapping("/cities/{cityId}/pincodes")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<List<PincodeDto>> getPincodesByCity(@PathVariable UUID cityId) {
         return ResponseEntity.ok(locationService.getPincodesByCity(cityId));
     }
 
     @DeleteMapping("/pincodes/{pincodeId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deletePincode(@PathVariable UUID pincodeId) {
         locationService.deletePincode(pincodeId);
         return ResponseEntity.noContent().build();

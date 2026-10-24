@@ -32,20 +32,20 @@ public class SeoController {
     }
 
     @PostMapping("/pages")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<SeoPage> createPage(@RequestBody SeoPage seoPage) {
         return ResponseEntity.ok(seoService.saveSeoPage(seoPage));
     }
 
     @PutMapping("/pages/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<SeoPage> updatePage(@PathVariable UUID id, @RequestBody SeoPage seoPage) {
         seoPage.setPageId(id);
         return ResponseEntity.ok(seoService.saveSeoPage(seoPage));
     }
 
     @DeleteMapping("/pages/{id}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<Void> deletePage(@PathVariable UUID id) {
         seoService.deleteSeoPage(id);
         return ResponseEntity.ok().build();
@@ -65,7 +65,7 @@ public class SeoController {
     }
 
     @PostMapping("/templates")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<SeoTemplate> saveTemplate(@RequestBody SeoTemplate seoTemplate) {
         return ResponseEntity.ok(seoService.saveSeoTemplate(seoTemplate));
     }
