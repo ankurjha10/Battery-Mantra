@@ -61,7 +61,13 @@ public class GlobalExceptionHandler {
                 else if (lowerMsg.contains("coupon_code")) field = " (Coupon Code)";
             } catch (Exception ignored) {}
             message = "A record with this value already exists" + field + ". Please use a unique value.";
-        } else if (lowerMsg.contains("foreign key") || lowerMsg.contains("referenced") || lowerMsg.contains("constraint")) {
+        } else if (lowerMsg.contains("check constraint") || lowerMsg.contains("violates check constraint")) {
+            if (lowerMsg.contains("users_role_check")) {
+                message = "The role SUB_ADMIN is not permitted by database check constraint 'users_role_check'. Please update or drop this constraint in the database.";
+            } else {
+                message = "One of the values entered is not allowed by the database constraint.";
+            }
+        } else if (lowerMsg.contains("foreign key") || lowerMsg.contains("referenced") || lowerMsg.contains("is still referenced from table")) {
             message = "This record cannot be modified or deleted because it is linked to other data. Please remove those references first.";
         } else if (lowerMsg.contains("not-null") || lowerMsg.contains("null value")) {
             message = "A required field is missing. Please fill in all required fields and try again.";
@@ -149,6 +155,24 @@ public class GlobalExceptionHandler {
             WebRequest request) {
         ErrorResponse error = new ErrorResponse(
                 "Required request body is missing or malformed",
+                HttpStatus.BAD_REQUEST.value(),
+                LocalDateTime.now(),
+                request.getDescription(false).replace("uri=", "")
+        );
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(org.springframework.web.bind.MethodArgumentNotValidException.class)
+    public ResponseEntity<ErrorResponse> handleValidationException(
+            org.springframework.web.bind.MethodArgumentNotValidException ex,
+            WebRequest request) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
+                .map(err -> err.getDefaultMessage() != null ? err.getDefaultMessage() : (err.getField() + " is invalid"))
+                .findFirst()
+                .orElse("Validation failed. Please check your inputs.");
+
+        ErrorResponse error = new ErrorResponse(
+                message,
                 HttpStatus.BAD_REQUEST.value(),
                 LocalDateTime.now(),
                 request.getDescription(false).replace("uri=", "")

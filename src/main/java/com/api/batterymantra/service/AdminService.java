@@ -71,6 +71,7 @@ public class AdminService {
                 .isActive(user.isActive())
                 .role(user.getRole().name())
                 .createdAt(user.getCreatedAt())
+                .permissions(user.getPermissions())
                 .build();
     }
 }

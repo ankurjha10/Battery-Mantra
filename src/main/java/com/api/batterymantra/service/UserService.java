@@ -87,17 +87,24 @@ public class UserService {
     }
 
     public UserProfileResponse createSubAdmin(AdminCreateSubAdminRequest request) {
-        if (userRepository.findByEmail(request.getEmail()) != null) {
+        String trimmedName = request.getName() != null ? request.getName().trim() : "";
+        String trimmedPhone = request.getPhone() != null ? request.getPhone().trim() : "";
+        String trimmedEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+
+        if (userRepository.findByEmail(trimmedEmail) != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already taken");
         }
-        if (userRepository.findByPhoneNumber(request.getPhone()) != null) {
+        if (userRepository.findByPhoneNumber(trimmedPhone) != null) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already taken");
+        }
+        if (userRepository.findByUsername(trimmedName) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Name/Username is already taken");
         }
         
         User user = User.builder()
-                .username(request.getName())
-                .email(request.getEmail())
-                .phoneNumber(request.getPhone())
+                .username(trimmedName)
+                .email(trimmedEmail)
+                .phoneNumber(trimmedPhone)
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.SUB_ADMIN)
                 .permissions(request.getPermissions())
@@ -120,13 +127,21 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User is not a Sub-Admin");
         }
 
-        User existingPhoneUser = userRepository.findByPhoneNumber(request.getPhone());
+        String trimmedName = request.getName() != null ? request.getName().trim() : "";
+        String trimmedPhone = request.getPhone() != null ? request.getPhone().trim() : "";
+
+        User existingPhoneUser = userRepository.findByPhoneNumber(trimmedPhone);
         if (existingPhoneUser != null && !existingPhoneUser.getUserId().equals(userId)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Phone number is already in use by another account");
         }
 
-        user.setUsername(request.getName().trim());
-        user.setPhoneNumber(request.getPhone().trim());
+        User existingUsernameUser = userRepository.findByUsername(trimmedName);
+        if (existingUsernameUser != null && !existingUsernameUser.getUserId().equals(userId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Name/Username is already in use by another account");
+        }
+
+        user.setUsername(trimmedName);
+        user.setPhoneNumber(trimmedPhone);
         user.setPermissions(request.getPermissions());
 
         user = userRepository.save(user);
