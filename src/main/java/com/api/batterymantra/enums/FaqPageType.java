@@ -5,6 +5,6 @@ public enum FaqPageType {
     CATEGORY,
     MANUFACTURER,
     BRAND,
-    BRAND_MODEL,
+    MANUFACTURER_MODEL,
     PRODUCT
 }
