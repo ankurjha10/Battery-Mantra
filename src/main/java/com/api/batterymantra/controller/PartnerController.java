@@ -42,6 +42,12 @@ public class PartnerController {
         return ResponseEntity.ok(partnerService.updatePartner(id, request));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable UUID id, @RequestParam boolean isActive) {
+        partnerService.toggleStatus(id, isActive);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deletePartner(@PathVariable UUID id) {
         partnerService.deletePartner(id);

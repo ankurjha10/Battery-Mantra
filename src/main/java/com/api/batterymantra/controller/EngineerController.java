@@ -42,6 +42,12 @@ public class EngineerController {
         return ResponseEntity.ok(engineerService.updateEngineer(id, request));
     }
 
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<Void> updateStatus(@PathVariable UUID id, @RequestParam boolean isActive) {
+        engineerService.toggleStatus(id, isActive);
+        return ResponseEntity.noContent().build();
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteEngineer(@PathVariable UUID id) {
         engineerService.deleteEngineer(id);

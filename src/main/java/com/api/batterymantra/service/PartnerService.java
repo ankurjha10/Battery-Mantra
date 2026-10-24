@@ -126,6 +126,17 @@ public class PartnerService {
         partnerProfileRepository.save(profile);
     }
 
+    public void toggleStatus(UUID id, boolean isActive) {
+        PartnerProfile profile = partnerProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Partner not found"));
+        profile.setActive(isActive);
+        if (profile.getUser() != null) {
+            profile.getUser().setActive(isActive);
+            userRepository.save(profile.getUser());
+        }
+        partnerProfileRepository.save(profile);
+    }
+
     private PartnerResponse mapToResponse(PartnerProfile profile) {
         return PartnerResponse.builder()
                 .id(profile.getId())

@@ -160,6 +160,17 @@ public class EngineerService {
         engineerProfileRepository.save(profile);
     }
 
+    public void toggleStatus(UUID id, boolean isActive) {
+        EngineerProfile profile = engineerProfileRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Engineer not found"));
+        profile.setActive(isActive);
+        if (profile.getUser() != null) {
+            profile.getUser().setActive(isActive);
+            userRepository.save(profile.getUser());
+        }
+        engineerProfileRepository.save(profile);
+    }
+
     private EngineerResponse mapToResponse(EngineerProfile profile) {
         return EngineerResponse.builder()
                 .id(profile.getId())
