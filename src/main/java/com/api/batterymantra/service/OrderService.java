@@ -37,6 +37,7 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.Random;
 
@@ -704,17 +705,86 @@ public class OrderService {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot reassign order in status: " + order.getOrderStatus());
+        }
+
         PartnerProfile partner = partnerProfileRepository.findById(partnerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Partner not found"));
 
+        PartnerProfile oldPartner = order.getAssignedPartner();
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        // 1. If previously assigned to another partner, notify old partner
+        if (oldPartner != null && !oldPartner.getId().equals(partnerId)) {
+            try {
+                notificationService.sendPushNotification(
+                        oldPartner.getUser().getUserId(),
+                        "Order Reassigned",
+                        "Order #" + shortId + " has been reassigned to another branch.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore failure so caller transaction is not broken
+            }
+        }
+
+        // 2. If previously assigned engineer does not belong to the new partner, unassign and notify
+        if (oldEngineer != null) {
+            boolean belongsToNewPartner = oldEngineer.getPartnerProfile() != null
+                    && oldEngineer.getPartnerProfile().getId().equals(partnerId);
+            if (!belongsToNewPartner) {
+                order.setAssignedEngineer(null);
+                try {
+                    notificationService.sendPushNotification(
+                            oldEngineer.getUser().getUserId(),
+                            "Duty Removed",
+                            "Order #" + shortId + " has been reassigned.",
+                            Map.of(
+                                    "action", "ORDER_REASSIGNED",
+                                    "orderId", order.getOrderId().toString(),
+                                    "type", "custom_ui",
+                                    "refresh", "ORDERS"
+                            )
+                    );
+                } catch (Exception e) {
+                    // Ignore failure
+                }
+            }
+        }
+
         order.setAssignedPartner(partner);
-        if (order.getOrderStatus() == OrderStatus.PENDING) {
+        if (order.getOrderStatus() == OrderStatus.PENDING || order.getOrderStatus() == OrderStatus.CONFIRMED) {
             order.setOrderStatus(OrderStatus.PROCESSING);
         }
         Orders savedOrder = orderRepository.save(order);
-        
-        notificationService.sendPushNotification(partner.getUser().getUserId(), "New Order Assigned", "Order #" + order.getOrderId() + " has been assigned to you.", null);
-        
+
+        // 3. Notify new partner with full dataPayload for instant UI refresh
+        try {
+            notificationService.sendPushNotification(
+                    partner.getUser().getUserId(),
+                    "New Order Assigned",
+                    "Order #" + shortId + " has been assigned to you.",
+                    Map.of(
+                            "action", "ORDER_ASSIGNED",
+                            "orderId", order.getOrderId().toString(),
+                            "type", "custom_ui",
+                            "refresh", "ORDERS"
+                    )
+            );
+        } catch (Exception e) {
+            // Ignore failure
+        }
+
         return orderMapper.toOrderResponse(savedOrder);
     }
 
@@ -723,10 +793,11 @@ public class OrderService {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
 
-        if (order.getAssignedPartner() != null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "Order is assigned to partner '" + order.getAssignedPartner().getBusinessName()
-                            + "'. Engineers must be assigned by the partner branch.");
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot reassign order in status: " + order.getOrderStatus());
         }
 
         EngineerProfile engineer = engineerProfileRepository.findById(engineerId)
@@ -736,14 +807,72 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin can only assign Direct Admin engineers.");
         }
 
+        PartnerProfile oldPartner = order.getAssignedPartner();
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        // 1. If order was assigned to a partner, Admin taking over removes partner assignment
+        if (oldPartner != null) {
+            order.setAssignedPartner(null);
+            try {
+                notificationService.sendPushNotification(
+                        oldPartner.getUser().getUserId(),
+                        "Order Reassigned",
+                        "Order #" + shortId + " was reassigned to Direct Admin fulfillment.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore failure
+            }
+        }
+
+        // 2. If previously assigned to another engineer, notify old engineer
+        if (oldEngineer != null && !oldEngineer.getId().equals(engineerId)) {
+            try {
+                notificationService.sendPushNotification(
+                        oldEngineer.getUser().getUserId(),
+                        "Duty Removed",
+                        "Order #" + shortId + " has been reassigned to another engineer.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore failure
+            }
+        }
+
         order.setAssignedEngineer(engineer);
-        if (order.getOrderStatus() == OrderStatus.PENDING) {
+        if (order.getOrderStatus() == OrderStatus.PENDING || order.getOrderStatus() == OrderStatus.CONFIRMED) {
             order.setOrderStatus(OrderStatus.PROCESSING);
         }
         Orders savedOrder = orderRepository.save(order);
-        
-        notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
-        
+
+        // 3. Notify new engineer with dataPayload
+        try {
+            notificationService.sendPushNotification(
+                    engineer.getUser().getUserId(),
+                    "New Duty Assigned",
+                    "Order #" + shortId + " has been assigned to you for delivery/installation.",
+                    Map.of(
+                            "action", "ORDER_ASSIGNED",
+                            "orderId", order.getOrderId().toString(),
+                            "type", "custom_ui",
+                            "refresh", "ORDERS"
+                    )
+            );
+        } catch (Exception e) {
+            // Ignore failure
+        }
+
         return orderMapper.toOrderResponse(savedOrder);
     }
 
@@ -751,6 +880,13 @@ public class OrderService {
     public OrderResponse assignEngineerByPartner(UUID orderId, UUID engineerId, UUID partnerProfileId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot reassign order in status: " + order.getOrderStatus());
+        }
 
         if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -765,14 +901,190 @@ public class OrderService {
                     "You can only assign engineers belonging to your partner branch.");
         }
 
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        // If engineer changed, notify old engineer
+        if (oldEngineer != null && !oldEngineer.getId().equals(engineerId)) {
+            try {
+                notificationService.sendPushNotification(
+                        oldEngineer.getUser().getUserId(),
+                        "Duty Removed",
+                        "Order #" + shortId + " has been reassigned to another engineer.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore failure
+            }
+        }
+
         order.setAssignedEngineer(engineer);
-        if (order.getOrderStatus() == OrderStatus.PENDING) {
+        if (order.getOrderStatus() == OrderStatus.PENDING || order.getOrderStatus() == OrderStatus.CONFIRMED) {
             order.setOrderStatus(OrderStatus.PROCESSING);
         }
         Orders savedOrder = orderRepository.save(order);
-        
-        notificationService.sendPushNotification(engineer.getUser().getUserId(), "New Duty Assigned", "Order #" + order.getOrderId() + " has been assigned to you for delivery/installation.", null);
 
+        // Notify new engineer
+        try {
+            notificationService.sendPushNotification(
+                    engineer.getUser().getUserId(),
+                    "New Duty Assigned",
+                    "Order #" + shortId + " has been assigned to you for delivery/installation.",
+                    Map.of(
+                            "action", "ORDER_ASSIGNED",
+                            "orderId", order.getOrderId().toString(),
+                            "type", "custom_ui",
+                            "refresh", "ORDERS"
+                    )
+            );
+        } catch (Exception e) {
+            // Ignore failure
+        }
+
+        return orderMapper.toOrderResponse(savedOrder);
+    }
+
+    @Transactional
+    public OrderResponse unassignPartner(UUID orderId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot unassign order in status: " + order.getOrderStatus());
+        }
+
+        PartnerProfile oldPartner = order.getAssignedPartner();
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        if (oldPartner != null) {
+            try {
+                notificationService.sendPushNotification(
+                        oldPartner.getUser().getUserId(),
+                        "Order Unassigned",
+                        "Order #" + shortId + " has been unassigned.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        if (oldEngineer != null) {
+            try {
+                notificationService.sendPushNotification(
+                        oldEngineer.getUser().getUserId(),
+                        "Duty Removed",
+                        "Order #" + shortId + " has been unassigned.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        order.setAssignedPartner(null);
+        order.setAssignedEngineer(null);
+        Orders savedOrder = orderRepository.save(order);
+        return orderMapper.toOrderResponse(savedOrder);
+    }
+
+    @Transactional
+    public OrderResponse unassignEngineerByAdmin(UUID orderId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot unassign order in status: " + order.getOrderStatus());
+        }
+
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        if (oldEngineer != null) {
+            try {
+                notificationService.sendPushNotification(
+                        oldEngineer.getUser().getUserId(),
+                        "Duty Removed",
+                        "Order #" + shortId + " has been unassigned.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        order.setAssignedEngineer(null);
+        Orders savedOrder = orderRepository.save(order);
+        return orderMapper.toOrderResponse(savedOrder);
+    }
+
+    @Transactional
+    public OrderResponse unassignEngineerByPartner(UUID orderId, UUID partnerProfileId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found"));
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED
+                || order.getOrderStatus() == OrderStatus.COMPLETED
+                || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot unassign order in status: " + order.getOrderStatus());
+        }
+
+        if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied. Order is not assigned to your partner branch.");
+        }
+
+        EngineerProfile oldEngineer = order.getAssignedEngineer();
+        String shortId = order.getOrderId().toString().substring(0, 8);
+
+        if (oldEngineer != null) {
+            try {
+                notificationService.sendPushNotification(
+                        oldEngineer.getUser().getUserId(),
+                        "Duty Removed",
+                        "Order #" + shortId + " has been unassigned.",
+                        Map.of(
+                                "action", "ORDER_REASSIGNED",
+                                "orderId", order.getOrderId().toString(),
+                                "type", "custom_ui",
+                                "refresh", "ORDERS"
+                        )
+                );
+            } catch (Exception e) {
+                // Ignore
+            }
+        }
+
+        order.setAssignedEngineer(null);
+        Orders savedOrder = orderRepository.save(order);
         return orderMapper.toOrderResponse(savedOrder);
     }
 

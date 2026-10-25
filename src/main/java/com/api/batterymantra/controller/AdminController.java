@@ -296,6 +296,18 @@ public class AdminController {
         return ResponseEntity.ok(orderService.assignEngineerByAdmin(orderId, engineerId));
     }
 
+    @PatchMapping("/orders/{orderId}/unassign-partner")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<OrderResponse> unassignOrderPartner(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(orderService.unassignPartner(orderId));
+    }
+
+    @PatchMapping("/orders/{orderId}/unassign-engineer")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<OrderResponse> unassignOrderEngineer(@PathVariable UUID orderId) {
+        return ResponseEntity.ok(orderService.unassignEngineerByAdmin(orderId));
+    }
+
     // --- Banners ---
     @GetMapping("/banners")
     @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
