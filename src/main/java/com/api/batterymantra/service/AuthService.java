@@ -1,6 +1,7 @@
 package com.api.batterymantra.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -18,21 +19,27 @@ import com.api.batterymantra.dto.auth.RegisterRequest;
 import com.api.batterymantra.dto.auth.RegisterResponse;
 import com.api.batterymantra.dto.auth.SendOtpRequest;
 import com.api.batterymantra.dto.auth.VerifyOtpRequest;
+import com.api.batterymantra.entity.EngineerProfile;
 import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.exception.TokenRefreshException;
+import com.api.batterymantra.repository.EngineerProfileRepository;
 import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.security.AuthUtil;
 
+import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final EngineerProfileRepository engineerProfileRepository;
     private final AuthUtil authUtil;
     private final AuthenticationManager authManager;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -212,5 +219,157 @@ public class AuthService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken.getRefreshToken())
                 .build();
+    }
+
+    public void sendEngineerOtp(SendOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+
+        String rawPhone = request.getPhoneNumber().trim();
+        User user = findEngineerUserByPhone(rawPhone);
+        if (user == null || user.getRole() != UserRole.ENGINEER) {
+            throw new IllegalArgumentException("No engineer account found with this phone number. Please contact your administrator or partner.");
+        }
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Your engineer account has been deactivated. Please contact support.");
+        }
+
+        Optional<EngineerProfile> profileOpt = engineerProfileRepository.findByUserUserId(user.getUserId());
+        if (profileOpt.isPresent() && !profileOpt.get().isActive()) {
+            throw new IllegalArgumentException("Your engineer profile is currently disabled. Please contact your partner or administrator.");
+        }
+
+        String clean10 = normalizePhoneNumber(rawPhone);
+        if (clean10 == null || clean10.isEmpty()) {
+            clean10 = normalizePhoneNumber(user.getPhoneNumber());
+        }
+
+        String otp = otpService.generateOtp(clean10);
+        log.info("Generated OTP for engineer [phone={}, user={}]: {}", clean10, user.getUsername(), otp);
+
+        String engineerName = "Engineer";
+        if (profileOpt.isPresent() && profileOpt.get().getFirstName() != null && !profileOpt.get().getFirstName().isBlank()) {
+            engineerName = profileOpt.get().getFirstName();
+        } else if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            engineerName = user.getUsername();
+        }
+
+        smsService.sendOtp(clean10, engineerName, otp);
+    }
+
+    public LoginResponse verifyEngineerOtp(VerifyOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+        if (request.getOtp() == null || request.getOtp().trim().isEmpty()) {
+            throw new IllegalArgumentException("OTP cannot be empty");
+        }
+
+        String rawPhone = request.getPhoneNumber().trim();
+        String clean10 = normalizePhoneNumber(rawPhone);
+
+        User user = findEngineerUserByPhone(rawPhone);
+        if (user == null || user.getRole() != UserRole.ENGINEER) {
+            throw new IllegalArgumentException("No engineer account found with this phone number. Please contact your administrator or partner.");
+        }
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Your engineer account has been deactivated. Please contact support.");
+        }
+
+        Optional<EngineerProfile> profileOpt = engineerProfileRepository.findByUserUserId(user.getUserId());
+        if (profileOpt.isPresent() && !profileOpt.get().isActive()) {
+            throw new IllegalArgumentException("Your engineer profile is currently disabled. Please contact your partner or administrator.");
+        }
+
+        boolean isValid = false;
+        if (clean10 != null && !clean10.isEmpty()) {
+            isValid = otpService.verifyOtp(clean10, request.getOtp().trim());
+        }
+        if (!isValid) {
+            isValid = otpService.verifyOtp(rawPhone, request.getOtp().trim());
+        }
+        if (!isValid && user.getPhoneNumber() != null) {
+            isValid = otpService.verifyOtp(normalizePhoneNumber(user.getPhoneNumber()), request.getOtp().trim());
+        }
+
+        if (!isValid) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+
+        String token = authUtil.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
+
+        String displayName = user.getUsername();
+        if (profileOpt.isPresent()) {
+            EngineerProfile profile = profileOpt.get();
+            String fullName = (profile.getFirstName() != null ? profile.getFirstName() : "") +
+                    (profile.getLastName() != null ? " " + profile.getLastName() : "");
+            if (!fullName.trim().isEmpty()) {
+                displayName = fullName.trim();
+            }
+        }
+
+        return new LoginResponse(
+                token,
+                refreshToken.getRefreshToken(),
+                user.getUserId(),
+                user.getRole().name(),
+                displayName,
+                user.getPermissions()
+        );
+    }
+
+    private String normalizePhoneNumber(String phone) {
+        if (phone == null) return null;
+        String clean = phone.trim().replaceAll("[^0-9]", "");
+        if (clean.length() == 12 && clean.startsWith("91")) {
+            return clean.substring(2);
+        }
+        if (clean.length() > 10 && clean.startsWith("0")) {
+            return clean.substring(1);
+        }
+        return clean;
+    }
+
+    private User findEngineerUserByPhone(String rawPhone) {
+        if (rawPhone == null || rawPhone.trim().isEmpty()) {
+            return null;
+        }
+        String clean10 = normalizePhoneNumber(rawPhone);
+
+        // 1. Try exact match
+        User user = userRepository.findByPhoneNumber(rawPhone.trim());
+        if (user != null && user.getRole() == UserRole.ENGINEER) {
+            return user;
+        }
+
+        // 2. Try normalized 10-digit variants
+        if (clean10 != null && !clean10.isEmpty()) {
+            user = userRepository.findByPhoneNumber(clean10);
+            if (user != null && user.getRole() == UserRole.ENGINEER) {
+                return user;
+            }
+            user = userRepository.findByPhoneNumber("+91" + clean10);
+            if (user != null && user.getRole() == UserRole.ENGINEER) {
+                return user;
+            }
+            user = userRepository.findByPhoneNumber("91" + clean10);
+            if (user != null && user.getRole() == UserRole.ENGINEER) {
+                return user;
+            }
+
+            // 3. Fallback scan all engineers in case format differs
+            List<User> engineers = userRepository.findAllByRole(UserRole.ENGINEER);
+            for (User eng : engineers) {
+                if (eng.getPhoneNumber() != null && clean10.equals(normalizePhoneNumber(eng.getPhoneNumber()))) {
+                    return eng;
+                }
+            }
+        }
+
+        return null;
     }
 }

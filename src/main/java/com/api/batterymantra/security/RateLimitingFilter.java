@@ -58,6 +58,8 @@ public class RateLimitingFilter extends OncePerRequestFilter {
     private boolean isRateLimitedEndpoint(String path) {
         return path.startsWith("/api/auth/login") ||
                path.startsWith("/api/auth/register") ||
+               path.startsWith("/api/auth/send-otp") ||
+               path.startsWith("/api/auth/engineer") ||
                path.startsWith("/api/callbacks") ||
                path.startsWith("/api/enquiries");
     }
