@@ -482,6 +482,19 @@ public class OrderService {
         if (request.getItems() != null && !request.getItems().isEmpty()) {
             order.getOrderItems().clear();
 
+            // Resolve City for city-specific pricing and exchange discounts
+            UUID targetCityId = null;
+            String cityName = order.getSelectedCity();
+            if (cityName == null && order.getShippingAddress() != null) {
+                cityName = order.getShippingAddress().getCity();
+            }
+            if (cityName != null && !cityName.isBlank()) {
+                var cityOpt = cityRepository.findByCityNameIgnoreCase(cityName.trim());
+                if (cityOpt.isPresent()) {
+                    targetCityId = cityOpt.get().getCityId();
+                }
+            }
+
             BigDecimal subTotal = BigDecimal.ZERO;
             BigDecimal exchangeDiscount = BigDecimal.ZERO;
 
@@ -490,20 +503,38 @@ public class OrderService {
                         .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                                 "Product not found: " + itemReq.getProductId()));
 
+                BigDecimal itemPrice = product.getProductPrice();
+                BigDecimal itemExchangeDisc = product.getExchangeDiscount() != null ? product.getExchangeDiscount() : BigDecimal.ZERO;
+
+                if (targetCityId != null && product.getCityPrices() != null) {
+                    final UUID finalCityId = targetCityId;
+                    var cpOpt = product.getCityPrices().stream()
+                            .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
+                            .findFirst();
+                    if (cpOpt.isPresent()) {
+                        if (cpOpt.get().getPrice() != null && cpOpt.get().getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                            itemPrice = cpOpt.get().getPrice();
+                        }
+                        if (cpOpt.get().getExchangeDiscount() != null) {
+                            itemExchangeDisc = cpOpt.get().getExchangeDiscount();
+                        }
+                    }
+                }
+
                 OrderItems item = OrderItems.builder()
                         .order(order)
                         .product(product)
                         .quantity(itemReq.getQuantity())
-                        .priceAtPurchase(product.getProductPrice())
+                        .priceAtPurchase(itemPrice)
                         .orderStatus(order.getOrderStatus())
                         .build();
 
                 order.getOrderItems().add(item);
-                subTotal = subTotal.add(product.getProductPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                subTotal = subTotal.add(itemPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
 
-                if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
+                if (itemReq.isExchangeOldBattery()) {
                     exchangeDiscount = exchangeDiscount
-                            .add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                            .add(itemExchangeDisc.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
                 }
             }
 
