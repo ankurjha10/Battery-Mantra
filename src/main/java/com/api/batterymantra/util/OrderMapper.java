@@ -22,13 +22,29 @@ public class OrderMapper {
         response.setTotalAmount(order.getTotalAmount());
         response.setPlacedAt(order.getPlacedAt());
         if (order.getShippingAddress() != null) {
-            response.setShippingAddress(
-                    order.getShippingAddress().getAddressLine1()
-                            + ", " + order.getShippingAddress().getAddressLine2()
-                            + ", " + order.getShippingAddress().getCity()
-                            + ", " + order.getShippingAddress().getState()
-                            + ", " + order.getShippingAddress().getPostalCode()
-                            + ", " + order.getShippingAddress().getCountry());
+            com.api.batterymantra.entity.Address addr = order.getShippingAddress();
+            response.setAddressLine1(addr.getAddressLine1());
+            response.setAddressLine2(addr.getAddressLine2());
+            response.setCity(addr.getCity());
+            response.setState(addr.getState());
+            response.setPostalCode(addr.getPostalCode());
+
+            java.util.List<String> parts = new java.util.ArrayList<>();
+            if (addr.getAddressLine1() != null && !addr.getAddressLine1().isBlank()) {
+                parts.add(addr.getAddressLine1().trim());
+            }
+            if (addr.getAddressLine2() != null && !addr.getAddressLine2().isBlank() && !"null".equalsIgnoreCase(addr.getAddressLine2().trim())) {
+                parts.add(addr.getAddressLine2().trim());
+            }
+            if (addr.getCity() != null && !addr.getCity().isBlank()) {
+                parts.add(addr.getCity().trim());
+            }
+            String stateWithPin = (addr.getState() != null && !addr.getState().isBlank() ? addr.getState().trim() : "") +
+                    (addr.getPostalCode() != null && !addr.getPostalCode().isBlank() ? " " + addr.getPostalCode().trim() : "");
+            if (!stateWithPin.isBlank()) {
+                parts.add(stateWithPin.trim());
+            }
+            response.setShippingAddress(String.join(", ", parts));
         }
         if (order.getDeliveryMethod() != null) {
             response.setDeliveryMethod(order.getDeliveryMethod().name());

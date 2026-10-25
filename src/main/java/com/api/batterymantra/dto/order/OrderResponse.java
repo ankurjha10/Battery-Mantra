@@ -21,6 +21,11 @@ public class OrderResponse {
     private UUID orderId;
     private String orderStatus;
     private String shippingAddress;
+    private String addressLine1;
+    private String addressLine2;
+    private String city;
+    private String state;
+    private String postalCode;
     private LocalDateTime placedAt;
     private BigDecimal totalAmount;
     private String deliveryMethod;

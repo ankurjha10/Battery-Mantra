@@ -677,8 +677,7 @@ public class OrderService {
      */
     @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
-        return orderRepository.findAll().stream()
-                .filter(o -> !(o.getPaymentMethod() == PaymentMethod.ONLINE && o.getPaymentStatus() != PaymentStatus.PAID))
+        return orderRepository.findAllByOrderByPlacedAtDesc().stream()
                 .map(orderMapper::toOrderResponse)
                 .toList();
     }

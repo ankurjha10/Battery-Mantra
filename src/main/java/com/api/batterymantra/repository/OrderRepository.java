@@ -12,6 +12,7 @@ import java.util.UUID;
 public interface OrderRepository extends JpaRepository<Orders, UUID> {
     List<Orders> findByOrderStatusAndPlacedAtBefore(OrderStatus status, LocalDateTime date);
     
+    List<Orders> findAllByOrderByPlacedAtDesc();
     List<Orders> findByCustomer_UserIdOrderByPlacedAtDesc(UUID customer);
     List<Orders> findByAssignedPartner_IdOrderByPlacedAtDesc(UUID partnerId);
     Optional<Orders> findByRazorpayOrderId(String razorpayOrderId);
