@@ -11,6 +11,7 @@ import com.api.batterymantra.entity.enums.DeliveryMethod;
 import com.api.batterymantra.repository.PincodeRepository;
 
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
+import com.api.batterymantra.dto.order.AdminUpdateOrderRequest;
 import com.api.batterymantra.dto.order.AdminOrderItemRequest;
 import com.api.batterymantra.dto.order.CheckoutRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
@@ -405,6 +406,194 @@ public class OrderService {
         // admin alert handled inside sendOrderPlacedSms
 
         return orderMapper.toOrderResponse(placedOrder);
+    }
+
+    @Transactional
+    public OrderResponse updateAdminOrder(UUID orderId, AdminUpdateOrderRequest request) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
+
+        if (order.getOrderStatus() == OrderStatus.DELIVERED || order.getOrderStatus() == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot modify an order that is already " + order.getOrderStatus());
+        }
+
+        // 1. Shipping Address Update
+        if (request.getAddressId() != null) {
+            Address newAddress = addressRepository.findById(request.getAddressId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Address not found: " + request.getAddressId()));
+            order.setShippingAddress(newAddress);
+            if (newAddress.getCity() != null && !newAddress.getCity().isBlank()) {
+                order.setSelectedCity(newAddress.getCity().trim());
+            }
+        } else {
+            Address address = order.getShippingAddress();
+            boolean addressChanged = false;
+            if (address != null) {
+                if (request.getRecipientName() != null && !request.getRecipientName().isBlank()) {
+                    address.setFullName(request.getRecipientName().trim());
+                    addressChanged = true;
+                }
+                if (request.getRecipientPhone() != null && !request.getRecipientPhone().isBlank()) {
+                    address.setPhoneNumber(request.getRecipientPhone().trim());
+                    addressChanged = true;
+                }
+                if (request.getAddressLine1() != null && !request.getAddressLine1().isBlank()) {
+                    address.setAddressLine1(request.getAddressLine1().trim());
+                    addressChanged = true;
+                }
+                if (request.getAddressLine2() != null) {
+                    address.setAddressLine2(request.getAddressLine2().trim());
+                    addressChanged = true;
+                }
+                if (request.getCity() != null && !request.getCity().isBlank()) {
+                    address.setCity(request.getCity().trim());
+                    order.setSelectedCity(request.getCity().trim());
+                    addressChanged = true;
+                }
+                if (request.getState() != null && !request.getState().isBlank()) {
+                    address.setState(request.getState().trim());
+                    addressChanged = true;
+                }
+                if (request.getPincode() != null && !request.getPincode().isBlank()) {
+                    address.setPostalCode(request.getPincode().trim());
+                    addressChanged = true;
+                }
+                if (addressChanged) {
+                    addressRepository.save(address);
+                }
+            }
+        }
+
+        // 2. City override if explicitly passed
+        if (request.getSelectedCity() != null && !request.getSelectedCity().isBlank()) {
+            order.setSelectedCity(request.getSelectedCity().trim());
+        }
+
+        // 3. Items Update (Product Change / Quantity Change)
+        if (request.getItems() != null && !request.getItems().isEmpty()) {
+            order.getOrderItems().clear();
+
+            BigDecimal subTotal = BigDecimal.ZERO;
+            BigDecimal exchangeDiscount = BigDecimal.ZERO;
+
+            for (AdminOrderItemRequest itemReq : request.getItems()) {
+                Product product = productRepository.findById(itemReq.getProductId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Product not found: " + itemReq.getProductId()));
+
+                OrderItems item = OrderItems.builder()
+                        .order(order)
+                        .product(product)
+                        .quantity(itemReq.getQuantity())
+                        .priceAtPurchase(product.getProductPrice())
+                        .orderStatus(order.getOrderStatus())
+                        .build();
+
+                order.getOrderItems().add(item);
+                subTotal = subTotal.add(product.getProductPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+
+                if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
+                    exchangeDiscount = exchangeDiscount
+                            .add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                }
+            }
+
+            order.setExchangeDiscount(exchangeDiscount);
+
+            BigDecimal discount = request.getManualDiscount() != null
+                    ? request.getManualDiscount()
+                    : (order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
+            order.setDiscountAmount(discount);
+
+            if (request.getTotalAmount() != null && request.getTotalAmount().compareTo(BigDecimal.ZERO) >= 0) {
+                order.setTotalAmount(request.getTotalAmount());
+            } else {
+                BigDecimal computedTotal = subTotal.subtract(exchangeDiscount).subtract(discount);
+                if (computedTotal.compareTo(BigDecimal.ZERO) < 0) {
+                    computedTotal = BigDecimal.ZERO;
+                }
+                order.setTotalAmount(computedTotal);
+            }
+        } else {
+            // Keep items, but update discounts or total amount if explicitly specified
+            if (request.getManualDiscount() != null || request.getTotalAmount() != null) {
+                if (request.getManualDiscount() != null) {
+                    order.setDiscountAmount(request.getManualDiscount());
+                }
+                if (request.getTotalAmount() != null) {
+                    order.setTotalAmount(request.getTotalAmount());
+                } else if (request.getManualDiscount() != null) {
+                    BigDecimal subTotal = order.getOrderItems().stream()
+                            .filter(i -> i.getPriceAtPurchase() != null)
+                            .map(i -> i.getPriceAtPurchase().multiply(BigDecimal.valueOf(i.getQuantity())))
+                            .reduce(BigDecimal.ZERO, BigDecimal::add);
+                    BigDecimal exDiscount = order.getExchangeDiscount() != null ? order.getExchangeDiscount() : BigDecimal.ZERO;
+                    BigDecimal computed = subTotal.subtract(exDiscount).subtract(request.getManualDiscount());
+                    if (computed.compareTo(BigDecimal.ZERO) < 0) computed = BigDecimal.ZERO;
+                    order.setTotalAmount(computed);
+                }
+            }
+        }
+
+        // 4. Delivery Method
+        if (request.getDeliveryMethod() != null && !request.getDeliveryMethod().isBlank()) {
+            try {
+                order.setDeliveryMethod(DeliveryMethod.valueOf(request.getDeliveryMethod().toUpperCase().trim()));
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid Delivery Method: " + request.getDeliveryMethod());
+            }
+        }
+
+        // 5. Installation Date
+        if (request.getInstallationDate() != null) {
+            order.setInstallationDate(request.getInstallationDate());
+        }
+
+        // 6. Payment Method
+        if (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank()) {
+            try {
+                order.setPaymentMethod(PaymentMethod.valueOf(request.getPaymentMethod().toUpperCase().trim()));
+            } catch (Exception ignored) {}
+        }
+
+        // 7. Payment Status
+        if (request.getPaymentStatus() != null && !request.getPaymentStatus().isBlank()) {
+            try {
+                order.setPaymentStatus(PaymentStatus.valueOf(request.getPaymentStatus().toUpperCase().trim()));
+            } catch (Exception ignored) {}
+        }
+
+        // 8. Notes
+        if (request.getEngineerNotes() != null) {
+            order.setEngineerNotes(request.getEngineerNotes());
+        }
+
+        Orders updatedOrder = orderRepository.save(order);
+
+        // Notify assigned engineer or partner if assigned
+        String shortId = order.getOrderId().toString();
+        shortId = shortId.length() > 8 ? shortId.substring(0, 8) : shortId;
+
+        if (order.getAssignedEngineer() != null && order.getAssignedEngineer().getUser() != null) {
+            notificationService.sendPushNotification(
+                    order.getAssignedEngineer().getUser().getUserId(),
+                    "Order #" + shortId + " Details Updated",
+                    "Admin has updated the details for Order #" + shortId + ". Please review the updated job details.",
+                    null
+            );
+        }
+
+        if (order.getAssignedPartner() != null && order.getAssignedPartner().getUser() != null) {
+            notificationService.sendPushNotification(
+                    order.getAssignedPartner().getUser().getUserId(),
+                    "Order #" + shortId + " Updated",
+                    "Order #" + shortId + " details have been updated by Admin.",
+                    null
+            );
+        }
+
+        return orderMapper.toOrderResponse(updatedOrder);
     }
 
     // To Get All the Orders Placed by a Customer

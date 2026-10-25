@@ -51,12 +51,14 @@ import com.api.batterymantra.entity.enums.EnquiryType;
 import com.api.batterymantra.service.EnquiryService;
 
 import com.api.batterymantra.dto.admin.AdminCreateCustomerRequest;
+import com.api.batterymantra.dto.admin.AdminUpdateCustomerRequest;
 import com.api.batterymantra.service.EngineerAttendanceService;
 import com.api.batterymantra.dto.engineer.UpdateLeaveStatusRequest;
 import com.api.batterymantra.entity.EngineerAttendance;
 import com.api.batterymantra.entity.LeaveRequest;
 import com.api.batterymantra.entity.enums.LeaveStatus;
 import com.api.batterymantra.dto.order.AdminCreateOrderRequest;
+import com.api.batterymantra.dto.order.AdminUpdateOrderRequest;
 
 import com.api.batterymantra.dto.reel.CreateReelRequest;
 import com.api.batterymantra.dto.reel.UpdateReelRequest;
@@ -133,6 +135,22 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<UserResponse> createCustomer(@RequestBody @Valid AdminCreateCustomerRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(adminService.createCustomer(request));
+    }
+
+    @PutMapping("/customers/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<UserResponse> updateCustomer(
+            @PathVariable UUID userId,
+            @RequestBody @Valid AdminUpdateCustomerRequest request) {
+        return ResponseEntity.ok(adminService.updateCustomer(userId, request));
+    }
+
+    @PutMapping("/users/{userId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<UserResponse> updateUser(
+            @PathVariable UUID userId,
+            @RequestBody @Valid AdminUpdateCustomerRequest request) {
+        return ResponseEntity.ok(adminService.updateCustomer(userId, request));
     }
 
     // --- Categories ---
@@ -270,6 +288,14 @@ public class AdminController {
     @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
     public ResponseEntity<OrderResponse> createOrder(@RequestBody @Valid AdminCreateOrderRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(orderService.createAdminOrder(request));
+    }
+
+    @PutMapping("/orders/{orderId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable UUID orderId,
+            @RequestBody @Valid AdminUpdateOrderRequest request) {
+        return ResponseEntity.ok(orderService.updateAdminOrder(orderId, request));
     }
 
     @PatchMapping("/orders/{orderId}/status")
