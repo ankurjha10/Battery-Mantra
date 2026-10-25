@@ -42,10 +42,10 @@ public class OrderItems {
     @Column(nullable = false)
     private BigDecimal priceAtPurchase;
 
-    @Column(name = "exchange_old_battery", nullable = false)
+    @Column(name = "exchange_old_battery", columnDefinition = "boolean default false")
     @Builder.Default
     private boolean exchangeOldBattery = false;
 
-    @Column(name = "exchange_discount")
+    @Column(name = "exchange_discount", columnDefinition = "numeric(38,2) default 0")
     private BigDecimal exchangeDiscount;
 }

@@ -91,24 +91,28 @@ public class OrderMapper {
         if (order.getCustomer() != null) {
             response.setCustomerEmail(order.getCustomer().getEmail());
         }
-        response.setOrderItems(order.getOrderItems().stream().map(item -> {
-            OrderItemResponse itemResponse = new OrderItemResponse();
-            if (item.getProduct() != null) {
-                itemResponse.setProductId(item.getProduct().getProductId());
-                itemResponse.setProductName(item.getProduct().getProductName());
-                itemResponse.setProductImage(item.getProduct().getProductImage());
-            }
-            itemResponse.setQuantity(item.getQuantity());
-            itemResponse.setPriceAtPurchase(item.getPriceAtPurchase());
-            if (item.getPriceAtPurchase() != null) {
-                itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
-            } else {
-                itemResponse.setSubtotal(BigDecimal.ZERO);
-            }
-            itemResponse.setExchangeOldBattery(item.isExchangeOldBattery());
-            itemResponse.setExchangeDiscount(item.getExchangeDiscount());
-            return itemResponse;
-        }).toList());
+        if (order.getOrderItems() != null) {
+            response.setOrderItems(order.getOrderItems().stream().map(item -> {
+                OrderItemResponse itemResponse = new OrderItemResponse();
+                if (item.getProduct() != null) {
+                    itemResponse.setProductId(item.getProduct().getProductId());
+                    itemResponse.setProductName(item.getProduct().getProductName());
+                    itemResponse.setProductImage(item.getProduct().getProductImage());
+                }
+                itemResponse.setQuantity(item.getQuantity());
+                itemResponse.setPriceAtPurchase(item.getPriceAtPurchase());
+                if (item.getPriceAtPurchase() != null) {
+                    itemResponse.setSubtotal(item.getPriceAtPurchase().multiply(BigDecimal.valueOf(item.getQuantity())));
+                } else {
+                    itemResponse.setSubtotal(BigDecimal.ZERO);
+                }
+                itemResponse.setExchangeOldBattery(item.isExchangeOldBattery());
+                itemResponse.setExchangeDiscount(item.getExchangeDiscount());
+                return itemResponse;
+            }).toList());
+        } else {
+            response.setOrderItems(java.util.Collections.emptyList());
+        }
 
         if (order.getAssignedPartner() != null) {
             PartnerResponse p = PartnerResponse.builder()
