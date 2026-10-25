@@ -19,4 +19,6 @@ public class OrderItemResponse {
     private BigDecimal priceAtPurchase;
     private Integer quantity;
     private BigDecimal subtotal;
+    private boolean exchangeOldBattery;
+    private BigDecimal exchangeDiscount;
 }

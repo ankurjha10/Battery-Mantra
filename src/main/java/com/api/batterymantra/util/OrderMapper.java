@@ -105,6 +105,8 @@ public class OrderMapper {
             } else {
                 itemResponse.setSubtotal(BigDecimal.ZERO);
             }
+            itemResponse.setExchangeOldBattery(item.isExchangeOldBattery());
+            itemResponse.setExchangeDiscount(item.getExchangeDiscount());
             return itemResponse;
         }).toList());
 

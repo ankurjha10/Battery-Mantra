@@ -145,13 +145,22 @@ public class OrderService {
 
         for (CartItem cartItem : cartItemList) {
             BigDecimal itemPrice = cartItem.getProduct().getProductPrice();
+            BigDecimal disc = cartItem.getProduct().getExchangeDiscount() != null
+                    ? cartItem.getProduct().getExchangeDiscount()
+                    : BigDecimal.ZERO;
+
             if (targetCityId != null && cartItem.getProduct().getCityPrices() != null) {
                 final UUID finalCityId = targetCityId;
                 var cpOpt = cartItem.getProduct().getCityPrices().stream()
                         .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
                         .findFirst();
-                if (cpOpt.isPresent() && cpOpt.get().getPrice() != null) {
-                    itemPrice = cpOpt.get().getPrice();
+                if (cpOpt.isPresent()) {
+                    if (cpOpt.get().getPrice() != null && cpOpt.get().getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        itemPrice = cpOpt.get().getPrice();
+                    }
+                    if (cpOpt.get().getExchangeDiscount() != null) {
+                        disc = cpOpt.get().getExchangeDiscount();
+                    }
                 }
             }
 
@@ -160,6 +169,8 @@ public class OrderService {
                     .product(cartItem.getProduct())
                     .quantity(cartItem.getQuantity())
                     .priceAtPurchase(itemPrice) // City Price yahan save hoga!
+                    .exchangeOldBattery(cartItem.isExchangeOldBattery())
+                    .exchangeDiscount(cartItem.isExchangeOldBattery() ? disc : BigDecimal.ZERO)
                     .build();
 
             if (cartItem.getProduct().isAutoAssignToPartner()) {
@@ -334,6 +345,21 @@ public class OrderService {
                 .installationDate(request.getInstallationDate())
                 .build();
 
+        // Resolve City for city-specific pricing
+        UUID targetCityId = null;
+        if (address != null && address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
+            var pincodeOpt = pincodeRepository.findByCode(address.getPostalCode().trim());
+            if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
+                targetCityId = pincodeOpt.get().getCity().getCityId();
+            }
+        }
+        if (targetCityId == null && address != null && address.getCity() != null && !address.getCity().isBlank()) {
+            var cityOpt = cityRepository.findByCityNameIgnoreCase(address.getCity().trim());
+            if (cityOpt.isPresent()) {
+                targetCityId = cityOpt.get().getCityId();
+            }
+        }
+
         List<OrderItems> orderItems = new ArrayList<>();
         BigDecimal subTotal = BigDecimal.ZERO;
         BigDecimal exchangeDiscount = BigDecimal.ZERO;
@@ -343,19 +369,39 @@ public class OrderService {
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Product not found: " + itemReq.getProductId()));
 
+            BigDecimal itemPrice = product.getProductPrice();
+            BigDecimal itemExchangeDisc = product.getExchangeDiscount() != null ? product.getExchangeDiscount() : BigDecimal.ZERO;
+
+            if (targetCityId != null && product.getCityPrices() != null) {
+                final UUID finalCityId = targetCityId;
+                var cpOpt = product.getCityPrices().stream()
+                        .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
+                        .findFirst();
+                if (cpOpt.isPresent()) {
+                    if (cpOpt.get().getPrice() != null && cpOpt.get().getPrice().compareTo(BigDecimal.ZERO) > 0) {
+                        itemPrice = cpOpt.get().getPrice();
+                    }
+                    if (cpOpt.get().getExchangeDiscount() != null) {
+                        itemExchangeDisc = cpOpt.get().getExchangeDiscount();
+                    }
+                }
+            }
+
             OrderItems item = OrderItems.builder()
                     .order(orders)
                     .product(product)
                     .quantity(itemReq.getQuantity())
-                    .priceAtPurchase(product.getProductPrice())
+                    .priceAtPurchase(itemPrice)
+                    .exchangeOldBattery(itemReq.isExchangeOldBattery())
+                    .exchangeDiscount(itemReq.isExchangeOldBattery() ? itemExchangeDisc : BigDecimal.ZERO)
                     .build();
 
             orderItems.add(item);
-            subTotal = subTotal.add(product.getProductPrice().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+            subTotal = subTotal.add(itemPrice.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
 
-            if (itemReq.isExchangeOldBattery() && product.getExchangeDiscount() != null) {
+            if (itemReq.isExchangeOldBattery()) {
                 exchangeDiscount = exchangeDiscount
-                        .add(product.getExchangeDiscount().multiply(BigDecimal.valueOf(itemReq.getQuantity())));
+                        .add(itemExchangeDisc.multiply(BigDecimal.valueOf(itemReq.getQuantity())));
             }
         }
 
@@ -494,6 +540,12 @@ public class OrderService {
                     targetCityId = cityOpt.get().getCityId();
                 }
             }
+            if (targetCityId == null && order.getShippingAddress() != null && order.getShippingAddress().getPostalCode() != null) {
+                var pinOpt = pincodeRepository.findByCode(order.getShippingAddress().getPostalCode().trim());
+                if (pinOpt.isPresent() && pinOpt.get().getCity() != null) {
+                    targetCityId = pinOpt.get().getCity().getCityId();
+                }
+            }
 
             BigDecimal subTotal = BigDecimal.ZERO;
             BigDecimal exchangeDiscount = BigDecimal.ZERO;
@@ -526,6 +578,8 @@ public class OrderService {
                         .product(product)
                         .quantity(itemReq.getQuantity())
                         .priceAtPurchase(itemPrice)
+                        .exchangeOldBattery(itemReq.isExchangeOldBattery())
+                        .exchangeDiscount(itemReq.isExchangeOldBattery() ? itemExchangeDisc : BigDecimal.ZERO)
                         .orderStatus(order.getOrderStatus())
                         .build();
 
@@ -545,15 +599,11 @@ public class OrderService {
                     : (order.getDiscountAmount() != null ? order.getDiscountAmount() : BigDecimal.ZERO);
             order.setDiscountAmount(discount);
 
-            if (request.getTotalAmount() != null && request.getTotalAmount().compareTo(BigDecimal.ZERO) >= 0) {
-                order.setTotalAmount(request.getTotalAmount());
-            } else {
-                BigDecimal computedTotal = subTotal.subtract(exchangeDiscount).subtract(discount);
-                if (computedTotal.compareTo(BigDecimal.ZERO) < 0) {
-                    computedTotal = BigDecimal.ZERO;
-                }
-                order.setTotalAmount(computedTotal);
+            BigDecimal computedTotal = subTotal.subtract(exchangeDiscount).subtract(discount);
+            if (computedTotal.compareTo(BigDecimal.ZERO) < 0) {
+                computedTotal = BigDecimal.ZERO;
             }
+            order.setTotalAmount(computedTotal);
         } else {
             // Keep items, but update discounts or total amount if explicitly specified
             if (request.getManualDiscount() != null || request.getTotalAmount() != null) {
