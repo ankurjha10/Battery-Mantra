@@ -31,6 +31,7 @@ public class OrderResponse {
     private String deliveryMethod;
     private String paymentMethod;
     private String paymentStatus;
+    private String paymentMode;
     private LocalDate installationDate;
     private BigDecimal exchangeDiscount;
     private String customerName;

@@ -34,6 +34,7 @@ public class AdminUpdateOrderRequest {
     // 5. Payment Details
     private String paymentMethod; // "ONLINE", "COD"
     private String paymentStatus; // "PENDING", "PAID", "FAILED", "REFUNDED"
+    private String paymentMode;   // "UPI", "CARD", "NET_BANKING", "WALLET", "CASH"
 
     // 6. Notes & City
     private String engineerNotes;

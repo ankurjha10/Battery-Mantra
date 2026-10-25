@@ -316,10 +316,18 @@ public class OrderService {
             paymentMethod = PaymentMethod.COD;
         }
 
+        PaymentStatus paymentStatus = PaymentStatus.PENDING;
+        if (request.getPaymentStatus() != null && !request.getPaymentStatus().isBlank()) {
+            try {
+                paymentStatus = PaymentStatus.valueOf(request.getPaymentStatus().toUpperCase().trim());
+            } catch (Exception ignored) {}
+        }
+
         Orders orders = Orders.builder()
                 .customer(customer)
                 .shippingAddress(address)
-                .paymentStatus(PaymentStatus.PENDING)
+                .paymentStatus(paymentStatus)
+                .paymentMode(request.getPaymentMode() != null && !request.getPaymentMode().isBlank() ? request.getPaymentMode().toUpperCase().trim() : null)
                 .orderStatus(OrderStatus.PENDING)
                 .deliveryMethod(deliveryMethod)
                 .paymentMethod(paymentMethod)
@@ -562,6 +570,11 @@ public class OrderService {
             try {
                 order.setPaymentStatus(PaymentStatus.valueOf(request.getPaymentStatus().toUpperCase().trim()));
             } catch (Exception ignored) {}
+        }
+
+        // 7b. Payment Mode (e.g. UPI, CARD, NET_BANKING, WALLET, CASH)
+        if (request.getPaymentMode() != null && !request.getPaymentMode().isBlank()) {
+            order.setPaymentMode(request.getPaymentMode().toUpperCase().trim());
         }
 
         // 8. Notes

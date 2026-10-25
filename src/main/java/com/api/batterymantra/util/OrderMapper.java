@@ -55,6 +55,7 @@ public class OrderMapper {
         if (order.getPaymentStatus() != null) {
             response.setPaymentStatus(order.getPaymentStatus().name());
         }
+        response.setPaymentMode(order.getPaymentMode());
         response.setInstallationDate(order.getInstallationDate());
         response.setExchangeDiscount(order.getExchangeDiscount());
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();

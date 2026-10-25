@@ -25,6 +25,9 @@ public class AdminCreateOrderRequest {
     @NotNull(message = "Payment method is required")
     private String paymentMethod; // "ONLINE" or "COD"
 
+    private String paymentStatus; // "PENDING", "PAID"
+    private String paymentMode;   // "UPI", "CARD", "NET_BANKING", "WALLET", "CASH"
+
     @NotNull(message = "Delivery method is required")
     private String deliveryMethod; // "HOME_INSTALLATION", "STORE_PICKUP", "STANDARD_DELIVERY"
 
