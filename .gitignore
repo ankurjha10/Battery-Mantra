@@ -44,3 +44,4 @@ seed_seo_pages.sql
 serviceAccountKey.json
 /.agents/
 skills-lock.json
+src/test/java/com/api/batterymantra/service/UserServiceTest.java

@@ -5,16 +5,17 @@ import com.api.batterymantra.dto.user.UpdateProfileRequest;
 import com.api.batterymantra.dto.user.UserProfileResponse;
 import com.api.batterymantra.dto.admin.AdminCreateSubAdminRequest;
 import com.api.batterymantra.dto.admin.AdminUpdateSubAdminRequest;
-import com.api.batterymantra.entity.User;
+import com.api.batterymantra.entity.*;
 import com.api.batterymantra.entity.enums.UserRole;
-import com.api.batterymantra.repository.UserRepository;
-import com.api.batterymantra.repository.RefreshTokenRepository;
+import com.api.batterymantra.repository.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -24,6 +25,15 @@ public class UserService {
     private final UserRepository userRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
+    private final OrderRepository orderRepository;
+    private final CallLogRepository callLogRepository;
+    private final CartRepository cartRepository;
+    private final WishlistRepository wishlistRepository;
+    private final NotificationRepository notificationRepository;
+    private final UserVehicleRepository userVehicleRepository;
+    private final AddressRepository addressRepository;
+    private final EngineerProfileRepository engineerProfileRepository;
+    private final PartnerProfileRepository partnerProfileRepository;
 
     public UserProfileResponse getUserProfile(UUID userId) {
         User user = userRepository.findById(userId)
@@ -153,12 +163,74 @@ public class UserService {
                 .build();
     }
 
+    @Transactional
     public void deleteUser(UUID userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
 
+        // 1. Delete RefreshToken
         refreshTokenRepository.findByUser(user).ifPresent(refreshTokenRepository::delete);
-        
+
+        // 2. Delete Cart & CartItems (Cart has CascadeType.ALL, orphanRemoval = true on cartItems)
+        cartRepository.findByUserId(userId).ifPresent(cartRepository::delete);
+
+        // 3. Delete Wishlist items
+        List<Wishlist> wishlists = wishlistRepository.findByUserUserId(userId);
+        if (!wishlists.isEmpty()) {
+            wishlistRepository.deleteAll(wishlists);
+        }
+
+        // 4. Delete Notifications
+        notificationRepository.deleteAllByUserUserId(userId);
+
+        // 5. Delete User Vehicles
+        List<UserVehicle> vehicles = userVehicleRepository.findByUserUserId(userId);
+        if (!vehicles.isEmpty()) {
+            userVehicleRepository.deleteAll(vehicles);
+        }
+
+        // 6. Delete Engineer / Partner Profiles if any
+        engineerProfileRepository.findByUserUserId(userId).ifPresent(eng -> {
+            List<CallLog> engCallLogs = callLogRepository.findByEngineerId(eng.getId());
+            if (!engCallLogs.isEmpty()) {
+                callLogRepository.deleteAll(engCallLogs);
+            }
+            List<Orders> assignedOrders = orderRepository.findByAssignedEngineer_IdOrderByPlacedAtDesc(eng.getId());
+            for (Orders o : assignedOrders) {
+                o.setAssignedEngineer(null);
+                orderRepository.save(o);
+            }
+            engineerProfileRepository.delete(eng);
+        });
+
+        partnerProfileRepository.findByUserUserId(userId).ifPresent(partner -> {
+            List<Orders> assignedOrders = orderRepository.findByAssignedPartner_IdOrderByPlacedAtDesc(partner.getId());
+            for (Orders o : assignedOrders) {
+                o.setAssignedPartner(null);
+                orderRepository.save(o);
+            }
+            partnerProfileRepository.delete(partner);
+        });
+
+        // 7. Delete Orders & their dependencies (CallLogs, OrderItems)
+        List<Orders> orders = orderRepository.findByCustomer_UserIdOrderByPlacedAtDesc(userId);
+        for (Orders order : orders) {
+            // Delete any CallLogs linked to this order
+            List<CallLog> callLogs = callLogRepository.findByOrderOrderId(order.getOrderId());
+            if (!callLogs.isEmpty()) {
+                callLogRepository.deleteAll(callLogs);
+            }
+            // orderRepository.delete cascades to OrderItems (CascadeType.ALL, orphanRemoval = true)
+            orderRepository.delete(order);
+        }
+
+        // 8. Delete Addresses (Safe now because all orders referencing shippingAddress are deleted)
+        List<Address> addresses = addressRepository.findByUserUserId(userId);
+        if (!addresses.isEmpty()) {
+            addressRepository.deleteAll(addresses);
+        }
+
+        // 9. Finally delete User entity
         userRepository.delete(user);
     }
 
