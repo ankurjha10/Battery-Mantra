@@ -29,15 +29,32 @@ public class AdminService {
         return userRepository.findAll().stream().map(this::toUserResponse).toList();
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public UserResponse createCustomer(AdminCreateCustomerRequest request) {
-        if (userRepository.existsByEmailOrPhoneNumber(request.getEmail(), request.getPhone())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "User already exists with this phone or email");
+        String trimmedPhone = request.getPhone() != null ? request.getPhone().trim() : "";
+        String trimmedName = request.getName() != null ? request.getName().trim() : "";
+        String rawEmail = request.getEmail() != null ? request.getEmail().trim().toLowerCase() : "";
+
+        if (userRepository.findByPhoneNumber(trimmedPhone) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Customer already exists with phone number: " + trimmedPhone);
+        }
+
+        if (!rawEmail.isEmpty() && userRepository.findByEmail(rawEmail) != null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Customer already exists with email: " + rawEmail);
+        }
+
+        // Fallback to phone@batterymantra.com matching AuthService OTP auto-registration convention
+        String email = !rawEmail.isEmpty() ? rawEmail : (trimmedPhone + "@batterymantra.com");
+
+        String username = trimmedName;
+        if (userRepository.findByUsername(username) != null) {
+            username = trimmedName + "_" + trimmedPhone;
         }
 
         User newUser = User.builder()
-                .username(request.getName())
-                .email(request.getEmail() != null ? request.getEmail() : "")
-                .phoneNumber(request.getPhone())
+                .username(username)
+                .email(email)
+                .phoneNumber(trimmedPhone)
                 .password(passwordEncoder.encode(UUID.randomUUID().toString()))
                 .role(UserRole.CUSTOMER)
                 .isActive(true)
@@ -47,13 +64,13 @@ public class AdminService {
 
         Address address = Address.builder()
                 .user(savedUser)
-                .fullName(request.getName())
-                .phoneNumber(request.getPhone())
-                .addressLine1(request.getAddressLine1())
-                .addressLine2(request.getAddressLine2())
-                .city(request.getCity())
-                .state(request.getState())
-                .postalCode(request.getPincode())
+                .fullName(trimmedName)
+                .phoneNumber(trimmedPhone)
+                .addressLine1(request.getAddressLine1() != null ? request.getAddressLine1().trim() : "")
+                .addressLine2(request.getAddressLine2() != null ? request.getAddressLine2().trim() : null)
+                .city(request.getCity() != null ? request.getCity().trim() : "")
+                .state(request.getState() != null ? request.getState().trim() : "")
+                .postalCode(request.getPincode() != null ? request.getPincode().trim() : "")
                 .country("India")
                 .isDefault(true)
                 .build();
@@ -63,12 +80,18 @@ public class AdminService {
         return toUserResponse(savedUser);
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public UserResponse updateCustomer(UUID userId, AdminUpdateCustomerRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Customer not found: " + userId));
 
         if (request.getName() != null && !request.getName().trim().isEmpty()) {
-            user.setUsername(request.getName().trim());
+            String newName = request.getName().trim();
+            User existingWithUsername = userRepository.findByUsername(newName);
+            if (existingWithUsername != null && !existingWithUsername.getUserId().equals(userId)) {
+                newName = newName + "_" + user.getPhoneNumber();
+            }
+            user.setUsername(newName);
         }
 
         if (request.getPhone() != null && !request.getPhone().trim().isEmpty()) {
@@ -87,8 +110,8 @@ public class AdminService {
                 if (existingWithEmail != null && !existingWithEmail.getUserId().equals(userId)) {
                     throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use by another account");
                 }
+                user.setEmail(newEmail);
             }
-            user.setEmail(newEmail);
         }
 
         User savedUser = userRepository.save(user);

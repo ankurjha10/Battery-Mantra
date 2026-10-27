@@ -42,3 +42,5 @@ seed_seo_pages.sql
 
 /vehicles-import/
 serviceAccountKey.json
+/.agents/
+skills-lock.json

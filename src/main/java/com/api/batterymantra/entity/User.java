@@ -34,7 +34,6 @@ public class User {
     @NotBlank
     private String password;
 
-    @NotBlank
     private String email;
 
     @NotBlank
