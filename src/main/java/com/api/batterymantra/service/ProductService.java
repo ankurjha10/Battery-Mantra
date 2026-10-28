@@ -13,6 +13,7 @@ import com.api.batterymantra.entity.Category;
 import com.api.batterymantra.entity.City;
 import com.api.batterymantra.entity.Product;
 import com.api.batterymantra.entity.ProductCityPricing;
+import com.api.batterymantra.util.ProductMapper;
 import com.api.batterymantra.util.SeoUtil;
 import com.api.batterymantra.repository.BrandRepository;
 import com.api.batterymantra.repository.CartItemRepository;
@@ -39,9 +40,11 @@ import org.springframework.cache.annotation.CacheEvict;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
@@ -68,10 +71,11 @@ public class ProductService {
         res.setOriginalPrice(p.getOriginalPrice() != null ? p.getOriginalPrice() : BigDecimal.ZERO);
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
-        res.setProductCategory(p.getProductCategory().getCategoryName());
         if (p.getProductCategory() != null) {
+            res.setProductCategory(p.getProductCategory().getCategoryName());
             res.setCategoryId(p.getProductCategory().getCategoryId());
         }
+        res.setCategories(ProductMapper.mapCategories(p));
         res.setBrandName(p.getBrand() != null ? p.getBrand().getBrandName() : null);
         res.setCapacity(p.getCapacity());
         
@@ -128,8 +132,11 @@ public class ProductService {
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
         res.setProductStock(p.getProductStock());
-        res.setCategoryName(p.getProductCategory().getCategoryName());
-        res.setCategoryId(p.getProductCategory().getCategoryId());
+        if (p.getProductCategory() != null) {
+            res.setCategoryName(p.getProductCategory().getCategoryName());
+            res.setCategoryId(p.getProductCategory().getCategoryId());
+        }
+        res.setCategories(ProductMapper.mapCategories(p));
         res.setSpecs(mapSpecUnits(p.getSpecUnits()));
         res.setSpecDetails(mapSpecDetails(p.getSpecUnits()));
         res.setHighlightedSpecAttributeIds(p.getHighlightedSpecAttributeIds() != null ? new ArrayList<>(p.getHighlightedSpecAttributeIds()) : new ArrayList<>());
@@ -398,9 +405,36 @@ public class ProductService {
     @Transactional
     @CacheEvict(value = "products", allEntries = true)
     public ProductDetailResponse addProduct(CreateProductRequest dto) {
-        Category category = categoryRepository.findById(dto.getCategoryId())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Category not found with id: " + dto.getCategoryId()));
+        Category primaryCategory;
+        Set<Category> linkedCategories = new HashSet<>();
+
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            List<Category> foundCategories = categoryRepository.findAllById(dto.getCategoryIds());
+            if (foundCategories.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No categories found for provided categoryIds");
+            }
+            linkedCategories.addAll(foundCategories);
+
+            if (dto.getCategoryId() != null) {
+                primaryCategory = categoryRepository.findById(dto.getCategoryId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Category not found with id: " + dto.getCategoryId()));
+            } else {
+                UUID firstId = dto.getCategoryIds().get(0);
+                primaryCategory = foundCategories.stream()
+                        .filter(c -> c.getCategoryId().equals(firstId))
+                        .findFirst()
+                        .orElse(foundCategories.get(0));
+            }
+            linkedCategories.add(primaryCategory);
+        } else if (dto.getCategoryId() != null) {
+            primaryCategory = categoryRepository.findById(dto.getCategoryId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                            "Category not found with id: " + dto.getCategoryId()));
+            linkedCategories.add(primaryCategory);
+        } else {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Category is required");
+        }
 
         Product product = new Product();
         product.setProductName(dto.getProductName());
@@ -412,7 +446,8 @@ public class ProductService {
         if (dto.getExchangeDiscount() != null) {
             product.setExchangeDiscount(dto.getExchangeDiscount());
         }
-        product.setProductCategory(category);
+        product.setProductCategory(primaryCategory);
+        product.setCategories(linkedCategories);
         
         if (dto.getAdditionalImages() != null) {
             product.setAdditionalImages(dto.getAdditionalImages());
@@ -540,11 +575,46 @@ public class ProductService {
         if (dto.getAdditionalImages() != null)
             product.setAdditionalImages(dto.getAdditionalImages());
 
-        if (dto.getCategoryId() != null) {
+        if (dto.getCategoryIds() != null) {
+            if (!dto.getCategoryIds().isEmpty()) {
+                List<Category> foundCategories = categoryRepository.findAllById(dto.getCategoryIds());
+                if (foundCategories.isEmpty()) {
+                    throw new ResponseStatusException(HttpStatus.NOT_FOUND, "No categories found for provided categoryIds");
+                }
+                Set<Category> newCategories = new HashSet<>(foundCategories);
+                Category primaryCategory;
+                if (dto.getCategoryId() != null) {
+                    primaryCategory = categoryRepository.findById(dto.getCategoryId())
+                            .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                    "Category not found with id: " + dto.getCategoryId()));
+                } else if (product.getProductCategory() != null && dto.getCategoryIds().contains(product.getProductCategory().getCategoryId())) {
+                    primaryCategory = product.getProductCategory();
+                } else {
+                    UUID firstId = dto.getCategoryIds().get(0);
+                    primaryCategory = foundCategories.stream()
+                            .filter(c -> c.getCategoryId().equals(firstId))
+                            .findFirst()
+                            .orElse(foundCategories.get(0));
+                }
+                newCategories.add(primaryCategory);
+                product.setProductCategory(primaryCategory);
+                product.setCategories(newCategories);
+            } else if (dto.getCategoryId() != null) {
+                Category primaryCategory = categoryRepository.findById(dto.getCategoryId())
+                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                                "Category not found with id: " + dto.getCategoryId()));
+                product.setProductCategory(primaryCategory);
+                product.setCategories(new HashSet<>(Set.of(primaryCategory)));
+            }
+        } else if (dto.getCategoryId() != null) {
             Category category = categoryRepository.findById(dto.getCategoryId())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                             "Category not found with id: " + dto.getCategoryId()));
             product.setProductCategory(category);
+            if (product.getCategories() == null) {
+                product.setCategories(new HashSet<>());
+            }
+            product.getCategories().add(category);
         }
 
         if (dto.getBrandId() != null) {

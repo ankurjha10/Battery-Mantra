@@ -19,6 +19,7 @@ import com.api.batterymantra.entity.User;
 import com.api.batterymantra.repository.CartRepository;
 import com.api.batterymantra.repository.ProductRepository;
 import com.api.batterymantra.repository.UserRepository;
+import com.api.batterymantra.util.ProductMapper;
 
 import java.util.ArrayList;
 import java.util.UUID;
@@ -236,6 +237,7 @@ public class CartService {
             productResponse.setProductCategory(product.getProductCategory().getCategoryName());
             productResponse.setCategoryId(product.getProductCategory().getCategoryId());
         }
+        productResponse.setCategories(ProductMapper.mapCategories(product));
         productResponse.setBrandName(product.getBrand() != null ? product.getBrand().getBrandName() : null);
         productResponse.setSearchKeywords(product.getSearchKeywords());
 

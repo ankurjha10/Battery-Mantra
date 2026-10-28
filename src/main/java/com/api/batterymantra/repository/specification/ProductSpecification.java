@@ -2,7 +2,10 @@ package com.api.batterymantra.repository.specification;
 
 import java.util.List;
 
+import com.api.batterymantra.entity.Category;
 import com.api.batterymantra.entity.Product;
+import jakarta.persistence.criteria.Join;
+import jakarta.persistence.criteria.JoinType;
 import org.springframework.data.jpa.domain.Specification;
 
 import java.math.BigDecimal;
@@ -15,13 +18,35 @@ public class ProductSpecification {
     }
 
     public static Specification<Product> hasCategoryId(UUID categoryId) {
-        return (root, query, cb) ->
-                cb.equal(root.get("productCategory").get("categoryId"), categoryId);
+        return (root, query, cb) -> {
+            if (categoryId == null) {
+                return cb.conjunction();
+            }
+            if (query != null) {
+                query.distinct(true);
+            }
+            Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);
+            return cb.or(
+                    cb.equal(root.get("productCategory").get("categoryId"), categoryId),
+                    cb.equal(categoriesJoin.get("categoryId"), categoryId)
+            );
+        };
     }
 
     public static Specification<Product> hasCategoryIdIn(List<UUID> categoryIds) {
-        return (root, query, cb) ->
-                root.get("productCategory").get("categoryId").in(categoryIds);
+        return (root, query, cb) -> {
+            if (categoryIds == null || categoryIds.isEmpty()) {
+                return cb.conjunction();
+            }
+            if (query != null) {
+                query.distinct(true);
+            }
+            Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);
+            return cb.or(
+                    root.get("productCategory").get("categoryId").in(categoryIds),
+                    categoriesJoin.get("categoryId").in(categoryIds)
+            );
+        };
     }
 
     public static Specification<Product> hasBrandIdIn(List<UUID> brandIds) {

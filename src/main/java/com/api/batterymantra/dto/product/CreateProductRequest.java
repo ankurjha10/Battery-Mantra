@@ -21,8 +21,8 @@ public class CreateProductRequest {
     private BigDecimal exchangeDiscount;
     private String productImage;
     private List<String> additionalImages;
-    @NotNull(message = "Category is required")
     private UUID categoryId;
+    private List<UUID> categoryIds;
     private UUID brandId;
     private List<UUID> specUnitIds;
     private List<UUID> highlightedSpecAttributeIds;

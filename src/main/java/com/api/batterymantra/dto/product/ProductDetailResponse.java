@@ -1,5 +1,6 @@
 package com.api.batterymantra.dto.product;
 
+import com.api.batterymantra.dto.category.CategorySummaryDto;
 import com.api.batterymantra.entity.SeoMetadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -19,6 +20,7 @@ public class ProductDetailResponse {
     private UUID brandId;
     private String categoryName;
     private UUID categoryId;
+    private List<CategorySummaryDto> categories;
     private BigDecimal productPrice;
     private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;

@@ -34,6 +34,22 @@ public class Product {
     @NotNull
     private Category productCategory;
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "product_categories",
+        joinColumns = @JoinColumn(name = "product_id"),
+        inverseJoinColumns = @JoinColumn(name = "category_id")
+    )
+    private Set<Category> categories = new HashSet<>();
+
+    public Category getCategory() {
+        return this.productCategory;
+    }
+
+    public void setCategory(Category category) {
+        this.productCategory = category;
+    }
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "brand_id", nullable = false)
     private Brand brand;

@@ -1,5 +1,6 @@
 package com.api.batterymantra.dto.product;
 
+import com.api.batterymantra.dto.category.CategorySummaryDto;
 import com.api.batterymantra.entity.SeoMetadata;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
@@ -21,6 +22,7 @@ public class ProductListResponse {
     private List<String> additionalImages;
     private String productCategory;
     private UUID categoryId;
+    private List<CategorySummaryDto> categories;
     private String capacity;
     private String capacityAh;
     @JsonProperty("isAutoAssignToPartner")

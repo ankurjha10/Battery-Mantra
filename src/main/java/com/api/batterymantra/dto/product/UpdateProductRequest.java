@@ -19,6 +19,7 @@ public class UpdateProductRequest {
     private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
     private UUID categoryId;
+    private List<UUID> categoryIds;
     private UUID brandId;
     private String productImage;
     private List<String> additionalImages;

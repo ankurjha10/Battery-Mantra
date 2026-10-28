@@ -56,4 +56,24 @@ public class Category {
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
+
+    public String getSlug() {
+        if (seo != null && seo.getSlug() != null && !seo.getSlug().trim().isEmpty()) {
+            return seo.getSlug();
+        }
+        return categoryName != null ? categoryName.toLowerCase().replace(" ", "-") : null;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        Category category = (Category) o;
+        return categoryId != null && categoryId.equals(category.categoryId);
+    }
+
+    @Override
+    public int hashCode() {
+        return getClass().hashCode();
+    }
 }
