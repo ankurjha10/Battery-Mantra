@@ -22,7 +22,7 @@ public class ProductSpecification {
             if (categoryId == null) {
                 return cb.conjunction();
             }
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.distinct(true);
             }
             Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);
@@ -38,7 +38,7 @@ public class ProductSpecification {
             if (categoryIds == null || categoryIds.isEmpty()) {
                 return cb.conjunction();
             }
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.distinct(true);
             }
             Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);

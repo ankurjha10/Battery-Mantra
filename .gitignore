@@ -45,3 +45,4 @@ serviceAccountKey.json
 /.agents/
 skills-lock.json
 src/test/java/com/api/batterymantra/service/UserServiceTest.java
+src/main/resources/db/migration_product_categories.sql
