@@ -17,18 +17,23 @@ public class ProductSpecification {
         // utility class
     }
 
-    public static Specification<Product> hasCategoryId(UUID categoryId) {
+        public static Specification<Product> hasCategoryId(UUID categoryId) {
         return (root, query, cb) -> {
             if (categoryId == null) {
                 return cb.conjunction();
             }
-            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
-                query.distinct(true);
-            }
-            Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);
+            jakarta.persistence.criteria.Subquery<UUID> subquery = query.subquery(UUID.class);
+            jakarta.persistence.criteria.Root<Product> subRoot = subquery.from(Product.class);
+            jakarta.persistence.criteria.Join<Product, Category> subCategories = subRoot.join("categories");
+            subquery.select(subRoot.get("productId"))
+                    .where(
+                            cb.equal(subRoot.get("productId"), root.get("productId")),
+                            cb.equal(subCategories.get("categoryId"), categoryId)
+                    );
+
             return cb.or(
                     cb.equal(root.get("productCategory").get("categoryId"), categoryId),
-                    cb.equal(categoriesJoin.get("categoryId"), categoryId)
+                    cb.exists(subquery)
             );
         };
     }
@@ -38,13 +43,18 @@ public class ProductSpecification {
             if (categoryIds == null || categoryIds.isEmpty()) {
                 return cb.conjunction();
             }
-            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
-                query.distinct(true);
-            }
-            Join<Product, Category> categoriesJoin = root.join("categories", JoinType.LEFT);
+            jakarta.persistence.criteria.Subquery<UUID> subquery = query.subquery(UUID.class);
+            jakarta.persistence.criteria.Root<Product> subRoot = subquery.from(Product.class);
+            jakarta.persistence.criteria.Join<Product, Category> subCategories = subRoot.join("categories");
+            subquery.select(subRoot.get("productId"))
+                    .where(
+                            cb.equal(subRoot.get("productId"), root.get("productId")),
+                            subCategories.get("categoryId").in(categoryIds)
+                    );
+
             return cb.or(
                     root.get("productCategory").get("categoryId").in(categoryIds),
-                    categoriesJoin.get("categoryId").in(categoryIds)
+                    cb.exists(subquery)
             );
         };
     }
@@ -135,7 +145,7 @@ public class ProductSpecification {
      */
     public static Specification<Product> sortByGlobalOrder() {
         return (root, query, cb) -> {
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.orderBy(
                         cb.asc(cb.coalesce(root.get("globalDisplayOrder"), Integer.MAX_VALUE)),
                         cb.desc(root.get("createdAt"))
@@ -150,7 +160,7 @@ public class ProductSpecification {
      */
     public static Specification<Product> sortByCategoryOrder() {
         return (root, query, cb) -> {
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.orderBy(
                         cb.asc(cb.coalesce(root.get("categoryDisplayOrder"), Integer.MAX_VALUE)),
                         cb.desc(root.get("createdAt"))
@@ -165,7 +175,7 @@ public class ProductSpecification {
      */
     public static Specification<Product> sortByBrandOrder() {
         return (root, query, cb) -> {
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.orderBy(
                         cb.asc(cb.coalesce(root.get("brandDisplayOrder"), Integer.MAX_VALUE)),
                         cb.desc(root.get("createdAt"))
@@ -181,7 +191,7 @@ public class ProductSpecification {
      */
     public static Specification<Product> sortByCategoryBrandOrder() {
         return (root, query, cb) -> {
-            if (query != null) {
+            if (query != null && Long.class != query.getResultType() && long.class != query.getResultType()) {
                 query.orderBy(
                         cb.asc(cb.coalesce(root.get("categoryBrandDisplayOrder"), Integer.MAX_VALUE)),
                         cb.desc(root.get("createdAt"))
