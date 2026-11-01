@@ -53,4 +53,7 @@ public class OrderResponse {
     private Double latitude;
     private Double longitude;
     private String selectedCity;
+    private UUID appliedCampaignId;
+    private String campaignName;
+    private BigDecimal campaignDiscountAmount;
 }

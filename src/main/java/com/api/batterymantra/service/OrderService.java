@@ -62,6 +62,7 @@ public class OrderService {
     private final EngineerInventoryRepository engineerInventoryRepository;
     private final CallLogRepository callLogRepository;
     private final StringRedisTemplate redisTemplate;
+    private final CampaignService campaignService;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -238,17 +239,42 @@ public class OrderService {
             total = BigDecimal.ZERO;
         }
 
-        // Apply coupon if present
+        // Apply campaign offers or coupon
         BigDecimal discountAmount = BigDecimal.ZERO;
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank()) {
-            var couponResponse = couponService.applyCoupon(request.getCouponCode(), total.doubleValue());
+        String couponCode = request.getCouponCode() != null ? request.getCouponCode().trim() : null;
+
+        com.api.batterymantra.dto.campaign.ValidateCartRequest campaignValidateReq = com.api.batterymantra.dto.campaign.ValidateCartRequest.builder()
+                .couponCode(couponCode)
+                .cityId(targetCityId)
+                .items(cartItemList.stream().map(ci -> com.api.batterymantra.dto.campaign.CartValidateItemDto.builder()
+                        .productId(ci.getProduct().getProductId())
+                        .quantity(ci.getQuantity())
+                        .hasExchange(ci.isExchangeOldBattery())
+                        .build()).toList())
+                .build();
+
+        var campaignValidation = campaignService.validateCart(campaignValidateReq);
+        if (campaignValidation.isApplicable() && campaignValidation.getDiscountAmount() != null && campaignValidation.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            discountAmount = campaignValidation.getDiscountAmount();
+            total = total.subtract(discountAmount);
+            if (total.compareTo(BigDecimal.ZERO) < 0) {
+                total = BigDecimal.ZERO;
+            }
+            orders.setAppliedCampaignId(campaignValidation.getCampaignId());
+            orders.setCampaignName(campaignValidation.getCampaignName());
+            orders.setCampaignDiscountAmount(discountAmount);
+            orders.setDiscountAmount(discountAmount);
+            orders.setCouponCode(couponCode);
+        } else if (couponCode != null && !couponCode.isBlank()) {
+            // Check traditional coupon service if not handled as a campaign
+            var couponResponse = couponService.applyCoupon(couponCode, total.doubleValue());
             if (couponResponse.getIsValid()) {
                 discountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
                 total = total.subtract(discountAmount);
                 if (total.compareTo(BigDecimal.ZERO) < 0) {
                     total = BigDecimal.ZERO;
                 }
-                orders.setCouponCode(request.getCouponCode());
+                orders.setCouponCode(couponCode);
                 orders.setDiscountAmount(discountAmount);
             } else {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, couponResponse.getMessage());

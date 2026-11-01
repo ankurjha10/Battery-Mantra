@@ -21,5 +21,7 @@ public class CheckoutRequest {
 
     private String couponCode;
 
+    private UUID appliedCampaignId;
+
     private String selectedCity;
 }

@@ -66,6 +66,9 @@ public class SecurityConfig {
                         // Public endpoints (e.g. delivery time)
                         .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
 
+                        // Campaigns & Offers — public storefront
+                        .requestMatchers("/api/campaigns/**").permitAll()
+
                         // FAQs - public
                         .requestMatchers(HttpMethod.GET, "/api/faqs/public/**").permitAll()
 

@@ -77,6 +77,9 @@ public class OrderMapper {
         response.setCouponCode(order.getCouponCode());
         response.setDiscountAmount(order.getDiscountAmount());
         response.setSelectedCity(order.getSelectedCity());
+        response.setAppliedCampaignId(order.getAppliedCampaignId());
+        response.setCampaignName(order.getCampaignName());
+        response.setCampaignDiscountAmount(order.getCampaignDiscountAmount());
 
         if (order.getShippingAddress() != null) {
             response.setCustomerName(order.getShippingAddress().getFullName());

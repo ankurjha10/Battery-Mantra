@@ -125,4 +125,14 @@ public class Orders {
     @Column(name = "selected_city")
     private String selectedCity;
 
+    @Column(name = "applied_campaign_id")
+    private UUID appliedCampaignId;
+
+    @Column(name = "campaign_name")
+    private String campaignName;
+
+    @Column(name = "campaign_discount_amount")
+    @Builder.Default
+    private BigDecimal campaignDiscountAmount = BigDecimal.ZERO;
+
 }
