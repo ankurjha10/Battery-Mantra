@@ -195,7 +195,7 @@ public class CampaignService {
                 }
             }
 
-            BigDecimal discountAmount = calculateDiscount(campaign, grossSubtotal, basePayable);
+            BigDecimal discountAmount = calculateCartDiscount(campaign, eligibleItems, grossSubtotal, basePayable);
             BigDecimal finalPayable = basePayable.subtract(discountAmount);
             if (finalPayable.compareTo(BigDecimal.ZERO) < 0) {
                 finalPayable = BigDecimal.ZERO;
@@ -231,7 +231,7 @@ public class CampaignService {
                     }
                 }
 
-                BigDecimal discountAmount = calculateDiscount(campaign, grossSubtotal, basePayable);
+                BigDecimal discountAmount = calculateCartDiscount(campaign, eligibleItems, grossSubtotal, basePayable);
                 BigDecimal finalPayable = basePayable.subtract(discountAmount);
                 if (finalPayable.compareTo(BigDecimal.ZERO) < 0) {
                     finalPayable = BigDecimal.ZERO;
@@ -311,6 +311,7 @@ public class CampaignService {
     @Transactional
     public CampaignResponse createCampaign(CampaignRequest request) {
         validateCampaignDates(request.getStartDate(), request.getEndDate());
+        validateProductDiscounts(request);
 
         String slug = (request.getSlug() != null && !request.getSlug().isBlank())
                 ? slugify(request.getSlug())
@@ -334,6 +335,7 @@ public class CampaignService {
                 .orElseThrow(() -> new ResourceNotFoundException("Campaign not found with id: " + id));
 
         validateCampaignDates(request.getStartDate(), request.getEndDate());
+        validateProductDiscounts(request);
 
         String slug = (request.getSlug() != null && !request.getSlug().isBlank())
                 ? slugify(request.getSlug())
@@ -458,6 +460,84 @@ public class CampaignService {
         }
 
         return discount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    public BigDecimal calculateCartDiscount(
+            Campaign campaign,
+            List<CartProductInfo> eligibleItems,
+            BigDecimal grossSubtotal,
+            BigDecimal basePayable) {
+
+        if (campaign == null) {
+            return BigDecimal.ZERO;
+        }
+
+        Map<UUID, BigDecimal> customDiscounts = campaign.getProductDiscounts();
+        if (customDiscounts == null || customDiscounts.isEmpty()) {
+            return calculateDiscount(campaign, grossSubtotal, basePayable);
+        }
+
+        BigDecimal totalDiscount = BigDecimal.ZERO;
+
+        for (CartProductInfo item : eligibleItems) {
+            if (item == null || item.product() == null) continue;
+            UUID pId = item.product().getProductId();
+
+            if (pId != null && customDiscounts.containsKey(pId)) {
+                BigDecimal customDisc = customDiscounts.get(pId);
+                if (customDisc != null && customDisc.compareTo(BigDecimal.ZERO) > 0) {
+                    BigDecimal lineDisc = customDisc.multiply(BigDecimal.valueOf(item.quantity()));
+                    totalDiscount = totalDiscount.add(lineDisc);
+                }
+            } else {
+                BigDecimal defaultItemDiscount = calculateItemDefaultDiscount(campaign, item);
+                totalDiscount = totalDiscount.add(defaultItemDiscount);
+            }
+        }
+
+        if (totalDiscount.compareTo(BigDecimal.ZERO) < 0) {
+            totalDiscount = BigDecimal.ZERO;
+        }
+        if (basePayable != null && totalDiscount.compareTo(basePayable) > 0) {
+            totalDiscount = basePayable;
+        }
+
+        return totalDiscount.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    private BigDecimal calculateItemDefaultDiscount(Campaign campaign, CartProductInfo item) {
+        if (campaign == null || campaign.getDiscountType() == null || item == null) {
+            return BigDecimal.ZERO;
+        }
+
+        BigDecimal discount = BigDecimal.ZERO;
+        BigDecimal val = campaign.getDiscountValue() != null ? campaign.getDiscountValue() : BigDecimal.ZERO;
+
+        switch (campaign.getDiscountType()) {
+            case FLAT_AMOUNT:
+                discount = val.multiply(BigDecimal.valueOf(item.quantity()));
+                break;
+
+            case PERCENTAGE:
+                BigDecimal lineSubtotal = item.lineTotal() != null ? item.lineTotal() : BigDecimal.ZERO;
+                discount = lineSubtotal.multiply(val).divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                if (campaign.getMaxDiscountCap() != null && campaign.getMaxDiscountCap().compareTo(BigDecimal.ZERO) > 0) {
+                    discount = discount.min(campaign.getMaxDiscountCap());
+                }
+                break;
+
+            case EXTRA_EXCHANGE_BONUS:
+                if (item.hasExchange()) {
+                    discount = val.multiply(BigDecimal.valueOf(item.quantity()));
+                }
+                break;
+
+            case SHOWCASE_ONLY:
+                discount = BigDecimal.ZERO;
+                break;
+        }
+
+        return discount;
     }
 
     private List<CartProductInfo> getEligibleCartItems(Campaign campaign, List<CartProductInfo> items) {
@@ -591,6 +671,27 @@ public class CampaignService {
         }
     }
 
+    private void validateProductDiscounts(CampaignRequest request) {
+        if (request == null) {
+            return;
+        }
+        if (request.getTargetType() == CampaignTargetType.CUSTOM_PRODUCTS) {
+            if (request.getProductDiscounts() != null && !request.getProductDiscounts().isEmpty()) {
+                Set<UUID> allowedProductIds = request.getProductIds() != null
+                        ? request.getProductIds()
+                        : Collections.emptySet();
+                for (UUID productId : request.getProductDiscounts().keySet()) {
+                    if (!allowedProductIds.contains(productId)) {
+                        throw new ResponseStatusException(
+                                HttpStatus.BAD_REQUEST,
+                                "Product discount specified for product ID " + productId + " which is not in campaign productIds"
+                        );
+                    }
+                }
+            }
+        }
+    }
+
     private void mapRequestToEntity(CampaignRequest req, Campaign c) {
         c.setName(req.getName().trim());
         c.setTagline(req.getTagline());
@@ -621,6 +722,12 @@ public class CampaignService {
         c.setBrandIds(req.getBrandIds() != null ? new HashSet<>(req.getBrandIds()) : new HashSet<>());
         c.setProductIds(req.getProductIds() != null ? new HashSet<>(req.getProductIds()) : new HashSet<>());
         c.setExcludedProductIds(req.getExcludedProductIds() != null ? new HashSet<>(req.getExcludedProductIds()) : new HashSet<>());
+
+        if (req.getTargetType() == CampaignTargetType.CUSTOM_PRODUCTS) {
+            c.setProductDiscounts(req.getProductDiscounts() != null ? new HashMap<>(req.getProductDiscounts()) : new HashMap<>());
+        } else {
+            c.setProductDiscounts(new HashMap<>());
+        }
     }
 
     public CampaignResponse toCampaignResponse(Campaign c, OffsetDateTime now) {
@@ -660,6 +767,7 @@ public class CampaignService {
                 .brandIds(c.getBrandIds() != null ? new HashSet<>(c.getBrandIds()) : new HashSet<>())
                 .productIds(c.getProductIds() != null ? new HashSet<>(c.getProductIds()) : new HashSet<>())
                 .excludedProductIds(c.getExcludedProductIds() != null ? new HashSet<>(c.getExcludedProductIds()) : new HashSet<>())
+                .productDiscounts(c.getProductDiscounts() != null ? new HashMap<>(c.getProductDiscounts()) : new HashMap<>())
                 .createdAt(c.getCreatedAt())
                 .updatedAt(c.getUpdatedAt())
                 .status(status)

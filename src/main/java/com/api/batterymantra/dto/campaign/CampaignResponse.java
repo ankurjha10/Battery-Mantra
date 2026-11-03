@@ -10,6 +10,7 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -45,6 +46,7 @@ public class CampaignResponse {
     private Set<UUID> brandIds;
     private Set<UUID> productIds;
     private Set<UUID> excludedProductIds;
+    private Map<UUID, BigDecimal> productDiscounts;
     private OffsetDateTime createdAt;
     private OffsetDateTime updatedAt;
     private String status; // "ACTIVE", "SCHEDULED", "EXPIRED", "INACTIVE"

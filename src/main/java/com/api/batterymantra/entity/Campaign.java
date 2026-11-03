@@ -8,12 +8,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
+import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -137,6 +141,11 @@ public class Campaign {
     @Column(name = "product_id")
     @Builder.Default
     private Set<UUID> excludedProductIds = new HashSet<>();
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "product_discounts", columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<UUID, BigDecimal> productDiscounts = new HashMap<>();
 
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)

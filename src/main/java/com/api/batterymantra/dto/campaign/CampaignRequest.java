@@ -12,7 +12,9 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -88,4 +90,10 @@ public class CampaignRequest {
 
     @Builder.Default
     private Set<UUID> excludedProductIds = new HashSet<>();
+
+    @Builder.Default
+    private Map<UUID, BigDecimal> productDiscounts = new HashMap<>();
+
+    @Builder.Default
+    private Map<UUID, BigDecimal> productDiscounts = new HashMap<>();
 }

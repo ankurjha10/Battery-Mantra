@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS campaigns (
     max_discount_cap NUMERIC(10, 2), -- Cap for percentage discount
     min_order_value NUMERIC(10, 2) DEFAULT 0.00,
     coupon_code VARCHAR(50), -- If NULL or empty, auto-applied to eligible products
+    product_discounts JSONB DEFAULT '{}'::jsonb,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -55,6 +56,10 @@ CREATE TABLE IF NOT EXISTS campaign_excluded_products (
     product_id UUID NOT NULL,
     PRIMARY KEY (campaign_id, product_id)
 );
+
+-- Alter campaigns table to add product_discounts if upgrading existing schema
+ALTER TABLE campaigns
+ADD COLUMN IF NOT EXISTS product_discounts JSONB DEFAULT '{}'::jsonb;
 
 -- Update orders table so financial records remain immutable when an offer is claimed
 ALTER TABLE orders 
