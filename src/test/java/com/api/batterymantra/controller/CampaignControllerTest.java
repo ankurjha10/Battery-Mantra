@@ -26,6 +26,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
@@ -241,5 +242,38 @@ class CampaignControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.isActive").value(false))
                 .andExpect(jsonPath("$.status").value("INACTIVE"));
+    }
+
+    @Test
+    @DisplayName("POST /api/admin/campaigns - Create campaign with productDiscounts")
+    void testAdminCreateCampaignWithProductDiscounts() throws Exception {
+        UUID prodId = UUID.randomUUID();
+        CampaignRequest req = CampaignRequest.builder()
+                .name("Custom Products Sale")
+                .startDate(OffsetDateTime.now())
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .productIds(Collections.singleton(prodId))
+                .productDiscounts(Map.of(prodId, BigDecimal.valueOf(800)))
+                .build();
+
+        CampaignResponse responseWithDiscounts = CampaignResponse.builder()
+                .id(campaignId)
+                .name("Custom Products Sale")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .productIds(Collections.singleton(prodId))
+                .productDiscounts(Map.of(prodId, BigDecimal.valueOf(800)))
+                .build();
+
+        when(campaignService.createCampaign(any(CampaignRequest.class))).thenReturn(responseWithDiscounts);
+
+        adminMockMvc.perform(post("/api/admin/campaigns")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(req)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Custom Products Sale"))
+                .andExpect(jsonPath("$.productDiscounts['" + prodId + "']").value(800));
     }
 }

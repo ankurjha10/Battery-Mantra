@@ -93,7 +93,4 @@ public class CampaignRequest {
 
     @Builder.Default
     private Map<UUID, BigDecimal> productDiscounts = new HashMap<>();
-
-    @Builder.Default
-    private Map<UUID, BigDecimal> productDiscounts = new HashMap<>();
 }

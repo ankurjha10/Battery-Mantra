@@ -442,4 +442,181 @@ class CampaignServiceTest {
         assertFalse(res.getIsActive());
         assertEquals("INACTIVE", res.getStatus());
     }
+
+    // ==========================================
+    // 5. Per-Product Custom Discounts Tests
+    // ==========================================
+
+    @Test
+    @DisplayName("Create Campaign: Saves productDiscounts when targetType is CUSTOM_PRODUCTS")
+    void testCreateCampaign_WithCustomProductDiscounts_Success() {
+        UUID prod1 = UUID.randomUUID();
+        UUID prod2 = UUID.randomUUID();
+        Map<UUID, BigDecimal> customDiscounts = Map.of(
+                prod1, BigDecimal.valueOf(800),
+                prod2, BigDecimal.valueOf(1200)
+        );
+
+        CampaignRequest req = CampaignRequest.builder()
+                .name("Diwali Mega Custom Sale")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .discountValue(BigDecimal.valueOf(500))
+                .startDate(OffsetDateTime.now())
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .productIds(Set.of(prod1, prod2))
+                .productDiscounts(customDiscounts)
+                .build();
+
+        when(campaignRepository.existsBySlug("diwali-mega-custom-sale")).thenReturn(false);
+        when(campaignRepository.save(any())).thenAnswer(inv -> {
+            Campaign c = inv.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+
+        CampaignResponse res = campaignService.createCampaign(req);
+
+        assertNotNull(res);
+        assertNotNull(res.getProductDiscounts());
+        assertEquals(2, res.getProductDiscounts().size());
+        assertEquals(0, BigDecimal.valueOf(800).compareTo(res.getProductDiscounts().get(prod1)));
+        assertEquals(0, BigDecimal.valueOf(1200).compareTo(res.getProductDiscounts().get(prod2)));
+    }
+
+    @Test
+    @DisplayName("Create Campaign: Throws 400 if product in productDiscounts is not in productIds")
+    void testCreateCampaign_ProductNotInProductIds_Throws() {
+        UUID prod1 = UUID.randomUUID();
+        UUID unassociatedProd = UUID.randomUUID();
+
+        CampaignRequest req = CampaignRequest.builder()
+                .name("Invalid Custom Discounts Campaign")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .startDate(OffsetDateTime.now())
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .productIds(Set.of(prod1))
+                .productDiscounts(Map.of(unassociatedProd, BigDecimal.valueOf(500)))
+                .build();
+
+        ResponseStatusException ex = assertThrows(ResponseStatusException.class, () -> campaignService.createCampaign(req));
+        assertEquals(400, ex.getStatusCode().value());
+        assertTrue(ex.getReason().contains("not in campaign productIds"));
+    }
+
+    @Test
+    @DisplayName("Create Campaign: Clears productDiscounts when targetType is not CUSTOM_PRODUCTS")
+    void testCreateCampaign_NonCustomTarget_ClearsProductDiscounts() {
+        UUID prod1 = UUID.randomUUID();
+
+        CampaignRequest req = CampaignRequest.builder()
+                .name("All Products Sale")
+                .targetType(CampaignTargetType.ALL_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .startDate(OffsetDateTime.now())
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .productDiscounts(Map.of(prod1, BigDecimal.valueOf(500)))
+                .build();
+
+        when(campaignRepository.existsBySlug("all-products-sale")).thenReturn(false);
+        when(campaignRepository.save(any())).thenAnswer(inv -> {
+            Campaign c = inv.getArgument(0);
+            c.setId(UUID.randomUUID());
+            return c;
+        });
+
+        CampaignResponse res = campaignService.createCampaign(req);
+
+        assertNotNull(res);
+        assertTrue(res.getProductDiscounts().isEmpty());
+    }
+
+    @Test
+    @DisplayName("Update Campaign: Successfully updates productDiscounts")
+    void testUpdateCampaign_WithCustomProductDiscounts_Success() {
+        UUID id = UUID.randomUUID();
+        UUID prod1 = UUID.randomUUID();
+
+        Campaign existing = Campaign.builder()
+                .id(id)
+                .name("Custom Sale")
+                .slug("custom-sale")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .productIds(Set.of(prod1))
+                .productDiscounts(new HashMap<>())
+                .startDate(OffsetDateTime.now().minusDays(1))
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .build();
+
+        CampaignRequest updateReq = CampaignRequest.builder()
+                .name("Custom Sale")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .startDate(OffsetDateTime.now().minusDays(1))
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .productIds(Set.of(prod1))
+                .productDiscounts(Map.of(prod1, BigDecimal.valueOf(750)))
+                .build();
+
+        when(campaignRepository.findById(id)).thenReturn(Optional.of(existing));
+        when(campaignRepository.existsBySlugAndIdNot(any(), eq(id))).thenReturn(false);
+        when(campaignRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        CampaignResponse res = campaignService.updateCampaign(id, updateReq);
+
+        assertNotNull(res);
+        assertEquals(1, res.getProductDiscounts().size());
+        assertEquals(0, BigDecimal.valueOf(750).compareTo(res.getProductDiscounts().get(prod1)));
+    }
+
+    @Test
+    @DisplayName("ValidateCart: Applies exact per-product custom discount override")
+    void testValidateCart_AppliesCustomProductDiscountOverride() {
+        UUID prodA = productId;
+        UUID prodB = UUID.randomUUID();
+
+        Product productB = new Product();
+        productB.setProductId(prodB);
+        productB.setProductName("Amaron 45Ah");
+        productB.setProductPrice(BigDecimal.valueOf(5000));
+        productB.setExchangeDiscount(BigDecimal.ZERO);
+        productB.setApproved(true);
+
+        Campaign customCampaign = Campaign.builder()
+                .id(UUID.randomUUID())
+                .name("Custom Product Offer")
+                .slug("custom-product-offer")
+                .targetType(CampaignTargetType.CUSTOM_PRODUCTS)
+                .discountType(CampaignDiscountType.FLAT_AMOUNT)
+                .discountValue(BigDecimal.valueOf(200)) // Default fallback discount
+                .productIds(Set.of(prodA, prodB))
+                .productDiscounts(Map.of(prodA, BigDecimal.valueOf(800))) // ProdA has 800 custom, ProdB falls back to 200
+                .startDate(OffsetDateTime.now().minusDays(1))
+                .endDate(OffsetDateTime.now().plusDays(5))
+                .isActive(true)
+                .couponCode("CUSTOMOFFER")
+                .build();
+
+        when(productRepository.findById(prodA)).thenReturn(Optional.of(testProduct));
+        when(productRepository.findById(prodB)).thenReturn(Optional.of(productB));
+        when(campaignRepository.findByCouponCodeIgnoreCase("CUSTOMOFFER")).thenReturn(Optional.of(customCampaign));
+
+        ValidateCartRequest req = ValidateCartRequest.builder()
+                .couponCode("CUSTOMOFFER")
+                .items(List.of(
+                        CartValidateItemDto.builder().productId(prodA).quantity(1).hasExchange(false).build(),
+                        CartValidateItemDto.builder().productId(prodB).quantity(1).hasExchange(false).build()
+                ))
+                .build();
+
+        ValidateCartResponse res = campaignService.validateCart(req);
+
+        assertTrue(res.isApplicable());
+        // ProdA discount (800) + ProdB fallback discount (200) = 1000
+        assertEquals(0, BigDecimal.valueOf(1000).compareTo(res.getDiscountAmount()));
+        // Gross subtotal = 4500 + 5000 = 9500. Payable = 9500 - 1000 = 8500
+        assertEquals(0, BigDecimal.valueOf(8500).compareTo(res.getFinalPayable()));
+    }
 }
