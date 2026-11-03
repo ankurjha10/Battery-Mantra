@@ -140,9 +140,21 @@ public class CampaignService {
 
         OffsetDateTime now = OffsetDateTime.now();
         String couponCode = request.getCouponCode() != null ? request.getCouponCode().trim() : "";
+        UUID campaignId = request.getCampaignId();
 
-        // 2. Coupon vs Auto-Apply evaluation
-        if (!couponCode.isEmpty()) {
+        // 2. Specific Campaign ID vs Coupon vs Auto-Apply evaluation
+        if (campaignId != null) {
+            Optional<Campaign> campaignOpt = campaignRepository.findById(campaignId);
+            if (campaignOpt.isEmpty()) {
+                return ValidateCartResponse.builder()
+                        .applicable(false)
+                        .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                        .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
+                        .message("Campaign offer not found")
+                        .build();
+            }
+            return evaluateCampaignForCart(campaignOpt.get(), cartProducts, grossSubtotal, basePayable, now);
+        } else if (!couponCode.isEmpty()) {
             // User sent a specific coupon code
             Optional<Campaign> campaignOpt = campaignRepository.findByCouponCodeIgnoreCase(couponCode);
             if (campaignOpt.isEmpty()) {
@@ -153,98 +165,16 @@ public class CampaignService {
                         .message("Invalid coupon code")
                         .build();
             }
-
-            Campaign campaign = campaignOpt.get();
-            if (!isCampaignCurrentlyActive(campaign, now)) {
-                return ValidateCartResponse.builder()
-                        .applicable(false)
-                        .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-                        .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
-                        .message("Campaign offer is not currently active")
-                        .build();
-            }
-
-            List<CartProductInfo> eligibleItems = getEligibleCartItems(campaign, cartProducts);
-            if (eligibleItems.isEmpty()) {
-                return ValidateCartResponse.builder()
-                        .applicable(false)
-                        .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-                        .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
-                        .message("No items in your cart qualify for this campaign offer")
-                        .build();
-            }
-
-            if (campaign.getMinOrderValue() != null && grossSubtotal.compareTo(campaign.getMinOrderValue()) < 0) {
-                return ValidateCartResponse.builder()
-                        .applicable(false)
-                        .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-                        .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
-                        .message("Cart minimum order value of ₹" + campaign.getMinOrderValue() + " not met")
-                        .build();
-            }
-
-            if (campaign.getDiscountType() == CampaignDiscountType.EXTRA_EXCHANGE_BONUS) {
-                boolean hasExchangeEligible = eligibleItems.stream().anyMatch(CartProductInfo::hasExchange);
-                if (!hasExchangeEligible) {
-                    return ValidateCartResponse.builder()
-                            .applicable(false)
-                            .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
-                            .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
-                            .message("Old battery exchange trade-in is required to unlock this offer")
-                            .build();
-                }
-            }
-
-            BigDecimal discountAmount = calculateCartDiscount(campaign, eligibleItems, grossSubtotal, basePayable);
-            BigDecimal finalPayable = basePayable.subtract(discountAmount);
-            if (finalPayable.compareTo(BigDecimal.ZERO) < 0) {
-                finalPayable = BigDecimal.ZERO;
-            }
-
-            return ValidateCartResponse.builder()
-                    .applicable(true)
-                    .campaignId(campaign.getId())
-                    .campaignName(campaign.getName())
-                    .discountAmount(discountAmount.setScale(2, RoundingMode.HALF_UP))
-                    .finalPayable(finalPayable.setScale(2, RoundingMode.HALF_UP))
-                    .message("Offer applied successfully!")
-                    .build();
-
+            return evaluateCampaignForCart(campaignOpt.get(), cartProducts, grossSubtotal, basePayable, now);
         } else {
             // Auto-apply logic: prioritize by priority DESC, discount_value DESC
             List<Campaign> autoCampaigns = campaignRepository.findActiveAutoApplyCampaigns(now);
 
             for (Campaign campaign : autoCampaigns) {
-                List<CartProductInfo> eligibleItems = getEligibleCartItems(campaign, cartProducts);
-                if (eligibleItems.isEmpty()) {
-                    continue;
+                ValidateCartResponse res = evaluateCampaignForCart(campaign, cartProducts, grossSubtotal, basePayable, now);
+                if (res.isApplicable()) {
+                    return res;
                 }
-
-                if (campaign.getMinOrderValue() != null && grossSubtotal.compareTo(campaign.getMinOrderValue()) < 0) {
-                    continue;
-                }
-
-                if (campaign.getDiscountType() == CampaignDiscountType.EXTRA_EXCHANGE_BONUS) {
-                    boolean hasExchangeEligible = eligibleItems.stream().anyMatch(CartProductInfo::hasExchange);
-                    if (!hasExchangeEligible) {
-                        continue;
-                    }
-                }
-
-                BigDecimal discountAmount = calculateCartDiscount(campaign, eligibleItems, grossSubtotal, basePayable);
-                BigDecimal finalPayable = basePayable.subtract(discountAmount);
-                if (finalPayable.compareTo(BigDecimal.ZERO) < 0) {
-                    finalPayable = BigDecimal.ZERO;
-                }
-
-                return ValidateCartResponse.builder()
-                        .applicable(true)
-                        .campaignId(campaign.getId())
-                        .campaignName(campaign.getName())
-                        .discountAmount(discountAmount.setScale(2, RoundingMode.HALF_UP))
-                        .finalPayable(finalPayable.setScale(2, RoundingMode.HALF_UP))
-                        .message("Offer applied successfully!")
-                        .build();
             }
 
             // No active auto-apply campaign matched
@@ -257,6 +187,104 @@ public class CampaignService {
                     .message("No offer applicable")
                     .build();
         }
+    }
+
+    private ValidateCartResponse evaluateCampaignForCart(
+            Campaign campaign,
+            List<CartProductInfo> cartProducts,
+            BigDecimal grossSubtotal,
+            BigDecimal basePayable,
+            OffsetDateTime now) {
+
+        if (!isCampaignCurrentlyActive(campaign, now)) {
+            return ValidateCartResponse.builder()
+                    .applicable(false)
+                    .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
+                    .message("Campaign offer is not currently active")
+                    .build();
+        }
+
+        List<CartProductInfo> eligibleItems = getEligibleCartItems(campaign, cartProducts);
+        if (eligibleItems.isEmpty()) {
+            return ValidateCartResponse.builder()
+                    .applicable(false)
+                    .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
+                    .message("No items in your cart qualify for this campaign offer")
+                    .build();
+        }
+
+        if (campaign.getMinOrderValue() != null && grossSubtotal.compareTo(campaign.getMinOrderValue()) < 0) {
+            return ValidateCartResponse.builder()
+                    .applicable(false)
+                    .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                    .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
+                    .message("Cart minimum order value of ₹" + campaign.getMinOrderValue() + " not met")
+                    .build();
+        }
+
+        if (campaign.getDiscountType() == CampaignDiscountType.EXTRA_EXCHANGE_BONUS) {
+            boolean hasExchangeEligible = eligibleItems.stream().anyMatch(CartProductInfo::hasExchange);
+            if (!hasExchangeEligible) {
+                return ValidateCartResponse.builder()
+                        .applicable(false)
+                        .discountAmount(BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP))
+                        .finalPayable(basePayable.setScale(2, RoundingMode.HALF_UP))
+                        .message("Old battery exchange trade-in is required to unlock this offer")
+                        .build();
+            }
+        }
+
+        BigDecimal discountAmount = calculateCartDiscount(campaign, eligibleItems, grossSubtotal, basePayable);
+        BigDecimal finalPayable = basePayable.subtract(discountAmount);
+        if (finalPayable.compareTo(BigDecimal.ZERO) < 0) {
+            finalPayable = BigDecimal.ZERO;
+        }
+
+        return ValidateCartResponse.builder()
+                .applicable(true)
+                .campaignId(campaign.getId())
+                .campaignName(campaign.getName())
+                .discountAmount(discountAmount.setScale(2, RoundingMode.HALF_UP))
+                .finalPayable(finalPayable.setScale(2, RoundingMode.HALF_UP))
+                .message("Offer applied successfully!")
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public ValidateCartResponse calculateCampaignDiscountForCart(
+            List<CartItem> cartItems,
+            UUID cityId,
+            String couponCode,
+            UUID campaignId) {
+
+        if (cartItems == null || cartItems.isEmpty()) {
+            return ValidateCartResponse.builder()
+                    .applicable(false)
+                    .discountAmount(BigDecimal.ZERO)
+                    .finalPayable(BigDecimal.ZERO)
+                    .message("Cart is empty")
+                    .build();
+        }
+
+        List<CartValidateItemDto> dtoList = cartItems.stream()
+                .filter(ci -> ci != null && ci.getProduct() != null)
+                .map(ci -> CartValidateItemDto.builder()
+                        .productId(ci.getProduct().getProductId())
+                        .quantity(ci.getQuantity())
+                        .hasExchange(ci.isExchangeOldBattery())
+                        .build())
+                .toList();
+
+        ValidateCartRequest req = ValidateCartRequest.builder()
+                .items(dtoList)
+                .cityId(cityId)
+                .couponCode(couponCode)
+                .campaignId(campaignId)
+                .build();
+
+        return validateCart(req);
     }
 
     // ==========================================

@@ -48,6 +48,8 @@ public class RazorpayService {
     private final PincodeRepository pincodeRepository;
     private final CityRepository cityRepository;
     private final SmsService smsService;
+    private final CampaignService campaignService;
+    private final CouponService couponService;
 
     @Transactional
     public RazorpayOrderResponse createOrder(UUID customerId, CreateRazorpayOrderRequest request) {
@@ -178,6 +180,39 @@ public class RazorpayService {
             total = BigDecimal.ZERO;
         }
 
+        // 5b. Evaluate Campaign offers and Coupons
+        BigDecimal campaignDiscountAmount = BigDecimal.ZERO;
+        BigDecimal couponDiscountAmount = BigDecimal.ZERO;
+        UUID appliedCampaignId = request.getAppliedCampaignId();
+        String campaignName = null;
+        String couponCode = request.getCouponCode() != null ? request.getCouponCode().trim() : null;
+
+        var campaignValidation = campaignService.calculateCampaignDiscountForCart(
+                cartItemList, targetCityId, couponCode, appliedCampaignId);
+
+        if (campaignValidation.isApplicable() && campaignValidation.getDiscountAmount() != null
+                && campaignValidation.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            campaignDiscountAmount = campaignValidation.getDiscountAmount();
+            appliedCampaignId = campaignValidation.getCampaignId();
+            campaignName = campaignValidation.getCampaignName();
+        }
+
+        // If couponCode was passed but not claimed by a campaign, check traditional CouponService
+        if (couponCode != null && !couponCode.isBlank() && appliedCampaignId == null) {
+            var couponResponse = couponService.applyCoupon(couponCode, total.subtract(campaignDiscountAmount).doubleValue());
+            if (couponResponse.getIsValid()) {
+                couponDiscountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
+            } else {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, couponResponse.getMessage());
+            }
+        }
+
+        BigDecimal totalDiscount = campaignDiscountAmount.add(couponDiscountAmount);
+        total = total.subtract(totalDiscount);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+
         // 6. Create Razorpay order
         long amountInPaise = total.multiply(BigDecimal.valueOf(100)).longValue();
 
@@ -210,6 +245,11 @@ public class RazorpayService {
                 .totalAmount(total)
                 .exchangeDiscount(exchangeDiscount)
                 .selectedCity(request.getSelectedCity())
+                .appliedCampaignId(appliedCampaignId)
+                .campaignName(campaignName)
+                .campaignDiscountAmount(campaignDiscountAmount)
+                .discountAmount(totalDiscount)
+                .couponCode(couponCode)
                 .build();
 
         // 8. Auto-assign partner (same logic as COD checkout)
@@ -300,6 +340,12 @@ public class RazorpayService {
             if (cart != null) {
                 cart.getCartItems().clear();
                 cartRepository.save(cart);
+            }
+
+            if (order.getCouponCode() != null && !order.getCouponCode().isBlank()
+                    && order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+                    && order.getAppliedCampaignId() == null) {
+                couponService.incrementCouponUsage(order.getCouponCode());
             }
 
             // Send SMS notifications

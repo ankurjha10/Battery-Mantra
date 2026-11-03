@@ -242,44 +242,42 @@ public class OrderService {
         // Apply campaign offers or coupon
         BigDecimal discountAmount = BigDecimal.ZERO;
         String couponCode = request.getCouponCode() != null ? request.getCouponCode().trim() : null;
+        UUID appliedCampaignId = request.getAppliedCampaignId();
+        BigDecimal campaignDiscountAmount = BigDecimal.ZERO;
+        BigDecimal couponDiscountAmount = BigDecimal.ZERO;
+        String campaignName = null;
 
-        com.api.batterymantra.dto.campaign.ValidateCartRequest campaignValidateReq = com.api.batterymantra.dto.campaign.ValidateCartRequest.builder()
-                .couponCode(couponCode)
-                .cityId(targetCityId)
-                .items(cartItemList.stream().map(ci -> com.api.batterymantra.dto.campaign.CartValidateItemDto.builder()
-                        .productId(ci.getProduct().getProductId())
-                        .quantity(ci.getQuantity())
-                        .hasExchange(ci.isExchangeOldBattery())
-                        .build()).toList())
-                .build();
+        var campaignValidation = campaignService.calculateCampaignDiscountForCart(
+                cartItemList, targetCityId, couponCode, appliedCampaignId);
 
-        var campaignValidation = campaignService.validateCart(campaignValidateReq);
-        if (campaignValidation.isApplicable() && campaignValidation.getDiscountAmount() != null && campaignValidation.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
-            discountAmount = campaignValidation.getDiscountAmount();
-            total = total.subtract(discountAmount);
-            if (total.compareTo(BigDecimal.ZERO) < 0) {
-                total = BigDecimal.ZERO;
-            }
-            orders.setAppliedCampaignId(campaignValidation.getCampaignId());
-            orders.setCampaignName(campaignValidation.getCampaignName());
-            orders.setCampaignDiscountAmount(discountAmount);
-            orders.setDiscountAmount(discountAmount);
-            orders.setCouponCode(couponCode);
-        } else if (couponCode != null && !couponCode.isBlank()) {
-            // Check traditional coupon service if not handled as a campaign
-            var couponResponse = couponService.applyCoupon(couponCode, total.doubleValue());
+        if (campaignValidation.isApplicable() && campaignValidation.getDiscountAmount() != null
+                && campaignValidation.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0) {
+            campaignDiscountAmount = campaignValidation.getDiscountAmount();
+            appliedCampaignId = campaignValidation.getCampaignId();
+            campaignName = campaignValidation.getCampaignName();
+        }
+
+        // If couponCode was passed but not claimed by a campaign, check traditional CouponService
+        if (couponCode != null && !couponCode.isBlank() && appliedCampaignId == null) {
+            var couponResponse = couponService.applyCoupon(couponCode, total.subtract(campaignDiscountAmount).doubleValue());
             if (couponResponse.getIsValid()) {
-                discountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
-                total = total.subtract(discountAmount);
-                if (total.compareTo(BigDecimal.ZERO) < 0) {
-                    total = BigDecimal.ZERO;
-                }
-                orders.setCouponCode(couponCode);
-                orders.setDiscountAmount(discountAmount);
+                couponDiscountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
             } else {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, couponResponse.getMessage());
             }
         }
+
+        discountAmount = campaignDiscountAmount.add(couponDiscountAmount);
+        total = total.subtract(discountAmount);
+        if (total.compareTo(BigDecimal.ZERO) < 0) {
+            total = BigDecimal.ZERO;
+        }
+
+        orders.setAppliedCampaignId(appliedCampaignId);
+        orders.setCampaignName(campaignName);
+        orders.setCampaignDiscountAmount(campaignDiscountAmount);
+        orders.setDiscountAmount(discountAmount);
+        orders.setCouponCode(couponCode);
 
         orders.setOrderItems(orderItems);
         orders.setTotalAmount(total);
@@ -287,8 +285,8 @@ public class OrderService {
 
         // Save the Order
         Orders placedOrder = orderRepository.save(orders);
-        
-        if (request.getCouponCode() != null && !request.getCouponCode().isBlank() && discountAmount.compareTo(BigDecimal.ZERO) > 0) {
+
+        if (request.getCouponCode() != null && !request.getCouponCode().isBlank() && couponDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
             couponService.incrementCouponUsage(request.getCouponCode());
         }
 

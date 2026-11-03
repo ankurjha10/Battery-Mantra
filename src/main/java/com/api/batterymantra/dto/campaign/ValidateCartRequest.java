@@ -23,4 +23,6 @@ public class ValidateCartRequest {
     private String couponCode;
 
     private UUID cityId;
+
+    private UUID campaignId;
 }

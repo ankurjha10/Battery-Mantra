@@ -619,4 +619,45 @@ class CampaignServiceTest {
         // Gross subtotal = 4500 + 5000 = 9500. Payable = 9500 - 1000 = 8500
         assertEquals(0, BigDecimal.valueOf(8500).compareTo(res.getFinalPayable()));
     }
+
+    @Test
+    @DisplayName("ValidateCart: Validates campaign by specific campaignId")
+    void testValidateCart_WithCampaignId_Success() {
+        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct));
+        when(campaignRepository.findById(diwaliCampaign.getId())).thenReturn(Optional.of(diwaliCampaign));
+
+        ValidateCartRequest req = ValidateCartRequest.builder()
+                .campaignId(diwaliCampaign.getId())
+                .items(List.of(CartValidateItemDto.builder()
+                        .productId(productId)
+                        .quantity(1)
+                        .hasExchange(false)
+                        .build()))
+                .build();
+
+        ValidateCartResponse res = campaignService.validateCart(req);
+
+        assertTrue(res.isApplicable());
+        assertEquals(diwaliCampaign.getId(), res.getCampaignId());
+        assertEquals(0, BigDecimal.valueOf(500).compareTo(res.getDiscountAmount()));
+    }
+
+    @Test
+    @DisplayName("CalculateCampaignDiscountForCart: Evaluates cart items directly")
+    void testCalculateCampaignDiscountForCart_Success() {
+        when(productRepository.findById(productId)).thenReturn(Optional.of(testProduct));
+        when(campaignRepository.findById(diwaliCampaign.getId())).thenReturn(Optional.of(diwaliCampaign));
+
+        CartItem item = new CartItem();
+        item.setProduct(testProduct);
+        item.setQuantity(1);
+        item.setExchangeOldBattery(false);
+
+        ValidateCartResponse res = campaignService.calculateCampaignDiscountForCart(
+                List.of(item), null, null, diwaliCampaign.getId());
+
+        assertTrue(res.isApplicable());
+        assertEquals(diwaliCampaign.getId(), res.getCampaignId());
+        assertEquals(0, BigDecimal.valueOf(500).compareTo(res.getDiscountAmount()));
+    }
 }
