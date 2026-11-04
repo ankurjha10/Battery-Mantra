@@ -53,7 +53,7 @@ public class CentralInventoryController {
             @Valid @RequestBody UpdateStockRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        String performedBy = principal != null && principal.getUsername() != null
+        String performedBy = principal != null && principal.getUser() != null && principal.getUsername() != null
                 ? principal.getUsername()
                 : "ADMIN";
 
@@ -70,7 +70,7 @@ public class CentralInventoryController {
             @Valid @RequestBody List<BulkStockUpdateRequest> requests,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        String performedBy = principal != null && principal.getUsername() != null
+        String performedBy = principal != null && principal.getUser() != null && principal.getUsername() != null
                 ? principal.getUsername()
                 : "ADMIN";
 

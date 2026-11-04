@@ -5,6 +5,7 @@ import com.api.batterymantra.dto.inventory.*;
 import com.api.batterymantra.entity.enums.StockStatus;
 import com.api.batterymantra.service.CentralInventoryService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -13,6 +14,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -36,11 +38,17 @@ class CentralInventoryControllerTest {
     @InjectMocks
     private CentralInventoryController controller;
 
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private ObjectMapper objectMapper;
 
     @BeforeEach
     void setUp() {
-        mockMvc = MockMvcBuilders.standaloneSetup(controller).build();
+        objectMapper = new ObjectMapper();
+        objectMapper.registerModule(new JavaTimeModule());
+        MappingJackson2HttpMessageConverter converter = new MappingJackson2HttpMessageConverter(objectMapper);
+
+        mockMvc = MockMvcBuilders.standaloneSetup(controller)
+                .setMessageConverters(converter)
+                .build();
     }
 
     @Test
@@ -65,7 +73,7 @@ class CentralInventoryControllerTest {
 
         InventoryDashboardResponse response = InventoryDashboardResponse.builder()
                 .summary(summary)
-                .items(new PageImpl<>(List.of(item)))
+                .items(new PageImpl<>(List.of(item), org.springframework.data.domain.PageRequest.of(0, 20), 1))
                 .build();
 
         when(inventoryService.getInventoryDashboard(any(), any(), any(), any(), anyInt(), anyInt()))
