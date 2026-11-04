@@ -71,7 +71,7 @@ public class SeoUtil {
         resolved.setOgDescription(replace.apply(effectiveOgDesc));
 
         resolved.setSlug(replace.apply(raw.getSlug()));
-        resolved.setCanonicalUrl(replace.apply(raw.getCanonicalUrl()));
+        resolved.setCanonicalUrl(sanitizeCanonicalUrl(replace.apply(raw.getCanonicalUrl())));
 
         // Preserve raw fields for admin edit
         resolved.setMetaTitleCity(raw.getMetaTitleCity());
@@ -81,5 +81,31 @@ public class SeoUtil {
         resolved.setOgDescriptionCity(raw.getOgDescriptionCity());
 
         return resolved;
+    }
+
+    /**
+     * Normalizes canonical URLs strictly to https://batterymantra.com (HTTPS, non-www).
+     */
+    public static String sanitizeCanonicalUrl(String url) {
+        if (url == null || url.isBlank()) {
+            return url;
+        }
+        return url.trim()
+                .replaceAll("https?://(www\\.)?batterymantra\\.in", "https://batterymantra.com")
+                .replaceAll("https?://www\\.batterymantra\\.com", "https://batterymantra.com")
+                .replaceAll("^http://batterymantra\\.com", "https://batterymantra.com");
+    }
+
+    /**
+     * Sanitizes blog post / CMS HTML content to eliminate www and .in internal links.
+     */
+    public static String sanitizeInternalLinks(String content) {
+        if (content == null || content.isBlank()) {
+            return content;
+        }
+        return content
+                .replaceAll("https?://(www\\.)?batterymantra\\.in", "https://batterymantra.com")
+                .replaceAll("https?://www\\.batterymantra\\.com", "https://batterymantra.com")
+                .replaceAll("http://batterymantra\\.com", "https://batterymantra.com");
     }
 }

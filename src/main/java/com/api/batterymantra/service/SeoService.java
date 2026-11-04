@@ -4,6 +4,7 @@ import com.api.batterymantra.entity.SeoPage;
 import com.api.batterymantra.entity.SeoTemplate;
 import com.api.batterymantra.repository.SeoPageRepository;
 import com.api.batterymantra.repository.SeoTemplateRepository;
+import com.api.batterymantra.util.SeoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,9 @@ public class SeoService {
 
     @Transactional
     public SeoPage saveSeoPage(SeoPage seoPage) {
+        if (seoPage.getSeo() != null && seoPage.getSeo().getCanonicalUrl() != null) {
+            seoPage.getSeo().setCanonicalUrl(SeoUtil.sanitizeCanonicalUrl(seoPage.getSeo().getCanonicalUrl()));
+        }
         if (seoPage.getPageId() != null) {
             SeoPage existing = seoPageRepository.findById(seoPage.getPageId()).orElse(null);
             if (existing != null) {

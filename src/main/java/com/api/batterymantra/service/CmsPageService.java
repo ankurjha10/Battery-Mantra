@@ -3,8 +3,10 @@ package com.api.batterymantra.service;
 import com.api.batterymantra.dto.cms.CmsPageDto;
 import com.api.batterymantra.dto.cms.CreateCmsPageRequest;
 import com.api.batterymantra.entity.CmsPage;
+import com.api.batterymantra.entity.SeoMetadata;
 import com.api.batterymantra.exception.ResourceNotFoundException;
 import com.api.batterymantra.repository.CmsPageRepository;
+import com.api.batterymantra.util.SeoUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -47,10 +49,15 @@ public class CmsPageService {
         page.setSubTitle(request.getSubTitle());
         page.setImage1(request.getImage1());
         page.setImage2(request.getImage2());
-        page.setContent(request.getContent());
-        page.setContent2(request.getContent2());
+        page.setContent(SeoUtil.sanitizeInternalLinks(request.getContent()));
+        page.setContent2(SeoUtil.sanitizeInternalLinks(request.getContent2()));
         page.setActive(request.isActive());
-        page.setSeo(request.getSeo());
+
+        SeoMetadata seo = request.getSeo();
+        if (seo != null) {
+            seo.setCanonicalUrl(SeoUtil.sanitizeCanonicalUrl(seo.getCanonicalUrl()));
+        }
+        page.setSeo(seo);
 
         CmsPage saved = cmsPageRepository.save(page);
         return mapToDto(saved);
@@ -65,10 +72,15 @@ public class CmsPageService {
         page.setSubTitle(request.getSubTitle());
         page.setImage1(request.getImage1());
         page.setImage2(request.getImage2());
-        page.setContent(request.getContent());
-        page.setContent2(request.getContent2());
+        page.setContent(SeoUtil.sanitizeInternalLinks(request.getContent()));
+        page.setContent2(SeoUtil.sanitizeInternalLinks(request.getContent2()));
         page.setActive(request.isActive());
-        page.setSeo(request.getSeo());
+
+        SeoMetadata seo = request.getSeo();
+        if (seo != null) {
+            seo.setCanonicalUrl(SeoUtil.sanitizeCanonicalUrl(seo.getCanonicalUrl()));
+        }
+        page.setSeo(seo);
 
         CmsPage updated = cmsPageRepository.save(page);
         return mapToDto(updated);

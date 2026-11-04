@@ -26,6 +26,7 @@ public class SecurityConfig {
 
     private final JwtAuthFilter jwtAuthFilter;
     private final RateLimitingFilter rateLimitingFilter;
+    private final CanonicalRedirectFilter canonicalRedirectFilter;
 
     @Bean
     public SecurityFilterChain securityFilterChain(
@@ -58,55 +59,61 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/api/enquiries/**").permitAll()
 
                         // Banners — read public
-                        .requestMatchers(HttpMethod.GET, "/api/banners/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/banners", "/api/banners/**").permitAll()
 
                         // Reels — read public
-                        .requestMatchers(HttpMethod.GET, "/api/reels/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/reels", "/api/reels/**").permitAll()
 
                         // Public endpoints (e.g. delivery time)
-                        .requestMatchers(HttpMethod.GET, "/api/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/public", "/api/public/**").permitAll()
 
                         // Campaigns & Offers — public storefront
-                        .requestMatchers("/api/campaigns/**").permitAll()
+                        .requestMatchers("/api/campaigns", "/api/campaigns/**").permitAll()
 
                         // FAQs - public
-                        .requestMatchers(HttpMethod.GET, "/api/faqs/public/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/faqs/public", "/api/faqs/public/**").permitAll()
 
                         // Locations — public
-                        .requestMatchers(HttpMethod.GET, "/api/locations/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/locations", "/api/locations/**").permitAll()
 
                         // Products — read public, write ADMIN (fine-grained via @PreAuthorize)
-                        .requestMatchers(HttpMethod.GET, "/api/products/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/products", "/api/products/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/products/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Categories — read public, write ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/categories", "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.PATCH, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Brands — read public, write ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/brands/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/brands", "/api/brands/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/brands/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Brand Contents — read public
-                        .requestMatchers(HttpMethod.GET, "/api/brand-contents/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/brand-contents", "/api/brand-contents/**").permitAll()
 
                         // Manufacturers — read public, write ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/manufacturers/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/manufacturers", "/api/manufacturers/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/manufacturers/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Vehicles — read public, write ADMIN
-                        .requestMatchers(HttpMethod.GET, "/api/vehicles/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/vehicles", "/api/vehicles/**").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/vehicles/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+
+                        // Fuels — read public, write ADMIN
+                        .requestMatchers(HttpMethod.GET, "/api/fuels", "/api/fuels/**").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/fuels/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/fuels/**").hasAnyRole("ADMIN", "SUB_ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/fuels/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 
                         // Cart — CUSTOMER only
                         .requestMatchers("/api/cart/**").hasRole("CUSTOMER")
@@ -134,8 +141,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/user/**").authenticated()
 
                         // SEO & CMS - read public
-                        .requestMatchers(HttpMethod.GET, "/api/seo/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/cms/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/seo", "/api/seo/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/cms", "/api/cms/**").permitAll()
 
                         .requestMatchers(
                                 "/swagger-ui/**",
@@ -159,6 +166,8 @@ public class SecurityConfig {
                             response.getWriter().write("{\"message\":\"Access denied. You do not have permission to perform this action.\",\"status\":403}");
                         })
                 )
+                .addFilterBefore(canonicalRedirectFilter,
+                        org.springframework.web.filter.CorsFilter.class)
                 .addFilterBefore(rateLimitingFilter,
                         UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter,

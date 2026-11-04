@@ -19,7 +19,7 @@ public class SmsService {
     private static final String SMS_AUTH_KEY = "323556494b4153323030383539301728374563";
     private static final String SMS_ROUTE = "1";
     private static final String SMS_SENDER_ID = "BATRYM";
-    private static final String FRONTEND_URL = "https://www.batterymantra.com";
+    private static final String FRONTEND_URL = "https://batterymantra.com";
 
     // WhatsApp - from .env
     @Value("${sms.wa.base.url}")
