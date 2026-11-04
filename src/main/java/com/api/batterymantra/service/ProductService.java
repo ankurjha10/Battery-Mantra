@@ -60,6 +60,7 @@ public class ProductService {
     private final CityRepository cityRepository;
     private final BulkPricingService bulkPricingService;
     private final SpecUnitRepository specUnitRepository;
+    private final CentralInventoryService centralInventoryService;
 
     private static final String PRODUCT_NOT_FOUND = "Product not found with id: ";
 
@@ -116,6 +117,11 @@ public class ProductService {
                         res.setExchangeDiscount(cp.getExchangeDiscount());
                     });
         }
+
+        res.setProductStock(p.getProductStock());
+        res.setInStock(p.getProductStock() > 0);
+        int threshold = p.getLowStockThreshold() > 0 ? p.getLowStockThreshold() : 10;
+        res.setLowStock(p.getProductStock() > 0 && p.getProductStock() <= threshold);
         
         res.setSeo(SeoUtil.resolveSeo(p.getSeo(), currentCity, p));
         
@@ -132,6 +138,9 @@ public class ProductService {
         res.setExchangeDiscount(p.getExchangeDiscount());
         res.setProductImage(p.getProductImage());
         res.setProductStock(p.getProductStock());
+        res.setInStock(p.getProductStock() > 0);
+        int threshold = p.getLowStockThreshold() > 0 ? p.getLowStockThreshold() : 10;
+        res.setLowStock(p.getProductStock() > 0 && p.getProductStock() <= threshold);
         if (p.getProductCategory() != null) {
             res.setCategoryName(p.getProductCategory().getCategoryName());
             res.setCategoryId(p.getProductCategory().getCategoryId());
@@ -811,6 +820,17 @@ public class ProductService {
             }
             if (req.getHighlights() != null) {
                 product.setHighlights(req.getHighlights());
+            }
+            if (req.getProductStock() != null) {
+                if (req.getProductStock() < 0) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Stock quantity cannot be negative for product: " + product.getProductName());
+                }
+                int oldStock = product.getProductStock();
+                int newStock = req.getProductStock();
+                if (oldStock != newStock) {
+                    product.setProductStock(newStock);
+                    centralInventoryService.recordAuditLog(product, "BULK_UPDATE", newStock - oldStock, oldStock, newStock, null, "ADMIN", "Updated via product bulk-update");
+                }
             }
             updatedProducts.add(product);
         }

@@ -63,6 +63,7 @@ public class OrderService {
     private final CallLogRepository callLogRepository;
     private final StringRedisTemplate redisTemplate;
     private final CampaignService campaignService;
+    private final CentralInventoryService centralInventoryService;
 
     @Transactional
     public OrderResponse placeOrder(UUID customerId, CheckoutRequest request) {
@@ -286,6 +287,9 @@ public class OrderService {
         // Save the Order
         Orders placedOrder = orderRepository.save(orders);
 
+        // Concurrency-safe stock auto-deduction (Pessimistic Write Lock)
+        centralInventoryService.deductStockForOrder(placedOrder, "CUSTOMER");
+
         if (request.getCouponCode() != null && !request.getCouponCode().isBlank() && couponDiscountAmount.compareTo(BigDecimal.ZERO) > 0) {
             couponService.incrementCouponUsage(request.getCouponCode());
         }
@@ -465,6 +469,9 @@ public class OrderService {
         orders.setExchangeDiscount(exchangeDiscount);
 
         Orders placedOrder = orderRepository.save(orders);
+
+        // Deduct stock for admin created order
+        centralInventoryService.deductStockForOrder(placedOrder, "ADMIN");
 
         // Send SMS
         String customerPhone = customer.getPhoneNumber();
@@ -757,17 +764,13 @@ public class OrderService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only pending orders can be cancelled");
         }
 
-        // Restore stock
-        for (OrderItems item : order.getOrderItems()) {
-            Product product = item.getProduct();
-            product.setProductStock(product.getProductStock() + item.getQuantity());
-            productRepository.save(product);
-        }
-
-        order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCancellationReason(reason != null && !reason.isBlank() ? reason : "Cancelled by customer");
         order.setCancelledBy("CUSTOMER");
+        order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCompletedAt(LocalDateTime.now());
+
+        // Concurrency-safe, idempotent stock auto-restoration
+        centralInventoryService.restoreStockForOrder(order, "CUSTOMER", order.getCancellationReason());
         Orders cancelledOrder = orderRepository.save(order);
 
         // Send SMS with actual reason
@@ -821,18 +824,14 @@ public class OrderService {
         // Validate status transition
         validateStatusTransition(order, newStatus);
 
-        // If cancelling, restore stock
-        if (newStatus == OrderStatus.CANCELLED && order.getOrderStatus() != OrderStatus.CANCELLED) {
-            for (OrderItems item : order.getOrderItems()) {
-                Product product = item.getProduct();
-                product.setProductStock(product.getProductStock() + item.getQuantity());
-                productRepository.save(product);
-            }
+        // If cancelling or returning, restore stock
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED) && order.getOrderStatus() != newStatus) {
             order.setCancellationReason(cancellationReason != null && !cancellationReason.isBlank() 
                 ? cancellationReason 
-                : "Cancelled by fulfillment team");
+                : (newStatus == OrderStatus.RETURNED ? "Order returned" : "Cancelled by fulfillment team"));
             order.setCancelledBy("ADMIN");
             order.setCompletedAt(LocalDateTime.now());
+            centralInventoryService.restoreStockForOrder(order, "ADMIN", order.getCancellationReason());
         }
 
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
@@ -916,16 +915,12 @@ public class OrderService {
 
         validateStatusTransition(order, newStatus);
 
-        // If cancelling, restore stock
-        if (newStatus == OrderStatus.CANCELLED && order.getOrderStatus() != OrderStatus.CANCELLED) {
-            for (OrderItems item : order.getOrderItems()) {
-                Product product = item.getProduct();
-                product.setProductStock(product.getProductStock() + item.getQuantity());
-                productRepository.save(product);
-            }
-            order.setCancellationReason("Cancelled by partner branch");
+        // If cancelling or returning, restore stock
+        if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED) && order.getOrderStatus() != newStatus) {
+            order.setCancellationReason(newStatus == OrderStatus.RETURNED ? "Returned by partner branch" : "Cancelled by partner branch");
             order.setCancelledBy("PARTNER");
             order.setCompletedAt(LocalDateTime.now());
+            centralInventoryService.restoreStockForOrder(order, "PARTNER", order.getCancellationReason());
         }
 
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
@@ -1615,12 +1610,8 @@ public class OrderService {
         order.setOrderStatus(OrderStatus.CANCELLED);
         order.setCompletedAt(LocalDateTime.now());
 
-        // Restore stock
-        for (OrderItems item : order.getOrderItems()) {
-            Product product = item.getProduct();
-            product.setProductStock(product.getProductStock() + item.getQuantity());
-            productRepository.save(product);
-        }
+        // Concurrency-safe, idempotent stock auto-restoration
+        centralInventoryService.restoreStockForOrder(order, "ENGINEER", reason);
 
         // Reset engineer duty status
         engineer.setDutyStatus(DutyStatus.ON_DUTY);

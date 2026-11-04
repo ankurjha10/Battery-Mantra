@@ -25,6 +25,9 @@ public class ProductDetailResponse {
     private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
     private int productStock;
+    private boolean inStock;
+    @JsonProperty("isLowStock")
+    private boolean isLowStock;
     private String productImage;
     private List<String> additionalImages;
     private Map<String, Object> specs;

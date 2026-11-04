@@ -10,5 +10,6 @@ public class BulkProductUpdateRequest {
     private BigDecimal productPrice;
     private BigDecimal originalPrice;
     private BigDecimal exchangeDiscount;
+    private Integer productStock;
     private String highlights;
 }

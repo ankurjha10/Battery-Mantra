@@ -18,6 +18,7 @@ import java.util.List;
 public class OrderCronService {
 
     private final OrderRepository orderRepository;
+    private final CentralInventoryService centralInventoryService;
 
     /**
      * Runs every day at midnight (00:00:00).
@@ -43,6 +44,7 @@ public class OrderCronService {
             order.setOrderStatus(OrderStatus.CANCELLED);
             order.setCancellationReason("Auto-cancelled due to 10-day timeout");
             orderRepository.save(order);
+            centralInventoryService.restoreStockForOrder(order, "SYSTEM", order.getCancellationReason());
             count++;
         }
 

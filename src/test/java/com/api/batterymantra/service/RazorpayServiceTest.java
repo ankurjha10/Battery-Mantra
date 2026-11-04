@@ -68,6 +68,9 @@ class RazorpayServiceTest {
     private CouponService couponService;
 
     @Mock
+    private CentralInventoryService centralInventoryService;
+
+    @Mock
     private OrderClient orderClient;
 
     private RazorpayService razorpayService;
@@ -96,7 +99,8 @@ class RazorpayServiceTest {
                 cityRepository,
                 smsService,
                 campaignService,
-                couponService
+                couponService,
+                centralInventoryService
         );
 
         customerId = UUID.randomUUID();

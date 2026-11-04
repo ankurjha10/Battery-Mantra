@@ -233,6 +233,10 @@ public class CartService {
         productResponse.setProductPrice(itemPrice);
         productResponse.setExchangeDiscount(itemExchange);
         productResponse.setProductImage(product.getProductImage());
+        productResponse.setProductStock(product.getProductStock());
+        productResponse.setInStock(product.getProductStock() > 0);
+        int threshold = product.getLowStockThreshold() > 0 ? product.getLowStockThreshold() : 10;
+        productResponse.setLowStock(product.getProductStock() > 0 && product.getProductStock() <= threshold);
         if (product.getProductCategory() != null) {
             productResponse.setProductCategory(product.getProductCategory().getCategoryName());
             productResponse.setCategoryId(product.getProductCategory().getCategoryId());

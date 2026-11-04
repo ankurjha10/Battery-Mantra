@@ -25,6 +25,10 @@ public class ProductListResponse {
     private List<CategorySummaryDto> categories;
     private String capacity;
     private String capacityAh;
+    private int productStock;
+    private boolean inStock;
+    @JsonProperty("isLowStock")
+    private boolean isLowStock;
     @JsonProperty("isAutoAssignToPartner")
     private boolean isAutoAssignToPartner;
     @JsonProperty("isApproved")

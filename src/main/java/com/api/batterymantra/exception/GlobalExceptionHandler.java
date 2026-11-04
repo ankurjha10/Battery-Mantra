@@ -10,10 +10,22 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import org.springframework.security.access.AccessDeniedException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    @ExceptionHandler(InsufficientStockException.class)
+    public ResponseEntity<Map<String, Object>> handleInsufficientStockException(InsufficientStockException ex) {
+        Map<String, Object> error = new LinkedHashMap<>();
+        error.put("error", "INSUFFICIENT_STOCK");
+        error.put("message", ex.getMessage());
+        error.put("productId", ex.getProductId());
+        error.put("availableStock", ex.getAvailableStock());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    }
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(

@@ -50,6 +50,7 @@ public class RazorpayService {
     private final SmsService smsService;
     private final CampaignService campaignService;
     private final CouponService couponService;
+    private final CentralInventoryService centralInventoryService;
 
     @Transactional
     public RazorpayOrderResponse createOrder(UUID customerId, CreateRazorpayOrderRequest request) {
@@ -280,20 +281,17 @@ public class RazorpayService {
             }
         }
 
-        // 9. Link order items and reduce stock
+        // 9. Link order items
         for (int i = 0; i < orderItems.size(); i++) {
             orderItems.get(i).setOrder(orders);
-
-            // Reduce stock
-            CartItem cartItem = cartItemList.get(i);
-            Product product = cartItem.getProduct();
-            product.setProductStock(product.getProductStock() - cartItem.getQuantity());
-            productRepository.save(product);
         }
         orders.setOrderItems(orderItems);
 
         // 10. Save the order — DO NOT clear cart yet
         Orders savedOrder = orderRepository.save(orders);
+
+        // Concurrency-safe stock auto-deduction (Pessimistic Write Lock)
+        centralInventoryService.deductStockForOrder(savedOrder, "CUSTOMER");
 
         log.info("Razorpay order created: {} for internal order: {}",
                 razorpayOrderId, savedOrder.getOrderId());

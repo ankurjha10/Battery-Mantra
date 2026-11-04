@@ -13,5 +13,6 @@ public enum OrderStatus {
     DISPATCHED,
     ACCEPTED,
     COMPLETED,
-    FAILED
+    FAILED,
+    RETURNED
 }

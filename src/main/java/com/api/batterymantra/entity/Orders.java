@@ -135,4 +135,7 @@ public class Orders {
     @Builder.Default
     private BigDecimal campaignDiscountAmount = BigDecimal.ZERO;
 
+    @Column(name = "stock_restored", nullable = false)
+    @Builder.Default
+    private boolean stockRestored = false;
 }

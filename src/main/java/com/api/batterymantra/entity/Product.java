@@ -1,9 +1,11 @@
 package com.api.batterymantra.entity;
 
+import com.api.batterymantra.entity.enums.StockStatus;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
 import org.hibernate.annotations.UuidGenerator;
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -72,7 +74,11 @@ public class Product {
     private String capacity;
 
     @Min(0)
-    private int productStock;
+    @Column(name = "product_stock", nullable = false)
+    private int productStock = 0;
+
+    @Column(name = "low_stock_threshold", nullable = false)
+    private int lowStockThreshold = 10;
 
     @PositiveOrZero
     private BigDecimal productPrice;
@@ -130,4 +136,19 @@ public class Product {
 
     @Embedded
     private SeoMetadata seo = new SeoMetadata();
+
+    @UpdateTimestamp
+    @Column(name = "updated_at")
+    private LocalDateTime updatedAt;
+
+    public StockStatus getStockStatus() {
+        int threshold = this.lowStockThreshold > 0 ? this.lowStockThreshold : 10;
+        if (this.productStock <= 0) {
+            return StockStatus.OUT_OF_STOCK;
+        } else if (this.productStock <= threshold) {
+            return StockStatus.LOW_STOCK;
+        } else {
+            return StockStatus.IN_STOCK;
+        }
+    }
 }
