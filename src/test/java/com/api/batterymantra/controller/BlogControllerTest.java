@@ -203,6 +203,8 @@ class BlogControllerTest {
                     .content("<p>Everything about batteries</p>")
                     .category("Car Batteries")
                     .status("DRAFT")
+                    .recommendationType("BRAND")
+                    .relatedBrandName("Amaron")
                     .build();
 
             BlogPostDetailResponse created = BlogPostDetailResponse.builder()
@@ -212,6 +214,8 @@ class BlogControllerTest {
                     .content("<p>Everything about batteries</p>")
                     .category("Car Batteries")
                     .status("DRAFT")
+                    .recommendationType("BRAND")
+                    .relatedBrandName("Amaron")
                     .readTimeMinutes(1)
                     .createdAt(Instant.now())
                     .build();
@@ -223,7 +227,9 @@ class BlogControllerTest {
                             .content(objectMapper.writeValueAsString(request)))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.title").value("New Car Battery Article"))
-                    .andExpect(jsonPath("$.slug").value("new-car-battery-article"));
+                    .andExpect(jsonPath("$.slug").value("new-car-battery-article"))
+                    .andExpect(jsonPath("$.recommendationType").value("BRAND"))
+                    .andExpect(jsonPath("$.relatedBrandName").value("Amaron"));
         }
 
         @Test

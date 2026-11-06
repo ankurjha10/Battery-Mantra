@@ -112,10 +112,38 @@ public class BlogPost {
     @Column(name = "og_image", length = 512)
     private String ogImage;
 
-    // E-Commerce Conversion: Store array of related Product UUIDs
+    // E-Commerce Conversion: Specific Products, Category, Brand, or Manufacturer CTA
+    @Builder.Default
+    @Column(name = "recommendation_type", length = 20)
+    private String recommendationType = "PRODUCTS";
+
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(name = "related_product_ids", columnDefinition = "jsonb")
     @Builder.Default
     private List<UUID> relatedProductIds = new ArrayList<>();
+
+    @Column(name = "related_category_id")
+    private UUID relatedCategoryId;
+
+    @Column(name = "related_category_name", length = 100)
+    private String relatedCategoryName;
+
+    @Column(name = "related_category_slug", length = 100)
+    private String relatedCategorySlug;
+
+    @Column(name = "related_brand_id")
+    private UUID relatedBrandId;
+
+    @Column(name = "related_brand_name", length = 100)
+    private String relatedBrandName;
+
+    @Column(name = "related_brand_slug", length = 100)
+    private String relatedBrandSlug;
+
+    @Column(name = "related_manufacturer_id")
+    private UUID relatedManufacturerId;
+
+    @Column(name = "related_manufacturer_name", length = 100)
+    private String relatedManufacturerName;
 }
 

@@ -148,6 +148,10 @@ public class BlogService {
                 ? request.getAuthorName().trim()
                 : "Battery Mantra Team";
 
+        String recommendationType = (request.getRecommendationType() != null && !request.getRecommendationType().trim().isEmpty())
+                ? request.getRecommendationType().trim().toUpperCase()
+                : "PRODUCTS";
+
         BlogPost post = BlogPost.builder()
                 .title(request.getTitle().trim())
                 .slug(slug)
@@ -168,7 +172,16 @@ public class BlogService {
                 .metaKeywords(request.getMetaKeywords())
                 .canonicalUrl(request.getCanonicalUrl())
                 .ogImage(request.getOgImage())
+                .recommendationType(recommendationType)
                 .relatedProductIds(request.getRelatedProductIds() != null ? request.getRelatedProductIds() : new ArrayList<>())
+                .relatedCategoryId(request.getRelatedCategoryId())
+                .relatedCategoryName(request.getRelatedCategoryName())
+                .relatedCategorySlug(request.getRelatedCategorySlug())
+                .relatedBrandId(request.getRelatedBrandId())
+                .relatedBrandName(request.getRelatedBrandName())
+                .relatedBrandSlug(request.getRelatedBrandSlug())
+                .relatedManufacturerId(request.getRelatedManufacturerId())
+                .relatedManufacturerName(request.getRelatedManufacturerName())
                 .build();
 
         BlogPost saved = blogPostRepository.save(post);
@@ -209,7 +222,18 @@ public class BlogService {
         post.setMetaKeywords(request.getMetaKeywords());
         post.setCanonicalUrl(request.getCanonicalUrl());
         post.setOgImage(request.getOgImage());
+        if (request.getRecommendationType() != null && !request.getRecommendationType().trim().isEmpty()) {
+            post.setRecommendationType(request.getRecommendationType().trim().toUpperCase());
+        }
         post.setRelatedProductIds(request.getRelatedProductIds() != null ? request.getRelatedProductIds() : new ArrayList<>());
+        post.setRelatedCategoryId(request.getRelatedCategoryId());
+        post.setRelatedCategoryName(request.getRelatedCategoryName());
+        post.setRelatedCategorySlug(request.getRelatedCategorySlug());
+        post.setRelatedBrandId(request.getRelatedBrandId());
+        post.setRelatedBrandName(request.getRelatedBrandName());
+        post.setRelatedBrandSlug(request.getRelatedBrandSlug());
+        post.setRelatedManufacturerId(request.getRelatedManufacturerId());
+        post.setRelatedManufacturerName(request.getRelatedManufacturerName());
 
         BlogPost saved = blogPostRepository.save(post);
         return mapToDetailResponse(saved);
@@ -355,6 +379,15 @@ public class BlogService {
                 .metaKeywords(b.getMetaKeywords())
                 .canonicalUrl(b.getCanonicalUrl())
                 .ogImage(b.getOgImage())
+                .recommendationType(b.getRecommendationType() != null ? b.getRecommendationType() : "PRODUCTS")
+                .relatedCategoryId(b.getRelatedCategoryId())
+                .relatedCategoryName(b.getRelatedCategoryName())
+                .relatedCategorySlug(b.getRelatedCategorySlug())
+                .relatedBrandId(b.getRelatedBrandId())
+                .relatedBrandName(b.getRelatedBrandName())
+                .relatedBrandSlug(b.getRelatedBrandSlug())
+                .relatedManufacturerId(b.getRelatedManufacturerId())
+                .relatedManufacturerName(b.getRelatedManufacturerName())
                 .relatedProducts(relatedProducts)
                 .relatedProductIds(b.getRelatedProductIds() != null ? new ArrayList<>(b.getRelatedProductIds()) : new ArrayList<>())
                 .build();

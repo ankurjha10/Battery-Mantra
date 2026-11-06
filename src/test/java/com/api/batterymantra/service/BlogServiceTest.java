@@ -193,6 +193,50 @@ class BlogServiceTest {
             assertEquals("PUBLISHED", response.getStatus());
             assertNotNull(response.getPublishedAt());
             assertEquals("Battery Mantra Team", response.getAuthorName());
+            assertEquals("PRODUCTS", response.getRecommendationType());
+        }
+
+        @Test
+        @DisplayName("createBlog should preserve brand, category, manufacturer CTA recommendation fields")
+        void createBlog_withRecommendationsAndAttachedCta() {
+            UUID brandId = UUID.randomUUID();
+            UUID catId = UUID.randomUUID();
+            UUID mfrId = UUID.randomUUID();
+
+            CreateBlogPostRequest request = CreateBlogPostRequest.builder()
+                    .title("Amaron Car Battery Buying Guide")
+                    .content("<p>Everything about Amaron</p>")
+                    .category("Car Batteries")
+                    .recommendationType("BRAND")
+                    .relatedBrandId(brandId)
+                    .relatedBrandName("Amaron")
+                    .relatedBrandSlug("amaron")
+                    .relatedCategoryId(catId)
+                    .relatedCategoryName("Car Batteries")
+                    .relatedCategorySlug("car-batteries")
+                    .relatedManufacturerId(mfrId)
+                    .relatedManufacturerName("Maruti Suzuki")
+                    .build();
+
+            when(blogPostRepository.existsBySlug("amaron-car-battery-buying-guide")).thenReturn(false);
+            when(blogPostRepository.save(any(BlogPost.class))).thenAnswer(invocation -> {
+                BlogPost saved = invocation.getArgument(0);
+                saved.setId(UUID.randomUUID());
+                return saved;
+            });
+
+            BlogPostDetailResponse response = blogService.createBlog(request);
+
+            assertNotNull(response);
+            assertEquals("BRAND", response.getRecommendationType());
+            assertEquals(brandId, response.getRelatedBrandId());
+            assertEquals("Amaron", response.getRelatedBrandName());
+            assertEquals("amaron", response.getRelatedBrandSlug());
+            assertEquals(catId, response.getRelatedCategoryId());
+            assertEquals("Car Batteries", response.getRelatedCategoryName());
+            assertEquals("car-batteries", response.getRelatedCategorySlug());
+            assertEquals(mfrId, response.getRelatedManufacturerId());
+            assertEquals("Maruti Suzuki", response.getRelatedManufacturerName());
         }
 
         @Test

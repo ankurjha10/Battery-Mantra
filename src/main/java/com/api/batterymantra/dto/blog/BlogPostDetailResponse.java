@@ -34,6 +34,17 @@ public class BlogPostDetailResponse {
     private Instant createdAt;
     private Instant updatedAt;
 
+    // Recommendations & Attached CTAs
+    private String recommendationType; // NONE, PRODUCTS, CATEGORY, BRAND, MANUFACTURER
+    private UUID relatedCategoryId;
+    private String relatedCategoryName;
+    private String relatedCategorySlug;
+    private UUID relatedBrandId;
+    private String relatedBrandName;
+    private String relatedBrandSlug;
+    private UUID relatedManufacturerId;
+    private String relatedManufacturerName;
+
     // SEO
     private String metaTitle;
     private String metaDescription;
