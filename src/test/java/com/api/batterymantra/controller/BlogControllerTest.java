@@ -74,7 +74,7 @@ class BlogControllerTest {
                     .build();
 
             when(blogService.getPublicBlogs(anyInt(), anyInt(), any(), any(), any(), any()))
-                    .thenReturn(new PageImpl<>(List.of(item)));
+                    .thenReturn(new PageImpl<>(List.of(item), org.springframework.data.domain.PageRequest.of(0, 10), 1));
 
             publicMockMvc.perform(get("/api/blogs")
                             .param("page", "0")
@@ -167,7 +167,7 @@ class BlogControllerTest {
                     .build();
 
             when(blogService.getAdminBlogs(anyInt(), anyInt(), any(), any(), any()))
-                    .thenReturn(new PageImpl<>(List.of(item)));
+                    .thenReturn(new PageImpl<>(List.of(item), org.springframework.data.domain.PageRequest.of(0, 10), 1));
 
             adminMockMvc.perform(get("/api/admin/blogs")
                             .contentType(MediaType.APPLICATION_JSON))
