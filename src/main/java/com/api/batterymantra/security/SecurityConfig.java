@@ -70,6 +70,9 @@ public class SecurityConfig {
                         // Campaigns & Offers — public storefront
                         .requestMatchers("/api/campaigns", "/api/campaigns/**").permitAll()
 
+                        // Blogs — read public
+                        .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/**").permitAll()
+
                         // FAQs - public
                         .requestMatchers(HttpMethod.GET, "/api/faqs/public", "/api/faqs/public/**").permitAll()
 
