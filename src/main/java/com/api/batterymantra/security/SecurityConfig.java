@@ -70,6 +70,9 @@ public class SecurityConfig {
                         // Campaigns & Offers — public storefront
                         .requestMatchers("/api/campaigns", "/api/campaigns/**").permitAll()
 
+                        // Coupons — public storefront (active PDP display, apply)
+                        .requestMatchers("/api/coupons/**").permitAll()
+
                         // Blogs — read public
                         .requestMatchers(HttpMethod.GET, "/api/blogs", "/api/blogs/**").permitAll()
 

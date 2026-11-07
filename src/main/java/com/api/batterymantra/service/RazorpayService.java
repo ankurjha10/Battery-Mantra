@@ -200,8 +200,22 @@ public class RazorpayService {
 
         // If couponCode was passed but not claimed by a campaign, check traditional CouponService
         if (couponCode != null && !couponCode.isBlank() && appliedCampaignId == null) {
-            var couponResponse = couponService.applyCoupon(couponCode, total.subtract(campaignDiscountAmount).doubleValue());
-            if (couponResponse.getIsValid()) {
+            List<com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto> couponCartItems = (cartItemList != null)
+                    ? cartItemList.stream().map(ci -> com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto.builder()
+                            .productId(ci.getProduct() != null && ci.getProduct().getProductId() != null ? ci.getProduct().getProductId().toString() : null)
+                            .categoryId(ci.getProduct() != null && ci.getProduct().getProductCategory() != null && ci.getProduct().getProductCategory().getCategoryId() != null ? ci.getProduct().getProductCategory().getCategoryId().toString() : null)
+                            .brandId(ci.getProduct() != null && ci.getProduct().getBrand() != null && ci.getProduct().getBrand().getBrandId() != null ? ci.getProduct().getBrand().getBrandId().toString() : null)
+                            .productPrice(ci.getProduct() != null && ci.getProduct().getProductPrice() != null ? ci.getProduct().getProductPrice().doubleValue() : 0.0)
+                            .quantity(ci.getQuantity())
+                            .build()).toList()
+                    : List.of();
+
+            var couponResponse = couponService.applyCoupon(com.api.batterymantra.dto.coupon.ApplyCouponRequest.builder()
+                    .code(couponCode)
+                    .cartTotal(total.subtract(campaignDiscountAmount).doubleValue())
+                    .cartItems(couponCartItems)
+                    .build());
+            if (Boolean.TRUE.equals(couponResponse.getIsValid())) {
                 couponDiscountAmount = BigDecimal.valueOf(couponResponse.getDiscountAmount());
             } else {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST, couponResponse.getMessage());

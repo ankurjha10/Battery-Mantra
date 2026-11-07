@@ -3,6 +3,7 @@ package com.api.batterymantra.controller.admin;
 import com.api.batterymantra.dto.coupon.CouponRequest;
 import com.api.batterymantra.dto.coupon.CouponResponse;
 import com.api.batterymantra.service.CouponService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,12 +22,12 @@ public class AdminCouponController {
     private final CouponService couponService;
 
     @PostMapping
-    public ResponseEntity<CouponResponse> createCoupon(@RequestBody CouponRequest request) {
+    public ResponseEntity<CouponResponse> createCoupon(@Valid @RequestBody CouponRequest request) {
         return new ResponseEntity<>(couponService.createCoupon(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<CouponResponse> updateCoupon(@PathVariable UUID id, @RequestBody CouponRequest request) {
+    public ResponseEntity<CouponResponse> updateCoupon(@PathVariable UUID id, @Valid @RequestBody CouponRequest request) {
         return ResponseEntity.ok(couponService.updateCoupon(id, request));
     }
 
