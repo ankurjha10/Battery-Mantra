@@ -6,6 +6,7 @@ RUN mvn clean package -DskipTests
 
 FROM eclipse-temurin:21-jre-jammy
 WORKDIR /app
+RUN mkdir -p /var/www/batterymantra/uploads
 COPY --from=build /app/target/batterymantra.jar app.jar
 EXPOSE 8080
 
