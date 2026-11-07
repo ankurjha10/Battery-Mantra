@@ -150,6 +150,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/seo", "/api/seo/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/cms", "/api/cms/**").permitAll()
 
+                        // Static uploaded files (local development fallback)
+                        .requestMatchers(HttpMethod.GET, "/uploads/**").permitAll()
+
                         .requestMatchers(
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
