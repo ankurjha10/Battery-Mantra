@@ -7,6 +7,7 @@ services:
       - batterymantra-network
     volumes:
       - ./serviceAccountKey.json:/app/serviceAccountKey.json
+      - /var/www/batterymantra/uploads:/var/www/batterymantra/uploads
     env_file:
       - .env
     depends_on:

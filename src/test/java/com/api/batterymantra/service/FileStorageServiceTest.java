@@ -108,7 +108,7 @@ class FileStorageServiceTest {
     }
 
     @Test
-    @DisplayName("uploadImage: sanitizes folder name and prevents directory traversal")
+    @DisplayName("uploadImage: sanitizes folder name and prevents directory traversal while allowing safe slashes")
     void testUploadImage_SanitizeFolder() throws IOException {
         MockMultipartFile file = new MockMultipartFile(
                 "file",
@@ -117,16 +117,38 @@ class FileStorageServiceTest {
                 "data".getBytes()
         );
 
-        // Path traversal attempts in folder name
+        // Path traversal attempts in folder name with special characters
         FileStorageService.UploadResult result = fileStorageService.uploadImage(file, "../../dangerous/folder!@#$");
 
-        // Allowed chars: [a-zA-Z0-9_-], so "../..dangerousfolder!@#$" -> "dangerousfolder"
+        // Allowed chars: [a-zA-Z0-9_/-] with .. stripped -> "dangerous/folder"
         assertFalse(result.publicId().contains(".."));
-        assertTrue(result.publicId().startsWith("dangerousfolder/"));
+        assertTrue(result.publicId().startsWith("dangerous/folder/"));
 
         // Blank or null folder defaults to "misc"
         FileStorageService.UploadResult miscResult = fileStorageService.uploadImage(file, "   ");
         assertTrue(miscResult.publicId().startsWith("misc/"));
+    }
+
+    @Test
+    @DisplayName("uploadImage: preserves nested subdirectories (e.g. battery-mantra/categories)")
+    void testUploadImage_NestedSubfolders() throws IOException {
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "category.png",
+                "image/png",
+                "category data".getBytes()
+        );
+
+        FileStorageService.UploadResult result = fileStorageService.uploadImage(file, "battery-mantra/categories");
+        assertNotNull(result);
+        assertTrue(result.publicId().startsWith("battery-mantra/categories/"));
+        assertTrue(result.publicId().endsWith(".png"));
+        assertEquals("https://batterymantra.com/uploads/" + result.publicId(), result.url());
+
+        // Verify the nested directory structure was physically created on disk
+        Path savedFile = tempUploadDir.resolve(result.publicId());
+        assertTrue(Files.exists(savedFile));
+        assertEquals("category data", Files.readString(savedFile));
     }
 }
 

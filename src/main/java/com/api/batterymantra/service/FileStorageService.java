@@ -35,10 +35,18 @@ public class FileStorageService {
             throw new IllegalArgumentException("Cannot upload an empty file");
         }
 
-        // 1. Sanitize folder name
-        String safeFolder = (folder == null || folder.isBlank()) ? "misc" : folder.replaceAll("[^a-zA-Z0-9_-]", "");
-        if (safeFolder.isBlank()) {
-            safeFolder = "misc";
+        // 1. Sanitize folder path: allow alphanumeric, underscores, hyphens, and slashes, but prevent directory traversal (..)
+        String safeFolder = "misc";
+        if (folder != null && !folder.isBlank()) {
+            safeFolder = folder.trim()
+                    .replace("\\", "/")
+                    .replaceAll("\\.{2,}", "")           // prevent directory traversal (../)
+                    .replaceAll("[^a-zA-Z0-9_/-]", "")   // keep letters, numbers, _, -, /
+                    .replaceAll("/+", "/")               // collapse consecutive slashes
+                    .replaceAll("^/+|/+$", "");          // strip leading and trailing slashes
+            if (safeFolder.isBlank()) {
+                safeFolder = "misc";
+            }
         }
 
         // 2. Extract and validate extension
