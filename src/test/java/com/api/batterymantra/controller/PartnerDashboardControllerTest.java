@@ -1,5 +1,9 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.inventory.CityInventoryBulkUpdateResponse;
+import com.api.batterymantra.dto.inventory.CityProductStockItem;
+import com.api.batterymantra.dto.inventory.PartnerBulkInventoryUpdateRequest;
+import com.api.batterymantra.dto.inventory.PartnerInventoryItemResponse;
 import com.api.batterymantra.dto.order.OrderNoteRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.dto.product.CityPricingRequestDto;
@@ -61,6 +65,9 @@ class PartnerDashboardControllerTest {
 
     @Mock
     private CityPricingRequestService cityPricingRequestService;
+
+    @Mock
+    private CityInventoryService cityInventoryService;
 
     @InjectMocks
     private PartnerDashboardController controller;
@@ -197,6 +204,92 @@ class PartnerDashboardControllerTest {
                 .andExpect(jsonPath("$.length()").value(1))
                 .andExpect(jsonPath("$[0].status").value("PENDING_APPROVAL"))
                 .andExpect(jsonPath("$[0].price").value(4800.0));
+    }
+
+    @Test
+    @DisplayName("GET /api/partner/inventory returns branch inventory for assigned city")
+    void testGetBranchInventory() throws Exception {
+        UUID cityId = UUID.randomUUID();
+        PartnerInventoryItemResponse item = PartnerInventoryItemResponse.builder()
+                .productId(UUID.randomUUID())
+                .productName("Exide Mileage ML38B20R")
+                .productPrice(BigDecimal.valueOf(4299))
+                .exchangeDiscount(BigDecimal.valueOf(600))
+                .productStock(14)
+                .brandName("Exide")
+                .capacity("35Ah")
+                .productCategory("Car Battery")
+                .productImage("https://img.batterymantra.com/exide.png")
+                .build();
+
+        when(cityInventoryService.getPartnerCityInventory(eq(cityId), any(PartnerProfile.class)))
+                .thenReturn(List.of(item));
+
+        mockMvc.perform(get("/api/partner/inventory")
+                        .param("cityId", cityId.toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].productName").value("Exide Mileage ML38B20R"))
+                .andExpect(jsonPath("$[0].productPrice").value(4299))
+                .andExpect(jsonPath("$[0].exchangeDiscount").value(600))
+                .andExpect(jsonPath("$[0].productStock").value(14))
+                .andExpect(jsonPath("$[0].brandName").value("Exide"));
+    }
+
+    @Test
+    @DisplayName("PATCH /api/partner/inventory/{productId}/stock updates single product stock")
+    void testUpdateBranchStock() throws Exception {
+        UUID productId = UUID.randomUUID();
+        UUID cityId = UUID.randomUUID();
+
+        PartnerInventoryItemResponse item = PartnerInventoryItemResponse.builder()
+                .productId(productId)
+                .productName("Exide Mileage ML38B20R")
+                .productStock(20)
+                .build();
+
+        when(cityInventoryService.updatePartnerProductStock(eq(productId), eq(cityId), eq(20), any(PartnerProfile.class)))
+                .thenReturn(item);
+
+        mockMvc.perform(patch("/api/partner/inventory/{productId}/stock", productId)
+                        .param("cityId", cityId.toString())
+                        .param("stock", "20"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.productStock").value(20));
+    }
+
+    @Test
+    @DisplayName("POST /api/partner/inventory/bulk-update updates stock across multiple products")
+    void testBulkUpdateBranchStock() throws Exception {
+        UUID cityId = UUID.randomUUID();
+        UUID prod1 = UUID.randomUUID();
+        UUID prod2 = UUID.randomUUID();
+
+        PartnerBulkInventoryUpdateRequest request = PartnerBulkInventoryUpdateRequest.builder()
+                .cityId(cityId)
+                .updates(List.of(
+                        new CityProductStockItem(prod1, 10),
+                        new CityProductStockItem(prod2, 0)
+                ))
+                .build();
+
+        CityInventoryBulkUpdateResponse response = CityInventoryBulkUpdateResponse.builder()
+                .cityId(cityId)
+                .updatedCount(2)
+                .message("Branch inventory updated successfully")
+                .build();
+
+        when(cityInventoryService.bulkUpdatePartnerCityStock(any(PartnerBulkInventoryUpdateRequest.class), any(PartnerProfile.class)))
+                .thenReturn(response);
+
+        mockMvc.perform(post("/api/partner/inventory/bulk-update")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cityId").value(cityId.toString()))
+                .andExpect(jsonPath("$.updatedCount").value(2))
+                .andExpect(jsonPath("$.message").value("Branch inventory updated successfully"));
     }
 }
 

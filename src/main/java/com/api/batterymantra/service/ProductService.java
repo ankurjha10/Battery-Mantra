@@ -743,7 +743,7 @@ public class ProductService {
                 .anyMatch(c -> c.getCityId().equals(dto.getCityId()));
 
         if (!isPartnerCity) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "You can only change prices for your branch operating cities.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Access denied: You are not authorized to manage inventory for this city");
         }
 
         City city = cityRepository.findById(dto.getCityId())

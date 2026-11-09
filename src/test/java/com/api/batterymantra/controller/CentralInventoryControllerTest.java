@@ -35,6 +35,9 @@ class CentralInventoryControllerTest {
     @Mock
     private CentralInventoryService inventoryService;
 
+    @Mock
+    private com.api.batterymantra.service.CityInventoryService cityInventoryService;
+
     @InjectMocks
     private CentralInventoryController controller;
 
@@ -132,6 +135,72 @@ class CentralInventoryControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.updatedCount").value(2))
                 .andExpect(jsonPath("$.message").value("Bulk stock updated successfully"));
+    }
+
+    @Test
+    void shouldGetCityInventoryForAdmin() throws Exception {
+        UUID cityId = UUID.randomUUID();
+        PartnerInventoryItemResponse item = PartnerInventoryItemResponse.builder()
+                .productId(UUID.randomUUID())
+                .productName("Exide Mileage ML38B20R")
+                .productPrice(BigDecimal.valueOf(4299))
+                .productStock(14)
+                .build();
+
+        when(cityInventoryService.getCityInventoryForAdmin(cityId))
+                .thenReturn(List.of(item));
+
+        mockMvc.perform(get("/api/admin/inventory/cities/{cityId}", cityId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].productName").value("Exide Mileage ML38B20R"))
+                .andExpect(jsonPath("$[0].productStock").value(14));
+    }
+
+    @Test
+    void shouldUpdateCityProductStockForAdmin() throws Exception {
+        UUID cityId = UUID.randomUUID();
+        UUID productId = UUID.randomUUID();
+        CityStockUpdateRequest request = new CityStockUpdateRequest(25);
+
+        PartnerInventoryItemResponse item = PartnerInventoryItemResponse.builder()
+                .productId(productId)
+                .productStock(25)
+                .build();
+
+        when(cityInventoryService.updateAdminCityProductStock(cityId, productId, 25))
+                .thenReturn(item);
+
+        mockMvc.perform(patch("/api/admin/inventory/cities/{cityId}/products/{productId}", cityId, productId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.productId").value(productId.toString()))
+                .andExpect(jsonPath("$.productStock").value(25));
+    }
+
+    @Test
+    void shouldBulkUpdateCityStockForAdmin() throws Exception {
+        UUID cityId = UUID.randomUUID();
+        UUID p1 = UUID.randomUUID();
+        List<CityProductStockItem> updates = List.of(new CityProductStockItem(p1, 15));
+
+        CityInventoryBulkUpdateResponse response = CityInventoryBulkUpdateResponse.builder()
+                .cityId(cityId)
+                .updatedCount(1)
+                .message("City inventory bulk updated successfully")
+                .build();
+
+        when(cityInventoryService.bulkUpdateAdminCityStock(eq(cityId), any()))
+                .thenReturn(response);
+
+        mockMvc.perform(put("/api/admin/inventory/cities/{cityId}/bulk-update", cityId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(updates)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.cityId").value(cityId.toString()))
+                .andExpect(jsonPath("$.updatedCount").value(1))
+                .andExpect(jsonPath("$.message").value("City inventory bulk updated successfully"));
     }
 }
 

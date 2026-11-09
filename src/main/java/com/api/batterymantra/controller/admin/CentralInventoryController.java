@@ -4,6 +4,7 @@ import com.api.batterymantra.dto.inventory.*;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.StockStatus;
 import com.api.batterymantra.service.CentralInventoryService;
+import com.api.batterymantra.service.CityInventoryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ import java.util.UUID;
 public class CentralInventoryController {
 
     private final CentralInventoryService inventoryService;
+    private final CityInventoryService cityInventoryService;
 
     /**
      * GET /api/admin/inventory
@@ -91,6 +93,41 @@ public class CentralInventoryController {
         Page<StockAuditLogResponse> logs = inventoryService.getProductAuditLogs(
                 productId, PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt")));
         return ResponseEntity.ok(logs);
+    }
+
+    // ===== Admin Multi-City Inventory =====
+
+    /**
+     * GET /api/admin/inventory/cities/{cityId}
+     * Unrestricted view of any city's branch inventory for Super Admin.
+     */
+    @GetMapping("/cities/{cityId}")
+    public ResponseEntity<List<PartnerInventoryItemResponse>> getCityInventory(
+            @PathVariable UUID cityId) {
+        return ResponseEntity.ok(cityInventoryService.getCityInventoryForAdmin(cityId));
+    }
+
+    /**
+     * PATCH /api/admin/inventory/cities/{cityId}/products/{productId}
+     * Updates stock in the city_pricing table for that product & city.
+     */
+    @PatchMapping("/cities/{cityId}/products/{productId}")
+    public ResponseEntity<PartnerInventoryItemResponse> updateCityProductStock(
+            @PathVariable UUID cityId,
+            @PathVariable UUID productId,
+            @Valid @RequestBody CityStockUpdateRequest request) {
+        return ResponseEntity.ok(cityInventoryService.updateAdminCityProductStock(cityId, productId, request.getStock()));
+    }
+
+    /**
+     * PUT /api/admin/inventory/cities/{cityId}/bulk-update
+     * Bulk updates stock in the city_pricing table for that city.
+     */
+    @PutMapping("/cities/{cityId}/bulk-update")
+    public ResponseEntity<CityInventoryBulkUpdateResponse> bulkUpdateCityStock(
+            @PathVariable UUID cityId,
+            @Valid @RequestBody List<CityProductStockItem> updates) {
+        return ResponseEntity.ok(cityInventoryService.bulkUpdateAdminCityStock(cityId, updates));
     }
 }
 

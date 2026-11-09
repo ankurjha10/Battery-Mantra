@@ -48,7 +48,7 @@ public class CityPricingRequestService {
 
         if (!operatesInCity) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
-                    "You can only request price changes for your branch operating cities.");
+                    "Access denied: You are not authorized to manage inventory for this city");
         }
 
         CityPricingRequest request = CityPricingRequest.builder()

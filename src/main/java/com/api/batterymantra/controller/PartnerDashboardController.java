@@ -1,5 +1,8 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.inventory.CityInventoryBulkUpdateResponse;
+import com.api.batterymantra.dto.inventory.PartnerBulkInventoryUpdateRequest;
+import com.api.batterymantra.dto.inventory.PartnerInventoryItemResponse;
 import com.api.batterymantra.dto.order.OrderNoteRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
 import com.api.batterymantra.dto.product.CityPricingRequestDto;
@@ -8,6 +11,7 @@ import com.api.batterymantra.dto.user.CreateEngineerRequest;
 import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.OrderStatus;
+import com.api.batterymantra.service.CityInventoryService;
 import com.api.batterymantra.service.CityPricingRequestService;
 import com.api.batterymantra.service.EngineerService;
 import com.api.batterymantra.service.OrderService;
@@ -44,6 +48,7 @@ public class PartnerDashboardController {
     private final ProductService productService;
     private final PartnerService partnerService;
     private final CityPricingRequestService cityPricingRequestService;
+    private final CityInventoryService cityInventoryService;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
         return partnerProfileRepository.findByUserUserId(userPrincipal.getUser().getUserId())
@@ -198,5 +203,36 @@ public class PartnerDashboardController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
         return ResponseEntity.ok(cityPricingRequestService.getPendingRequestsForPartner(partnerProfile.getId()));
+    }
+
+    // ===== Branch / Multi-City Inventory =====
+
+    @GetMapping("/inventory")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<List<PartnerInventoryItemResponse>> getBranchInventory(
+            @RequestParam UUID cityId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(cityInventoryService.getPartnerCityInventory(cityId, partnerProfile));
+    }
+
+    @PatchMapping("/inventory/{productId}/stock")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<PartnerInventoryItemResponse> updateBranchStock(
+            @PathVariable UUID productId,
+            @RequestParam UUID cityId,
+            @RequestParam int stock,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(cityInventoryService.updatePartnerProductStock(productId, cityId, stock, partnerProfile));
+    }
+
+    @PostMapping("/inventory/bulk-update")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<CityInventoryBulkUpdateResponse> bulkUpdateBranchStock(
+            @Valid @RequestBody PartnerBulkInventoryUpdateRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(cityInventoryService.bulkUpdatePartnerCityStock(request, partnerProfile));
     }
 }
