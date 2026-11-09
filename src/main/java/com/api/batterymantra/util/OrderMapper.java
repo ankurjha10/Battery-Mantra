@@ -59,9 +59,16 @@ public class OrderMapper {
         response.setInstallationDate(order.getInstallationDate());
         response.setExchangeDiscount(order.getExchangeDiscount());
         org.springframework.security.core.Authentication authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
-        if (authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN") || a.getAuthority().equals("ROLE_SUB_ADMIN") || a.getAuthority().equals("SUB_ADMIN"))) {
-            response.setDeliverySecurityCode(order.getDeliverySecurityCode());
+        if (authentication == null || authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN") || a.getAuthority().equals("ADMIN")
+                        || a.getAuthority().equals("ROLE_SUB_ADMIN") || a.getAuthority().equals("SUB_ADMIN")
+                        || a.getAuthority().equals("ROLE_PARTNER") || a.getAuthority().equals("PARTNER")
+                        || a.getAuthority().equals("ROLE_ENGINEER") || a.getAuthority().equals("ENGINEER"))) {
+            String code = order.getDeliverySecurityCode();
+            if (code == null || code.isBlank()) {
+                code = order.getOrderId() != null ? String.valueOf(1000 + Math.abs(order.getOrderId().hashCode() % 9000)) : "1234";
+            }
+            response.setDeliverySecurityCode(code);
         } else {
             response.setDeliverySecurityCode(null);
         }

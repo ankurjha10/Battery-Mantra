@@ -106,6 +106,7 @@ public class OrderService {
         }
 
         // Creating a new Order
+        String initialSecurityCode = String.valueOf(1000 + new Random().nextInt(9000));
         Orders orders = Orders.builder()
                 .customer(cart.getCustomer())
                 .shippingAddress(address)
@@ -115,6 +116,7 @@ public class OrderService {
                 .paymentMethod(paymentMethod)
                 .installationDate(request.getInstallationDate())
                 .selectedCity(request.getSelectedCity())
+                .deliverySecurityCode(initialSecurityCode)
                 .build();
 
         // Resolve Target City for Dynamic Pricing
@@ -371,6 +373,7 @@ public class OrderService {
                 .deliveryMethod(deliveryMethod)
                 .paymentMethod(paymentMethod)
                 .installationDate(request.getInstallationDate())
+                .deliverySecurityCode(String.valueOf(1000 + new Random().nextInt(9000)))
                 .build();
 
         // Resolve City for city-specific pricing
@@ -905,6 +908,11 @@ public class OrderService {
 
     @Transactional
     public OrderResponse updatePartnerOrderStatus(UUID orderId, OrderStatus newStatus, UUID partnerProfileId) {
+        return updatePartnerOrderStatus(orderId, newStatus, null, partnerProfileId);
+    }
+
+    @Transactional
+    public OrderResponse updatePartnerOrderStatus(UUID orderId, OrderStatus newStatus, String cancellationReason, UUID partnerProfileId) {
         Orders order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
 
@@ -913,14 +921,19 @@ public class OrderService {
                     "Access denied to this order. It is not assigned to you.");
         }
 
-        validateStatusTransition(order, newStatus);
+        validatePartnerStatusTransition(order, newStatus);
 
         // If cancelling or returning, restore stock
         if ((newStatus == OrderStatus.CANCELLED || newStatus == OrderStatus.RETURNED) && order.getOrderStatus() != newStatus) {
-            order.setCancellationReason(newStatus == OrderStatus.RETURNED ? "Returned by partner branch" : "Cancelled by partner branch");
+            String reason = (cancellationReason != null && !cancellationReason.isBlank())
+                    ? cancellationReason
+                    : (newStatus == OrderStatus.RETURNED ? "Returned by partner branch" : "Cancelled by partner branch");
+            order.setCancellationReason(reason);
             order.setCancelledBy("PARTNER");
             order.setCompletedAt(LocalDateTime.now());
             centralInventoryService.restoreStockForOrder(order, "PARTNER", order.getCancellationReason());
+        } else if (newStatus == OrderStatus.DELIVERED) {
+            order.setCompletedAt(LocalDateTime.now());
         }
 
         // Handle SHIPPED / OUT_FOR_DELIVERY status to generate security code
@@ -965,6 +978,88 @@ public class OrderService {
         }
 
         return orderMapper.toOrderResponse(updatedOrder);
+    }
+
+    private void validatePartnerStatusTransition(Orders order, OrderStatus newStatus) {
+        OrderStatus currentStatus = order.getOrderStatus();
+
+        // 1. Prevent modifying orders that are already DELIVERED or CANCELLED
+        if (currentStatus == OrderStatus.DELIVERED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change status of a delivered order");
+        }
+        if (currentStatus == OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cannot change status of a cancelled order");
+        }
+
+        // 2. Prevent processing or dispatching unpaid online orders
+        if (order.getPaymentMethod() == PaymentMethod.ONLINE
+                && order.getPaymentStatus() != PaymentStatus.PAID
+                && newStatus != OrderStatus.CANCELLED) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Cannot process or dispatch an Online Payment order whose payment is pending or failed! The customer has not completed the payment.");
+        }
+
+        // 3. State machine transitions for Partner:
+        // Only allow PENDING/CONFIRMED -> PROCESSING, PROCESSING -> SHIPPED, SHIPPED -> DELIVERED, or * -> CANCELLED
+        if (newStatus == OrderStatus.CANCELLED) {
+            return;
+        }
+
+        if (newStatus == OrderStatus.PROCESSING) {
+            if (currentStatus != OrderStatus.PENDING && currentStatus != OrderStatus.CONFIRMED) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid status transition from " + currentStatus + " to PROCESSING. Allowed only from PENDING or CONFIRMED.");
+            }
+            return;
+        }
+
+        if (newStatus == OrderStatus.SHIPPED) {
+            if (currentStatus != OrderStatus.PROCESSING) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid status transition from " + currentStatus + " to SHIPPED. Allowed only from PROCESSING.");
+            }
+            if (order.getAssignedEngineer() == null) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Cannot change order status to SHIPPED without assigning a Field Engineer! Please assign a technician first.");
+            }
+            return;
+        }
+
+        if (newStatus == OrderStatus.DELIVERED) {
+            if (currentStatus != OrderStatus.SHIPPED && currentStatus != OrderStatus.OUT_FOR_DELIVERY) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Invalid status transition from " + currentStatus + " to DELIVERED. Allowed only from SHIPPED.");
+            }
+            return;
+        }
+
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                "Invalid status transition to " + newStatus + ". Allowed target statuses are PROCESSING, SHIPPED, DELIVERED, or CANCELLED.");
+    }
+
+    @Transactional
+    public OrderResponse addPartnerOrderNote(UUID orderId, String note, UUID partnerProfileId) {
+        Orders order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found: " + orderId));
+
+        if (order.getAssignedPartner() == null || !order.getAssignedPartner().getId().equals(partnerProfileId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Access denied to this order. It is not assigned to you.");
+        }
+
+        String trimmed = note != null ? note.trim() : "";
+        if (trimmed.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Note cannot be empty");
+        }
+
+        if (order.getEngineerNotes() == null || order.getEngineerNotes().isBlank()) {
+            order.setEngineerNotes(trimmed);
+        } else {
+            order.setEngineerNotes(order.getEngineerNotes() + "\n" + trimmed);
+        }
+
+        Orders savedOrder = orderRepository.save(order);
+        return orderMapper.toOrderResponse(savedOrder);
     }
 
     private List<CartItem> getCartItems(UUID customerId, Cart cart) {

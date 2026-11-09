@@ -24,12 +24,15 @@ import com.api.batterymantra.dto.vehicle.UpdateVehicleRequest;
 import com.api.batterymantra.dto.vehicle.VehicleResponse;
 import com.api.batterymantra.service.VehicleService;
 
+import com.api.batterymantra.dto.product.CityPricingRequestResponse;
 import com.api.batterymantra.dto.product.CreateProductRequest;
 import com.api.batterymantra.dto.product.ProductDetailResponse;
 import com.api.batterymantra.dto.product.ProductReorderRequest;
 import com.api.batterymantra.dto.product.BulkProductUpdateRequest;
 import com.api.batterymantra.dto.product.UpdateProductRequest;
 import com.api.batterymantra.entity.UserPrincipal;
+import com.api.batterymantra.entity.enums.PricingRequestStatus;
+import com.api.batterymantra.service.CityPricingRequestService;
 import com.api.batterymantra.service.ProductService;
 
 import com.api.batterymantra.dto.order.OrderResponse;
@@ -93,6 +96,7 @@ public class AdminController {
     private final EngineerAttendanceService attendanceService;
     private final UserService userService;
     private final InstagramReelService reelService;
+    private final CityPricingRequestService cityPricingRequestService;
 
     // --- Users ---
     @GetMapping("/users")
@@ -275,6 +279,33 @@ public class AdminController {
     public ResponseEntity<Void> bulkUpdateProducts(@RequestBody List<BulkProductUpdateRequest> requests) {
         productService.bulkUpdateProducts(requests);
         return ResponseEntity.ok().build();
+    }
+
+    // --- Product City Pricing Requests ---
+    @PatchMapping("/products/pricing-requests/{requestId}/approve")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<CityPricingRequestResponse> approvePricingRequest(
+            @PathVariable UUID requestId,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        String adminUser = userPrincipal != null ? userPrincipal.getUsername() : "ADMIN";
+        return ResponseEntity.ok(cityPricingRequestService.approvePricingRequest(requestId, adminUser));
+    }
+
+    @PatchMapping("/products/pricing-requests/{requestId}/reject")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<CityPricingRequestResponse> rejectPricingRequest(
+            @PathVariable UUID requestId,
+            @RequestParam(required = false) String reason,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        String adminUser = userPrincipal != null ? userPrincipal.getUsername() : "ADMIN";
+        return ResponseEntity.ok(cityPricingRequestService.rejectPricingRequest(requestId, reason, adminUser));
+    }
+
+    @GetMapping("/products/pricing-requests")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUB_ADMIN')")
+    public ResponseEntity<List<CityPricingRequestResponse>> getPricingRequests(
+            @RequestParam(required = false) PricingRequestStatus status) {
+        return ResponseEntity.ok(cityPricingRequestService.getPricingRequests(status));
     }
 
     // --- Orders ---

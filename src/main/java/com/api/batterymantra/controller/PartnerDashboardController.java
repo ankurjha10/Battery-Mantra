@@ -1,10 +1,14 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.order.OrderNoteRequest;
 import com.api.batterymantra.dto.order.OrderResponse;
+import com.api.batterymantra.dto.product.CityPricingRequestDto;
+import com.api.batterymantra.dto.product.CityPricingRequestResponse;
 import com.api.batterymantra.dto.user.CreateEngineerRequest;
 import com.api.batterymantra.dto.user.EngineerResponse;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.OrderStatus;
+import com.api.batterymantra.service.CityPricingRequestService;
 import com.api.batterymantra.service.EngineerService;
 import com.api.batterymantra.service.OrderService;
 import com.api.batterymantra.repository.PartnerProfileRepository;
@@ -39,6 +43,7 @@ public class PartnerDashboardController {
     private final PartnerProfileRepository partnerProfileRepository;
     private final ProductService productService;
     private final PartnerService partnerService;
+    private final CityPricingRequestService cityPricingRequestService;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
         return partnerProfileRepository.findByUserUserId(userPrincipal.getUser().getUserId())
@@ -65,9 +70,21 @@ public class PartnerDashboardController {
     public ResponseEntity<OrderResponse> updateOrderStatus(
             @PathVariable UUID orderId,
             @RequestParam OrderStatus newStatus,
+            @RequestParam(required = false) String cancellationReason,
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
-        OrderResponse updatedOrder = orderService.updatePartnerOrderStatus(orderId, newStatus, partnerProfile.getId());
+        OrderResponse updatedOrder = orderService.updatePartnerOrderStatus(orderId, newStatus, cancellationReason, partnerProfile.getId());
+        return ResponseEntity.ok(updatedOrder);
+    }
+
+    @PostMapping("/orders/{orderId}/notes")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<OrderResponse> addOrderNote(
+            @PathVariable UUID orderId,
+            @Valid @RequestBody OrderNoteRequest request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        OrderResponse updatedOrder = orderService.addPartnerOrderNote(orderId, request.getNote(), partnerProfile.getId());
         return ResponseEntity.ok(updatedOrder);
     }
 
@@ -162,5 +179,24 @@ public class PartnerDashboardController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
         return ResponseEntity.ok(productService.updateCityPricingByPartner(productId, dto, partnerProfile));
+    }
+
+    @PostMapping("/products/{productId}/city-pricing-request")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<CityPricingRequestResponse> createCityPricingRequest(
+            @PathVariable UUID productId,
+            @Valid @RequestBody CityPricingRequestDto request,
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(cityPricingRequestService.createPricingRequest(productId, request, partnerProfile));
+    }
+
+    @GetMapping("/products/pending-pricing-requests")
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<List<CityPricingRequestResponse>> getPendingPricingRequests(
+            @AuthenticationPrincipal UserPrincipal userPrincipal) {
+        PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
+        return ResponseEntity.ok(cityPricingRequestService.getPendingRequestsForPartner(partnerProfile.getId()));
     }
 }

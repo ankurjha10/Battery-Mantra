@@ -138,4 +138,11 @@ public class Orders {
     @Column(name = "stock_restored", nullable = false)
     @Builder.Default
     private boolean stockRestored = false;
+
+    @PrePersist
+    public void prePersist() {
+        if (this.deliverySecurityCode == null || this.deliverySecurityCode.isBlank()) {
+            this.deliverySecurityCode = String.valueOf(1000 + new java.util.Random().nextInt(9000));
+        }
+    }
 }
