@@ -70,3 +70,4 @@ public class CityPricingRequest {
     @UpdateTimestamp
     private LocalDateTime updatedAt;
 }
+

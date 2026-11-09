@@ -19,3 +19,4 @@ public interface CityPricingRequestRepository extends JpaRepository<CityPricingR
 
     List<CityPricingRequest> findAllByOrderByCreatedAtDesc();
 }
+

@@ -31,3 +31,4 @@ public class CityPricingRequestDto {
 
     private String reason;
 }
+

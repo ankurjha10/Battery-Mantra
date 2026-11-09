@@ -34,3 +34,4 @@ public class CityPricingRequestResponse {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 }
+

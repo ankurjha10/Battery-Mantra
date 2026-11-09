@@ -199,3 +199,4 @@ class PartnerDashboardControllerTest {
                 .andExpect(jsonPath("$[0].price").value(4800.0));
     }
 }
+
