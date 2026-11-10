@@ -43,4 +43,9 @@ public class CreateProductRequest {
 
     private SeoMetadata seo;
     private String searchKeywords;
+    private String proposalReason;
+    private String highlights;
+    private String warranty;
+    private String batteryTechnology;
+    private String rlCode;
 }

@@ -140,6 +140,9 @@ public class SecurityConfig {
                         // Partner Dashboard APIs
                         .requestMatchers("/api/partner/**").hasRole("PARTNER")
 
+                        // Super Admin Only Security APIs
+                        .requestMatchers("/api/admin/security/**").hasRole("ADMIN")
+
                         // Admin APIs
                         .requestMatchers("/api/admin/**").hasAnyRole("ADMIN", "SUB_ADMIN")
 

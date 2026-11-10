@@ -14,19 +14,23 @@ import com.api.batterymantra.entity.enums.OrderStatus;
 import com.api.batterymantra.service.CityInventoryService;
 import com.api.batterymantra.service.CityPricingRequestService;
 import com.api.batterymantra.service.EngineerService;
+import com.api.batterymantra.service.FileStorageService;
 import com.api.batterymantra.service.OrderService;
 import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.entity.PartnerProfile;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import com.api.batterymantra.dto.product.CityPricingDto;
@@ -49,6 +53,7 @@ public class PartnerDashboardController {
     private final PartnerService partnerService;
     private final CityPricingRequestService cityPricingRequestService;
     private final CityInventoryService cityInventoryService;
+    private final FileStorageService fileStorageService;
 
     private PartnerProfile getPartnerProfile(UserPrincipal userPrincipal) {
         return partnerProfileRepository.findByUserUserId(userPrincipal.getUser().getUserId())
@@ -234,5 +239,26 @@ public class PartnerDashboardController {
             @AuthenticationPrincipal UserPrincipal userPrincipal) {
         PartnerProfile partnerProfile = getPartnerProfile(userPrincipal);
         return ResponseEntity.ok(cityInventoryService.bulkUpdatePartnerCityStock(request, partnerProfile));
+    }
+
+    // ===== Partner Media Upload =====
+
+    @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PreAuthorize("hasRole('PARTNER')")
+    public ResponseEntity<?> uploadPartnerImage(
+            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "folder", defaultValue = "products") String folder) {
+        try {
+            FileStorageService.UploadResult result = fileStorageService.uploadPartnerImage(file, folder);
+            return ResponseEntity.ok(Map.of(
+                    "url", result.url(),
+                    "publicId", result.publicId()
+            ));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(Map.of("message", "File upload failed: " + e.getMessage()));
+        }
     }
 }

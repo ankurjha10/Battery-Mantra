@@ -2,6 +2,7 @@ package com.api.batterymantra.dto.admin;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 import java.util.List;
@@ -25,4 +26,7 @@ public class AdminCreateSubAdminRequest {
     private String role; // Expecting "SUB_ADMIN"
 
     private List<String> permissions;
+
+    @Size(min = 4, max = 32, message = "gatePin must be between 4 and 32 characters")
+    private String gatePin;
 }

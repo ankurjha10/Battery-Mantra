@@ -129,7 +129,20 @@ public class Product {
     @Column(name = "category_brand_display_order")
     private Integer categoryBrandDisplayOrder = 0;
 
+    @Column(columnDefinition = "TEXT")
     private String highlights;
+
+    @Column(name = "proposal_reason", columnDefinition = "TEXT")
+    private String proposalReason;
+
+    @Column(name = "warranty")
+    private String warranty;
+
+    @Column(name = "battery_technology")
+    private String batteryTechnology;
+
+    @Column(name = "rl_code")
+    private String rlCode;
 
     @Column(name = "search_keywords", columnDefinition = "TEXT")
     private String searchKeywords;

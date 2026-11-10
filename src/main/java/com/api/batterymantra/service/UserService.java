@@ -111,6 +111,27 @@ public class UserService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Name/Username is already taken");
         }
         
+        String gatePinHash = null;
+        java.time.LocalDateTime gatePinUpdatedAt = null;
+        if (request.getGatePin() != null && !request.getGatePin().trim().isEmpty()) {
+            String trimmedPin = request.getGatePin().trim();
+            if (trimmedPin.length() < 4) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gate PIN must be at least 4 characters");
+            }
+            for (User staff : userRepository.findAllByRole(UserRole.ADMIN)) {
+                if (staff.getGatePinHash() != null && passwordEncoder.matches(trimmedPin, staff.getGatePinHash())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gate PIN must be unique across all Admin and Sub-Admin accounts");
+                }
+            }
+            for (User staff : userRepository.findAllByRole(UserRole.SUB_ADMIN)) {
+                if (staff.getGatePinHash() != null && passwordEncoder.matches(trimmedPin, staff.getGatePinHash())) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gate PIN must be unique across all Admin and Sub-Admin accounts");
+                }
+            }
+            gatePinHash = passwordEncoder.encode(trimmedPin);
+            gatePinUpdatedAt = java.time.LocalDateTime.now();
+        }
+
         User user = User.builder()
                 .username(trimmedName)
                 .email(trimmedEmail)
@@ -118,6 +139,8 @@ public class UserService {
                 .password(passwordEncoder.encode(request.getPassword()))
                 .role(UserRole.SUB_ADMIN)
                 .permissions(request.getPermissions())
+                .gatePinHash(gatePinHash)
+                .gatePinUpdatedAt(gatePinUpdatedAt)
                 .build();
                 
         user = userRepository.save(user);

@@ -1,5 +1,7 @@
 package com.api.batterymantra.controller;
 
+import com.api.batterymantra.dto.auth.AdminGateRequest;
+import com.api.batterymantra.dto.auth.AdminGateResponse;
 import com.api.batterymantra.dto.auth.RefreshTokenRequest;
 import com.api.batterymantra.dto.auth.RefreshTokenResponse;
 import com.api.batterymantra.dto.auth.RegisterRequest;
@@ -8,7 +10,9 @@ import com.api.batterymantra.dto.auth.LoginResponse;
 import com.api.batterymantra.dto.auth.RegisterResponse;
 import com.api.batterymantra.dto.auth.SendOtpRequest;
 import com.api.batterymantra.dto.auth.VerifyOtpRequest;
+import com.api.batterymantra.service.AdminGateService;
 import com.api.batterymantra.service.AuthService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -25,6 +29,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class AuthController {
 
     private final AuthService authService;
+    private final AdminGateService adminGateService;
 
     @GetMapping("/check-user")
     public ResponseEntity<CheckUserResponse> checkUser(@RequestParam String phoneNumber) {
@@ -66,5 +71,21 @@ public class AuthController {
     @PostMapping("/engineer/verify-otp")
     public ResponseEntity<LoginResponse> verifyEngineerOtp(@RequestBody VerifyOtpRequest request) {
         return ResponseEntity.ok(authService.verifyEngineerOtp(request));
+    }
+
+    @PostMapping("/partner/send-otp")
+    public ResponseEntity<String> sendPartnerOtp(@RequestBody SendOtpRequest request) {
+        authService.sendPartnerOtp(request);
+        return ResponseEntity.ok("OTP sent successfully");
+    }
+
+    @PostMapping("/partner/verify-otp")
+    public ResponseEntity<LoginResponse> verifyPartnerOtp(@RequestBody VerifyOtpRequest request) {
+        return ResponseEntity.ok(authService.verifyPartnerOtp(request));
+    }
+
+    @PostMapping("/admin-gate")
+    public ResponseEntity<AdminGateResponse> verifyAdminGate(@Valid @RequestBody AdminGateRequest request) {
+        return ResponseEntity.ok(adminGateService.verifyGatePin(request));
     }
 }

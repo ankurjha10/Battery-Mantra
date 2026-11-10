@@ -150,5 +150,39 @@ class FileStorageServiceTest {
         assertTrue(Files.exists(savedFile));
         assertEquals("category data", Files.readString(savedFile));
     }
+
+    @Test
+    @DisplayName("uploadPartnerImage: allows png, jpg, jpeg, webp and rejects svg/gif and >15MB")
+    void testUploadPartnerImage_Validation() throws IOException {
+        String[] allowedExts = {"png", "jpg", "jpeg", "webp"};
+        String[] allowedTypes = {"image/png", "image/jpeg", "image/jpeg", "image/webp"};
+
+        for (int i = 0; i < allowedExts.length; i++) {
+            MockMultipartFile file = new MockMultipartFile(
+                    "file",
+                    "battery." + allowedExts[i],
+                    allowedTypes[i],
+                    ("content-" + i).getBytes()
+            );
+            FileStorageService.UploadResult result = fileStorageService.uploadPartnerImage(file, "products");
+            assertTrue(result.publicId().startsWith("products/"));
+            assertTrue(result.publicId().endsWith("." + allowedExts[i]));
+        }
+
+        MockMultipartFile svgFile = new MockMultipartFile(
+                "file", "icon.svg", "image/svg+xml", "<svg/>".getBytes()
+        );
+        assertThrows(IllegalArgumentException.class, () ->
+                fileStorageService.uploadPartnerImage(svgFile, "products")
+        );
+
+        MockMultipartFile oversized = new MockMultipartFile(
+                "file", "huge.jpg", "image/jpeg", new byte[(15 * 1024 * 1024) + 1]
+        );
+        IllegalArgumentException sizeEx = assertThrows(IllegalArgumentException.class, () ->
+                fileStorageService.uploadPartnerImage(oversized, "products")
+        );
+        assertTrue(sizeEx.getMessage().contains("15MB"));
+    }
 }
 

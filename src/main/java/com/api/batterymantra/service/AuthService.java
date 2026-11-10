@@ -20,14 +20,18 @@ import com.api.batterymantra.dto.auth.RegisterResponse;
 import com.api.batterymantra.dto.auth.SendOtpRequest;
 import com.api.batterymantra.dto.auth.VerifyOtpRequest;
 import com.api.batterymantra.entity.EngineerProfile;
+import com.api.batterymantra.entity.PartnerProfile;
 import com.api.batterymantra.entity.RefreshToken;
 import com.api.batterymantra.entity.User;
 import com.api.batterymantra.entity.UserPrincipal;
 import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.exception.TokenRefreshException;
 import com.api.batterymantra.repository.EngineerProfileRepository;
+import com.api.batterymantra.repository.PartnerProfileRepository;
 import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.security.AuthUtil;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Optional;
@@ -40,6 +44,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EngineerProfileRepository engineerProfileRepository;
+    private final PartnerProfileRepository partnerProfileRepository;
     private final AuthUtil authUtil;
     private final AuthenticationManager authManager;
     private final BCryptPasswordEncoder passwordEncoder;
@@ -68,7 +73,7 @@ public class AuthService {
         }
         
         String phone = request.getPhoneNumber().trim();
-        String otp = otpService.generateOtp(phone);
+        String otp = otpService.generateOtp("CUSTOMER", phone);
         
         User user = userRepository.findByPhoneNumber(phone);
         String name = (user != null && user.getUsername() != null) ? user.getUsername() : "Customer";
@@ -85,7 +90,7 @@ public class AuthService {
         }
         
         String phone = request.getPhoneNumber().trim();
-        boolean isValid = otpService.verifyOtp(phone, request.getOtp().trim());
+        boolean isValid = otpService.verifyOtp("CUSTOMER", phone, request.getOtp().trim());
         
         if (!isValid) {
             throw new IllegalArgumentException("Invalid or expired OTP");
@@ -176,6 +181,15 @@ public class AuthService {
     public LoginResponse login(LoginRequest loginRequest) {
         System.out.println("LOGIN METHOD HIT");
 
+        AuthUtil.GateTokenClaims gateClaims = null;
+        if (loginRequest.getGateToken() != null && !loginRequest.getGateToken().isBlank()) {
+            try {
+                gateClaims = authUtil.validateAndExtractGateClaims(loginRequest.getGateToken().trim());
+            } catch (Exception e) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid or expired gate token");
+            }
+        }
+
         try {
             if (loginRequest.getUsername() == null || loginRequest.getUsername().trim().isEmpty()) {
                 throw new IllegalArgumentException("Username cannot be empty");
@@ -193,11 +207,34 @@ public class AuthService {
 
             UserPrincipal userPrincipal = (UserPrincipal) authentication.getPrincipal();
             User user = userPrincipal.getUser();
+
+            if (gateClaims != null) {
+                if ("ADMIN".equals(gateClaims.tier()) && user.getRole() != UserRole.ADMIN) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access denied: This login gate is restricted to ADMIN accounts");
+                }
+                if ("SUB_ADMIN".equals(gateClaims.tier()) && user.getRole() != UserRole.SUB_ADMIN) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access denied: This login gate is restricted to SUB_ADMIN accounts");
+                }
+                if (gateClaims.targetUserId() != null && !gateClaims.targetUserId().equals(user.getUserId())) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access denied: This gate PIN is bound to a different account");
+                }
+                if (gateClaims.targetUserId() == null &&
+                        user.getGatePinHash() != null && !user.getGatePinHash().isBlank()) {
+                    throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                            "Access denied: Please enter your personal gate PIN");
+                }
+            }
+
             String token = authUtil.generateAccessToken(user);
             
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
 
             return new LoginResponse(token, refreshToken.getRefreshToken(), user.getUserId(), user.getRole().name(), user.getUsername(), user.getPermissions());
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (BadCredentialsException e) {
             throw new IllegalArgumentException("Invalid username or password");
         } catch (UsernameNotFoundException e) {
@@ -246,7 +283,7 @@ public class AuthService {
             clean10 = normalizePhoneNumber(user.getPhoneNumber());
         }
 
-        String otp = otpService.generateOtp(clean10);
+        String otp = otpService.generateOtp("ENGINEER", clean10);
         log.info("Generated OTP for engineer [phone={}, user={}]: {}", clean10, user.getUsername(), otp);
 
         String engineerName = "Engineer";
@@ -268,8 +305,6 @@ public class AuthService {
         }
 
         String rawPhone = request.getPhoneNumber().trim();
-        String clean10 = normalizePhoneNumber(rawPhone);
-
         User user = findEngineerUserByPhone(rawPhone);
         if (user == null || user.getRole() != UserRole.ENGINEER) {
             throw new IllegalArgumentException("No engineer account found with this phone number. Please contact your administrator or partner.");
@@ -284,18 +319,7 @@ public class AuthService {
             throw new IllegalArgumentException("Your engineer profile is currently disabled. Please contact your partner or administrator.");
         }
 
-        boolean isValid = false;
-        if (clean10 != null && !clean10.isEmpty()) {
-            isValid = otpService.verifyOtp(clean10, request.getOtp().trim());
-        }
-        if (!isValid) {
-            isValid = otpService.verifyOtp(rawPhone, request.getOtp().trim());
-        }
-        if (!isValid && user.getPhoneNumber() != null) {
-            isValid = otpService.verifyOtp(normalizePhoneNumber(user.getPhoneNumber()), request.getOtp().trim());
-        }
-
-        if (!isValid) {
+        if (!verifyScopedOtp("ENGINEER", rawPhone, user, request.getOtp().trim())) {
             throw new IllegalArgumentException("Invalid or expired OTP");
         }
 
@@ -322,6 +346,108 @@ public class AuthService {
         );
     }
 
+    public void sendPartnerOtp(SendOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+
+        String rawPhone = request.getPhoneNumber().trim();
+        User user = findPartnerUserByPhone(rawPhone);
+        if (user == null || user.getRole() != UserRole.PARTNER) {
+            throw new IllegalArgumentException("No partner account found with this phone number. Please contact your administrator.");
+        }
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Your partner account has been deactivated. Please contact support.");
+        }
+
+        PartnerProfile partnerProfile = partnerProfileRepository.findByUserUserId(user.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("No partner profile found for this account. Please contact your administrator."));
+        if (!partnerProfile.isActive()) {
+            throw new IllegalArgumentException("Your partner profile is currently disabled. Please contact your administrator.");
+        }
+
+        String clean10 = normalizePhoneNumber(rawPhone);
+        if (clean10 == null || clean10.isEmpty()) {
+            clean10 = normalizePhoneNumber(user.getPhoneNumber());
+        }
+
+        String otp = otpService.generateOtp("PARTNER", clean10);
+        log.info("Generated OTP for partner [phone={}, user={}]: {}", clean10, user.getUsername(), otp);
+
+        String partnerName = resolvePartnerDisplayName(user, partnerProfile);
+        smsService.sendOtp(clean10, partnerName, otp);
+    }
+
+    public LoginResponse verifyPartnerOtp(VerifyOtpRequest request) {
+        if (request.getPhoneNumber() == null || request.getPhoneNumber().trim().isEmpty()) {
+            throw new IllegalArgumentException("Phone number cannot be empty");
+        }
+        if (request.getOtp() == null || request.getOtp().trim().isEmpty()) {
+            throw new IllegalArgumentException("OTP cannot be empty");
+        }
+
+        String rawPhone = request.getPhoneNumber().trim();
+        User user = findPartnerUserByPhone(rawPhone);
+        if (user == null || user.getRole() != UserRole.PARTNER) {
+            throw new IllegalArgumentException("No partner account found with this phone number. Please contact your administrator.");
+        }
+
+        if (!user.isActive()) {
+            throw new IllegalArgumentException("Your partner account has been deactivated. Please contact support.");
+        }
+
+        PartnerProfile partnerProfile = partnerProfileRepository.findByUserUserId(user.getUserId())
+                .orElseThrow(() -> new IllegalArgumentException("No partner profile found for this account. Please contact your administrator."));
+        if (!partnerProfile.isActive()) {
+            throw new IllegalArgumentException("Your partner profile is currently disabled. Please contact your administrator.");
+        }
+
+        if (!verifyScopedOtp("PARTNER", rawPhone, user, request.getOtp().trim())) {
+            throw new IllegalArgumentException("Invalid or expired OTP");
+        }
+
+        String token = authUtil.generateAccessToken(user);
+        RefreshToken refreshToken = refreshTokenService.createRefreshToken(user.getUsername());
+        String displayName = resolvePartnerDisplayName(user, partnerProfile);
+
+        return new LoginResponse(
+                token,
+                refreshToken.getRefreshToken(),
+                user.getUserId(),
+                user.getRole().name(),
+                displayName,
+                user.getPermissions()
+        );
+    }
+
+    private String resolvePartnerDisplayName(User user, PartnerProfile profile) {
+        if (profile != null) {
+            if (profile.getBusinessName() != null && !profile.getBusinessName().isBlank()) {
+                return profile.getBusinessName().trim();
+            }
+            if (profile.getContactPerson() != null && !profile.getContactPerson().isBlank()) {
+                return profile.getContactPerson().trim();
+            }
+        }
+        return user.getUsername();
+    }
+
+    private boolean verifyScopedOtp(String scope, String rawPhone, User user, String otp) {
+        String clean10 = normalizePhoneNumber(rawPhone);
+        if (clean10 != null && !clean10.isEmpty() && otpService.verifyOtp(scope, clean10, otp)) {
+            return true;
+        }
+        if (otpService.verifyOtp(scope, rawPhone, otp)) {
+            return true;
+        }
+        if (user.getPhoneNumber() != null) {
+            String userClean = normalizePhoneNumber(user.getPhoneNumber());
+            return userClean != null && !userClean.isEmpty() && otpService.verifyOtp(scope, userClean, otp);
+        }
+        return false;
+    }
+
     private String normalizePhoneNumber(String phone) {
         if (phone == null) return null;
         String clean = phone.trim().replaceAll("[^0-9]", "");
@@ -335,37 +461,52 @@ public class AuthService {
     }
 
     private User findEngineerUserByPhone(String rawPhone) {
+        return findUserByPhoneAndRole(rawPhone, UserRole.ENGINEER);
+    }
+
+    private User findPartnerUserByPhone(String rawPhone) {
+        return findUserByPhoneAndRole(rawPhone, UserRole.PARTNER);
+    }
+
+    private User findUserByPhoneAndRole(String rawPhone, UserRole requiredRole) {
         if (rawPhone == null || rawPhone.trim().isEmpty()) {
             return null;
         }
-        String clean10 = normalizePhoneNumber(rawPhone);
+        String trimmed = rawPhone.trim();
+        String clean10 = normalizePhoneNumber(trimmed);
 
-        // 1. Try exact match
-        User user = userRepository.findByPhoneNumber(rawPhone.trim());
-        if (user != null && user.getRole() == UserRole.ENGINEER) {
-            return user;
+        List<String> candidates = new java.util.ArrayList<>();
+        candidates.add(trimmed);
+        if (clean10 != null && !clean10.isEmpty()) {
+            candidates.add(clean10);
+            candidates.add("+91" + clean10);
+            candidates.add("91" + clean10);
+            candidates.add("0" + clean10);
         }
 
-        // 2. Try normalized 10-digit variants
-        if (clean10 != null && !clean10.isEmpty()) {
-            user = userRepository.findByPhoneNumber(clean10);
-            if (user != null && user.getRole() == UserRole.ENGINEER) {
-                return user;
+        for (String candidate : candidates) {
+            List<User> matches = userRepository.findAllByPhoneNumber(candidate);
+            if (matches != null) {
+                for (User match : matches) {
+                    if (match != null && match.getRole() == requiredRole) {
+                        return match;
+                    }
+                }
             }
-            user = userRepository.findByPhoneNumber("+91" + clean10);
-            if (user != null && user.getRole() == UserRole.ENGINEER) {
-                return user;
+            User single = userRepository.findByPhoneNumber(candidate);
+            if (single != null && single.getRole() == requiredRole) {
+                return single;
             }
-            user = userRepository.findByPhoneNumber("91" + clean10);
-            if (user != null && user.getRole() == UserRole.ENGINEER) {
-                return user;
-            }
+        }
 
-            // 3. Fallback scan all engineers in case format differs
-            List<User> engineers = userRepository.findAllByRole(UserRole.ENGINEER);
-            for (User eng : engineers) {
-                if (eng.getPhoneNumber() != null && clean10.equals(normalizePhoneNumber(eng.getPhoneNumber()))) {
-                    return eng;
+        if (clean10 != null && !clean10.isEmpty()) {
+            List<User> roleUsers = userRepository.findAllByRole(requiredRole);
+            if (roleUsers != null) {
+                for (User candidateUser : roleUsers) {
+                    if (candidateUser.getPhoneNumber() != null &&
+                            clean10.equals(normalizePhoneNumber(candidateUser.getPhoneNumber()))) {
+                        return candidateUser;
+                    }
                 }
             }
         }

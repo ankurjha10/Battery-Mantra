@@ -25,6 +25,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.MethodParameter;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
@@ -39,6 +40,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.*;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -69,6 +71,9 @@ class PartnerDashboardControllerTest {
     @Mock
     private CityInventoryService cityInventoryService;
 
+    @Mock
+    private FileStorageService fileStorageService;
+
     @InjectMocks
     private PartnerDashboardController controller;
 
@@ -87,7 +92,7 @@ class PartnerDashboardControllerTest {
         testUserPrincipal = new UserPrincipal(user);
 
         PartnerProfile profile = PartnerProfile.builder().id(partnerProfileId).user(user).build();
-        when(partnerProfileRepository.findByUserUserId(userId)).thenReturn(Optional.of(profile));
+        lenient().when(partnerProfileRepository.findByUserUserId(userId)).thenReturn(Optional.of(profile));
 
         HandlerMethodArgumentResolver authPrincipalResolver = new HandlerMethodArgumentResolver() {
             @Override
@@ -290,6 +295,43 @@ class PartnerDashboardControllerTest {
                 .andExpect(jsonPath("$.cityId").value(cityId.toString()))
                 .andExpect(jsonPath("$.updatedCount").value(2))
                 .andExpect(jsonPath("$.message").value("Branch inventory updated successfully"));
+    }
+
+    @Test
+    @DisplayName("POST /api/partner/upload returns url and publicId for valid image")
+    void testUploadPartnerImage_Success() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "battery.webp", "image/webp", "fake webp content".getBytes()
+        );
+
+        when(fileStorageService.uploadPartnerImage(any(), eq("products")))
+                .thenReturn(new FileStorageService.UploadResult(
+                        "https://batterymantra.com/uploads/products/abc.webp",
+                        "products/abc.webp"
+                ));
+
+        mockMvc.perform(multipart("/api/partner/upload")
+                        .file(file)
+                        .param("folder", "products"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.url").value("https://batterymantra.com/uploads/products/abc.webp"))
+                .andExpect(jsonPath("$.publicId").value("products/abc.webp"));
+    }
+
+    @Test
+    @DisplayName("POST /api/partner/upload returns 400 Bad Request on validation failure")
+    void testUploadPartnerImage_BadRequest() throws Exception {
+        MockMultipartFile file = new MockMultipartFile(
+                "file", "bad.svg", "image/svg+xml", "<svg/>".getBytes()
+        );
+
+        when(fileStorageService.uploadPartnerImage(any(), any()))
+                .thenThrow(new IllegalArgumentException("Unsupported file type. Allowed: png, jpg, jpeg, webp"));
+
+        mockMvc.perform(multipart("/api/partner/upload")
+                        .file(file))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Unsupported file type. Allowed: png, jpg, jpeg, webp"));
     }
 }
 

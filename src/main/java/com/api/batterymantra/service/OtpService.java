@@ -27,6 +27,20 @@ public class OtpService {
     @Value("${otp.expiration-ms}")
     private long otpValidityMs;
 
+    public String generateOtp(String scope, String phoneNumber) {
+        return generateOtp(buildScopedKey(scope, phoneNumber));
+    }
+
+    public boolean verifyOtp(String scope, String phoneNumber, String otp) {
+        return verifyOtp(buildScopedKey(scope, phoneNumber), otp);
+    }
+
+    private String buildScopedKey(String scope, String phoneNumber) {
+        String normalizedScope = (scope == null || scope.isBlank()) ? "CUSTOMER" : scope.trim().toUpperCase();
+        String normalizedPhone = phoneNumber != null ? phoneNumber.trim() : "";
+        return normalizedScope + ":" + normalizedPhone;
+    }
+
     public String generateOtp(String phoneNumber) {
         // Generate a 4-digit OTP (1000 to 9999)
         String otp = String.valueOf(1000 + random.nextInt(9000));

@@ -21,6 +21,9 @@ public class FileStorageService {
     private String baseUrl;
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "svg", "gif");
+    private static final Set<String> PARTNER_ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp");
+    private static final Set<String> PARTNER_ALLOWED_CONTENT_TYPES = Set.of("image/jpeg", "image/jpg", "image/png", "image/webp");
+    private static final long PARTNER_MAX_FILE_SIZE_BYTES = 15L * 1024 * 1024;
 
     public FileStorageService() {
     }
@@ -30,7 +33,31 @@ public class FileStorageService {
         this.baseUrl = baseUrl;
     }
 
+    public UploadResult uploadPartnerImage(MultipartFile file, String folder) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Cannot upload an empty file");
+        }
+        if (file.getSize() > PARTNER_MAX_FILE_SIZE_BYTES) {
+            throw new IllegalArgumentException("File size exceeds maximum limit of 15MB");
+        }
+        String contentType = file.getContentType();
+        if (contentType != null && !contentType.isBlank() &&
+                !"application/octet-stream".equalsIgnoreCase(contentType) &&
+                !PARTNER_ALLOWED_CONTENT_TYPES.contains(contentType.toLowerCase())) {
+            throw new IllegalArgumentException("Unsupported image content type. Allowed: PNG, JPG, WebP");
+        }
+        return saveImageWithAllowedExtensions(file, folder, PARTNER_ALLOWED_EXTENSIONS, "Unsupported file type. Allowed: png, jpg, jpeg, webp");
+    }
+
     public UploadResult uploadImage(MultipartFile file, String folder) throws IOException {
+        return saveImageWithAllowedExtensions(file, folder, ALLOWED_EXTENSIONS, "Unsupported file type. Allowed: jpg, jpeg, png, webp, svg, gif");
+    }
+
+    private UploadResult saveImageWithAllowedExtensions(
+            MultipartFile file,
+            String folder,
+            Set<String> allowedExtensions,
+            String unsupportedMessage) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("Cannot upload an empty file");
         }
@@ -57,8 +84,8 @@ public class FileStorageService {
             extension = originalFilename.substring(dotIndex + 1).toLowerCase();
         }
 
-        if (!ALLOWED_EXTENSIONS.contains(extension)) {
-            throw new IllegalArgumentException("Unsupported file type. Allowed: jpg, jpeg, png, webp, svg, gif");
+        if (!allowedExtensions.contains(extension)) {
+            throw new IllegalArgumentException(unsupportedMessage);
         }
 
         // 3. Generate clean unique filename: <uuid>.<ext>

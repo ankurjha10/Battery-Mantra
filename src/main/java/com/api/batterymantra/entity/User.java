@@ -56,4 +56,10 @@ public class User {
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
     private List<String> permissions;
+
+    @Column(name = "gate_pin_hash")
+    private String gatePinHash;
+
+    @Column(name = "gate_pin_updated_at")
+    private LocalDateTime gatePinUpdatedAt;
 }

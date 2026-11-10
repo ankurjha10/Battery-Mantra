@@ -47,6 +47,10 @@ public class ProductDetailResponse {
     private Integer brandDisplayOrder;
     private Integer categoryBrandDisplayOrder;
     private String highlights;
+    private String proposalReason;
+    private String warranty;
+    private String batteryTechnology;
+    private String rlCode;
     private SeoMetadata seo;
     private String searchKeywords;
 }

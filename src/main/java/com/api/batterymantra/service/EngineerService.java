@@ -34,15 +34,15 @@ public class EngineerService {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new RuntimeException("Email already in use");
         }
-        if (request.getPassword() == null || request.getPassword().trim().isEmpty()) {
-            throw new IllegalArgumentException("Password is required for new engineers");
-        }
+        String rawPassword = (request.getPassword() != null && !request.getPassword().trim().isEmpty())
+                ? request.getPassword()
+                : UUID.randomUUID().toString();
 
         User user = new User();
         user.setUsername(request.getEmail()); // Use email as username
         user.setEmail(request.getEmail());
         user.setPhoneNumber(request.getPhoneNumber());
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        user.setPassword(passwordEncoder.encode(rawPassword));
         user.setRole(UserRole.ENGINEER);
         user.setActive(true);
         user = userRepository.save(user);

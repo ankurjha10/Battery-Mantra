@@ -101,6 +101,10 @@ public class ProductService {
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
+        res.setProposalReason(p.getProposalReason());
+        res.setWarranty(p.getWarranty());
+        res.setBatteryTechnology(p.getBatteryTechnology());
+        res.setRlCode(p.getRlCode());
         res.setSearchKeywords(p.getSearchKeywords());
 
         City currentCity = null;
@@ -167,6 +171,10 @@ public class ProductService {
         res.setBrandDisplayOrder(p.getBrandDisplayOrder());
         res.setCategoryBrandDisplayOrder(p.getCategoryBrandDisplayOrder());
         res.setHighlights(p.getHighlights());
+        res.setProposalReason(p.getProposalReason());
+        res.setWarranty(p.getWarranty());
+        res.setBatteryTechnology(p.getBatteryTechnology());
+        res.setRlCode(p.getRlCode());
         res.setSearchKeywords(p.getSearchKeywords());
 
         if (p.getCityPrices() != null) {
@@ -513,6 +521,21 @@ public class ProductService {
         if (dto.getSearchKeywords() != null) {
             product.setSearchKeywords(dto.getSearchKeywords());
         }
+        if (dto.getProposalReason() != null) {
+            product.setProposalReason(dto.getProposalReason());
+        }
+        if (dto.getHighlights() != null) {
+            product.setHighlights(dto.getHighlights());
+        }
+        if (dto.getWarranty() != null) {
+            product.setWarranty(dto.getWarranty());
+        }
+        if (dto.getBatteryTechnology() != null) {
+            product.setBatteryTechnology(dto.getBatteryTechnology());
+        }
+        if (dto.getRlCode() != null) {
+            product.setRlCode(dto.getRlCode());
+        }
 
         if (dto.getCityPrices() != null) {
             for (CityPricingDto cpd : dto.getCityPrices()) {
@@ -669,6 +692,16 @@ public class ProductService {
 
         if (dto.getSearchKeywords() != null)
             product.setSearchKeywords(dto.getSearchKeywords());
+        if (dto.getProposalReason() != null)
+            product.setProposalReason(dto.getProposalReason());
+        if (dto.getHighlights() != null)
+            product.setHighlights(dto.getHighlights());
+        if (dto.getWarranty() != null)
+            product.setWarranty(dto.getWarranty());
+        if (dto.getBatteryTechnology() != null)
+            product.setBatteryTechnology(dto.getBatteryTechnology());
+        if (dto.getRlCode() != null)
+            product.setRlCode(dto.getRlCode());
 
         if (dto.getCityPrices() != null) {
             product.getCityPrices().clear();
