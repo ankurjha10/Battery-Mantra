@@ -29,10 +29,10 @@ public class AdminGateConfig {
     @Builder.Default
     private Long id = SINGLETON_ID;
 
-    @Column(name = "admin_pin_hash", nullable = false)
+    @Column(name = "admin_pin_hash")
     private String adminPinHash;
 
-    @Column(name = "sub_admin_pin_hash", nullable = false)
+    @Column(name = "sub_admin_pin_hash")
     private String subAdminPinHash;
 
     @CreationTimestamp

@@ -147,7 +147,6 @@ class AdminGateServiceTest {
         when(adminGateConfigRepository.findById(AdminGateConfig.SINGLETON_ID)).thenReturn(Optional.of(storedConfig));
         when(userRepository.findAllByRole(UserRole.ADMIN)).thenReturn(List.of(superAdmin));
         when(userRepository.findAllByRole(UserRole.SUB_ADMIN)).thenReturn(List.of(subAdmin1, subAdmin2));
-        when(adminGateConfigRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
         // 1. Collision with subAdmin2's PIN (778899) -> 400 Bad Request
@@ -223,17 +222,42 @@ class AdminGateServiceTest {
     }
 
     @Test
-    @DisplayName("getGateConfig: initializes default PINs if missing and never exposes hashes")
-    void testGetGateConfig_InitializesDefaults() {
+    @DisplayName("getGateConfig & verifyGatePin: purely DB-driven, returns unconfigured flags until saved in DB")
+    void testGetGateConfig_PureDbDriven() {
         when(adminGateConfigRepository.findById(AdminGateConfig.SINGLETON_ID)).thenReturn(Optional.empty());
-        when(adminGateConfigRepository.save(any(AdminGateConfig.class))).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findAllByRole(UserRole.ADMIN)).thenReturn(List.of());
         when(userRepository.findAllByRole(UserRole.SUB_ADMIN)).thenReturn(List.of());
 
         AdminGateConfigResponse response = adminGateService.getGateConfig();
-        assertTrue(response.isAdminPinConfigured());
-        assertTrue(response.isSubAdminPinConfigured());
-        assertNotNull(response.getUpdatedAt());
+        assertFalse(response.isAdminPinConfigured());
+        assertFalse(response.isSubAdminPinConfigured());
+        assertNull(response.getUpdatedAt());
+
+        ResponseStatusException unconfiguredEx = assertThrows(ResponseStatusException.class, () ->
+                adminGateService.verifyGatePin(new AdminGateRequest("849201")));
+        assertEquals(401, unconfiguredEx.getStatusCode().value());
+
+        // Now save tier PIN into DB via Super Admin
+        UUID superAdminId = UUID.randomUUID();
+        User superAdmin = User.builder()
+                .userId(superAdminId)
+                .username("superadmin")
+                .role(UserRole.ADMIN)
+                .password(passwordEncoder.encode("realPass"))
+                .build();
+        when(userRepository.findById(superAdminId)).thenReturn(Optional.of(superAdmin));
+        when(adminGateConfigRepository.save(any(AdminGateConfig.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AdminGateConfigResponse updated = adminGateService.updateGatePin(superAdminId,
+                UpdateGatePinRequest.builder()
+                        .targetRole("ADMIN")
+                        .newPin("774411")
+                        .currentPassword("realPass")
+                        .build());
+
+        assertTrue(updated.isAdminPinConfigured());
+        assertFalse(updated.isSubAdminPinConfigured());
+        assertNotNull(updated.getUpdatedAt());
     }
 }
 

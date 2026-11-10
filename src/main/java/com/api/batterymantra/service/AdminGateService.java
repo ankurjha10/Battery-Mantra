@@ -12,9 +12,6 @@ import com.api.batterymantra.repository.UserRepository;
 import com.api.batterymantra.security.AuthUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -36,23 +33,7 @@ public class AdminGateService {
     private final BCryptPasswordEncoder passwordEncoder;
     private final AuthUtil authUtil;
 
-    @Value("${app.security.admin-gate-pin:849201}")
-    private String defaultAdminPin = "849201";
-
-    @Value("${app.security.sub-admin-gate-pin:517309}")
-    private String defaultSubAdminPin = "517309";
-
-    @EventListener(ApplicationReadyEvent.class)
-    @Transactional
-    public void initDefaultGateConfigOnStartup() {
-        try {
-            getOrInitializeConfig();
-        } catch (Exception e) {
-            log.warn("Could not pre-initialize AdminGateConfig on startup: {}", e.getMessage());
-        }
-    }
-
-    @Transactional
+    @Transactional(readOnly = true)
     public AdminGateResponse verifyGatePin(AdminGateRequest request) {
         if (request == null || request.getPin() == null || request.getPin().trim().isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid gate PIN");
@@ -60,7 +41,7 @@ public class AdminGateService {
 
         String candidatePin = request.getPin().trim();
 
-        // 1. Check per-user personal gate PINs across active ADMIN and SUB_ADMIN users
+        // 1. Check per-user personal gate PINs across active ADMIN and SUB_ADMIN users in DB
         for (User staffUser : findAllAdminAndSubAdminUsers()) {
             if (staffUser.isActive() && staffUser.getGatePinHash() != null && !staffUser.getGatePinHash().isBlank()) {
                 if (passwordEncoder.matches(candidatePin, staffUser.getGatePinHash())) {
@@ -73,17 +54,19 @@ public class AdminGateService {
             }
         }
 
-        // 2. Fallback: Check tier-level default gate PINs
-        AdminGateConfig config = getOrInitializeConfig();
+        // 2. Fallback: Check tier-level gate PINs stored in admin_gate_config table
+        AdminGateConfig config = loadConfigOrEmpty();
 
-        if (config.getAdminPinHash() != null && passwordEncoder.matches(candidatePin, config.getAdminPinHash())) {
+        if (config.getAdminPinHash() != null && !config.getAdminPinHash().isBlank() &&
+                passwordEncoder.matches(candidatePin, config.getAdminPinHash())) {
             return AdminGateResponse.builder()
                     .tier("ADMIN")
                     .gateToken(authUtil.generateGateToken("ADMIN", null))
                     .build();
         }
 
-        if (config.getSubAdminPinHash() != null && passwordEncoder.matches(candidatePin, config.getSubAdminPinHash())) {
+        if (config.getSubAdminPinHash() != null && !config.getSubAdminPinHash().isBlank() &&
+                passwordEncoder.matches(candidatePin, config.getSubAdminPinHash())) {
             return AdminGateResponse.builder()
                     .tier("SUB_ADMIN")
                     .gateToken(authUtil.generateGateToken("SUB_ADMIN", null))
@@ -93,9 +76,9 @@ public class AdminGateService {
         throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid gate PIN");
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public AdminGateConfigResponse getGateConfig() {
-        AdminGateConfig config = getOrInitializeConfig();
+        AdminGateConfig config = loadConfigOrEmpty();
         return toConfigResponse(config);
     }
 
@@ -119,7 +102,7 @@ public class AdminGateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gate PIN must be at least 4 characters");
         }
 
-        AdminGateConfig config = getOrInitializeConfig();
+        AdminGateConfig config = loadConfigOrEmpty();
 
         if (request.getTargetUserId() != null) {
             User targetUser = userRepository.findById(request.getTargetUserId())
@@ -137,11 +120,9 @@ public class AdminGateService {
             targetUser.setGatePinUpdatedAt(LocalDateTime.now());
             userRepository.save(targetUser);
 
-            config.setUpdatedAt(LocalDateTime.now());
-            AdminGateConfig savedConfig = adminGateConfigRepository.save(config);
-            log.info("Personal gate PIN updated for {} '{}' by Super Admin '{}'",
+            log.info("Personal gate PIN updated in DB for {} '{}' by Super Admin '{}'",
                     targetUser.getRole(), targetUser.getUsername(), adminUser.getUsername());
-            return toConfigResponse(savedConfig);
+            return toConfigResponse(config);
         }
 
         String targetRole = request.getTargetRole() != null ? request.getTargetRole().trim().toUpperCase() : "";
@@ -160,7 +141,7 @@ public class AdminGateService {
 
         config.setUpdatedAt(LocalDateTime.now());
         AdminGateConfig saved = adminGateConfigRepository.save(config);
-        log.info("Tier fallback gate PIN updated for tier {} by Super Admin '{}'", targetRole, adminUser.getUsername());
+        log.info("Tier gate PIN updated in DB for tier {} by Super Admin '{}'", targetRole, adminUser.getUsername());
         return toConfigResponse(saved);
     }
 
@@ -172,7 +153,7 @@ public class AdminGateService {
         if (trimmed.length() < 4) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Gate PIN must be at least 4 characters");
         }
-        AdminGateConfig config = getOrInitializeConfig();
+        AdminGateConfig config = loadConfigOrEmpty();
         ensurePinUniqueForUser(trimmed, null, config);
     }
 
@@ -227,42 +208,11 @@ public class AdminGateService {
         return staff;
     }
 
-    private AdminGateConfig getOrInitializeConfig() {
+    private AdminGateConfig loadConfigOrEmpty() {
         return adminGateConfigRepository.findById(AdminGateConfig.SINGLETON_ID)
-                .map(existing -> {
-                    boolean modified = false;
-                    if (existing.getAdminPinHash() == null || existing.getAdminPinHash().isBlank()) {
-                        existing.setAdminPinHash(passwordEncoder.encode(resolveAdminDefaultPin()));
-                        modified = true;
-                    }
-                    if (existing.getSubAdminPinHash() == null || existing.getSubAdminPinHash().isBlank()) {
-                        existing.setSubAdminPinHash(passwordEncoder.encode(resolveSubAdminDefaultPin()));
-                        modified = true;
-                    }
-                    return modified ? adminGateConfigRepository.save(existing) : existing;
-                })
-                .orElseGet(() -> {
-                    String adminPin = resolveAdminDefaultPin();
-                    String subAdminPin = resolveSubAdminDefaultPin();
-                    if (adminPin.equals(subAdminPin)) {
-                        throw new IllegalStateException("Default ADMIN and SUB_ADMIN gate PINs must be distinct");
-                    }
-                    AdminGateConfig created = AdminGateConfig.builder()
-                            .id(AdminGateConfig.SINGLETON_ID)
-                            .adminPinHash(passwordEncoder.encode(adminPin))
-                            .subAdminPinHash(passwordEncoder.encode(subAdminPin))
-                            .updatedAt(LocalDateTime.now())
-                            .build();
-                    return adminGateConfigRepository.save(created);
-                });
-    }
-
-    private String resolveAdminDefaultPin() {
-        return (defaultAdminPin != null && !defaultAdminPin.isBlank()) ? defaultAdminPin.trim() : "849201";
-    }
-
-    private String resolveSubAdminDefaultPin() {
-        return (defaultSubAdminPin != null && !defaultSubAdminPin.isBlank()) ? defaultSubAdminPin.trim() : "517309";
+                .orElseGet(() -> AdminGateConfig.builder()
+                        .id(AdminGateConfig.SINGLETON_ID)
+                        .build());
     }
 
     private AdminGateConfigResponse toConfigResponse(AdminGateConfig config) {
