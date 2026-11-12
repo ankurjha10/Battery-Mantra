@@ -169,5 +169,34 @@ class AdminSecurityControllerTest {
                 .andExpect(jsonPath("$.users[0].userId").value(targetUserId.toString()))
                 .andExpect(jsonPath("$.users[0].personalPinConfigured").value(true));
     }
+
+    @Test
+    @DisplayName("PUT /api/admin/security/gate-pin accepts raw tier-level JSON without targetUserId (4-digit ADMIN PIN)")
+    void testUpdateGatePin_RawTierPayloadWithoutTargetUserId() throws Exception {
+        AdminGateConfigResponse response = AdminGateConfigResponse.builder()
+                .adminPinConfigured(true)
+                .subAdminPinConfigured(false)
+                .updatedAt(LocalDateTime.now())
+                .users(List.of())
+                .build();
+
+        when(adminGateService.updateGatePin(eq(adminUserId), any(UpdateGatePinRequest.class)))
+                .thenReturn(response);
+
+        String rawPayload = """
+                {
+                  "targetRole": "ADMIN",
+                  "newPin": "2244",
+                  "currentPassword": "SuperSecret@1"
+                }
+                """;
+
+        mockMvc.perform(put("/api/admin/security/gate-pin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(rawPayload))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.adminPinConfigured").value(true))
+                .andExpect(jsonPath("$.subAdminPinConfigured").value(false));
+    }
 }
 

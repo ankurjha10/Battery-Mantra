@@ -168,8 +168,10 @@ public class AdminGateService {
                         "Gate PIN must be unique across all Admin and Sub-Admin accounts");
             }
         }
-        if ((config.getAdminPinHash() != null && passwordEncoder.matches(rawPin, config.getAdminPinHash())) ||
-                (config.getSubAdminPinHash() != null && passwordEncoder.matches(rawPin, config.getSubAdminPinHash()))) {
+        if ((config.getAdminPinHash() != null && !config.getAdminPinHash().isBlank() &&
+                passwordEncoder.matches(rawPin, config.getAdminPinHash())) ||
+                (config.getSubAdminPinHash() != null && !config.getSubAdminPinHash().isBlank() &&
+                passwordEncoder.matches(rawPin, config.getSubAdminPinHash()))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "Personal gate PIN must be distinct from the default ADMIN/SUB_ADMIN gate PINs");
         }
@@ -177,11 +179,13 @@ public class AdminGateService {
 
     private void ensurePinUniqueForTier(String rawPin, String targetRole, AdminGateConfig config) {
         if ("ADMIN".equals(targetRole) && config.getSubAdminPinHash() != null &&
+                !config.getSubAdminPinHash().isBlank() &&
                 passwordEncoder.matches(rawPin, config.getSubAdminPinHash())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "ADMIN gate PIN must be distinct from SUB_ADMIN gate PIN");
         }
         if ("SUB_ADMIN".equals(targetRole) && config.getAdminPinHash() != null &&
+                !config.getAdminPinHash().isBlank() &&
                 passwordEncoder.matches(rawPin, config.getAdminPinHash())) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "SUB_ADMIN gate PIN must be distinct from ADMIN gate PIN");

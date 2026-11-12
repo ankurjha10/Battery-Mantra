@@ -259,5 +259,51 @@ class AdminGateServiceTest {
         assertFalse(updated.isSubAdminPinConfigured());
         assertNotNull(updated.getUpdatedAt());
     }
+
+    @Test
+    @DisplayName("updateGatePin: setting ADMIN tier PIN when sub_admin_pin_hash is null or blank succeeds and stays distinct from SUB_ADMIN")
+    void testUpdateGatePin_TierAdminFirstThenSubAdmin() {
+        UUID superAdminId = UUID.randomUUID();
+        User superAdmin = User.builder()
+                .userId(superAdminId)
+                .username("superadmin")
+                .role(UserRole.ADMIN)
+                .password(passwordEncoder.encode("realPass"))
+                .build();
+
+        AdminGateConfig configState = AdminGateConfig.builder()
+                .id(AdminGateConfig.SINGLETON_ID)
+                .adminPinHash("")
+                .subAdminPinHash("")
+                .build();
+
+        when(userRepository.findById(superAdminId)).thenReturn(Optional.of(superAdmin));
+        when(userRepository.findAllByRole(UserRole.ADMIN)).thenReturn(List.of(superAdmin));
+        when(userRepository.findAllByRole(UserRole.SUB_ADMIN)).thenReturn(List.of());
+        when(adminGateConfigRepository.findById(AdminGateConfig.SINGLETON_ID)).thenReturn(Optional.of(configState));
+        when(adminGateConfigRepository.save(any(AdminGateConfig.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        AdminGateConfigResponse afterAdmin = adminGateService.updateGatePin(superAdminId,
+                UpdateGatePinRequest.builder()
+                        .targetRole("ADMIN")
+                        .newPin("2244")
+                        .currentPassword("realPass")
+                        .build());
+
+        assertTrue(afterAdmin.isAdminPinConfigured());
+        assertFalse(afterAdmin.isSubAdminPinConfigured());
+        assertTrue(passwordEncoder.matches("2244", configState.getAdminPinHash()));
+
+        AdminGateConfigResponse afterSubAdmin = adminGateService.updateGatePin(superAdminId,
+                UpdateGatePinRequest.builder()
+                        .targetRole("SUB_ADMIN")
+                        .newPin("3355")
+                        .currentPassword("realPass")
+                        .build());
+
+        assertTrue(afterSubAdmin.isAdminPinConfigured());
+        assertTrue(afterSubAdmin.isSubAdminPinConfigured());
+        assertTrue(passwordEncoder.matches("3355", configState.getSubAdminPinHash()));
+    }
 }
 
