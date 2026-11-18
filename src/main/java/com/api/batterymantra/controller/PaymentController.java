@@ -1,6 +1,7 @@
 package com.api.batterymantra.controller;
 
 import com.api.batterymantra.dto.payment.CreateRazorpayOrderRequest;
+import com.api.batterymantra.dto.payment.PaymentFailedRequest;
 import com.api.batterymantra.dto.payment.PaymentVerificationResponse;
 import com.api.batterymantra.dto.payment.QrCodeResponse;
 import com.api.batterymantra.dto.payment.RazorpayOrderResponse;
@@ -42,6 +43,32 @@ public class PaymentController {
             @AuthenticationPrincipal UserPrincipal userDetails) {
         UUID customerId = userDetails.getUser().getUserId();
         PaymentVerificationResponse response = razorpayService.verifyPayment(customerId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Called by frontend when Razorpay reports payment.failed or user dismisses the payment modal.
+     * Records failure on the pending checkout session; no order is created.
+     */
+    @PostMapping("/failed")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<Map<String, Object>> markPaymentFailed(
+            @RequestBody @Valid PaymentFailedRequest request,
+            @AuthenticationPrincipal UserPrincipal userDetails) {
+        UUID customerId = userDetails.getUser().getUserId();
+        Map<String, Object> response = razorpayService.markPaymentFailed(customerId, request);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * Public Razorpay server-to-server webhook endpoint.
+     * Authenticated exclusively via HMAC-SHA256 X-Razorpay-Signature header.
+     */
+    @PostMapping("/webhook")
+    public ResponseEntity<Map<String, Object>> handleWebhook(
+            @RequestBody String rawPayload,
+            @RequestHeader(value = "X-Razorpay-Signature", required = false) String signature) {
+        Map<String, Object> response = razorpayService.handleWebhook(rawPayload, signature);
         return ResponseEntity.ok(response);
     }
 

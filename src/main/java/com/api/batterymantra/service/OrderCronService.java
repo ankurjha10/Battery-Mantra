@@ -1,8 +1,11 @@
 package com.api.batterymantra.service;
 
 import com.api.batterymantra.entity.Orders;
+import com.api.batterymantra.entity.PendingPaymentCheckout;
 import com.api.batterymantra.entity.enums.OrderStatus;
+import com.api.batterymantra.entity.enums.PaymentCheckoutStatus;
 import com.api.batterymantra.repository.OrderRepository;
+import com.api.batterymantra.repository.PendingPaymentCheckoutRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -18,7 +21,32 @@ import java.util.List;
 public class OrderCronService {
 
     private final OrderRepository orderRepository;
+    private final PendingPaymentCheckoutRepository pendingPaymentCheckoutRepository;
     private final CentralInventoryService centralInventoryService;
+
+    /**
+     * Runs every 15 minutes.
+     * Marks abandoned/timed-out pending online payment checkouts as EXPIRED.
+     * No order was ever created and no stock was deducted for these checkouts.
+     */
+    @Scheduled(cron = "0 */15 * * * ?")
+    @Transactional
+    public void expireAbandonedPendingCheckouts() {
+        List<PendingPaymentCheckout> expiredCheckouts = pendingPaymentCheckoutRepository
+                .findByStatusAndExpiresAtBefore(PaymentCheckoutStatus.PENDING, LocalDateTime.now());
+
+        if (expiredCheckouts.isEmpty()) {
+            return;
+        }
+
+        for (PendingPaymentCheckout checkout : expiredCheckouts) {
+            checkout.setStatus(PaymentCheckoutStatus.EXPIRED);
+            checkout.setFailureReason("Customer - Payment timeout (checkout expired)");
+        }
+        pendingPaymentCheckoutRepository.saveAll(expiredCheckouts);
+
+        log.info("Expired {} abandoned pending online payment checkouts.", expiredCheckouts.size());
+    }
 
     /**
      * Runs every day at midnight (00:00:00).
@@ -30,7 +58,7 @@ public class OrderCronService {
         log.info("Starting cron job: autoCancelOldPendingOrders");
 
         LocalDateTime tenDaysAgo = LocalDateTime.now().minusDays(10);
-        
+
         List<Orders> oldPendingOrders = orderRepository.findByOrderStatusAndPlacedAtBefore(
                 OrderStatus.PENDING, tenDaysAgo);
 

@@ -1,7 +1,9 @@
 package com.api.batterymantra.service;
 
 import com.api.batterymantra.config.RazorpayConfig;
+import com.api.batterymantra.dto.payment.CheckoutItemSnapshot;
 import com.api.batterymantra.dto.payment.CreateRazorpayOrderRequest;
+import com.api.batterymantra.dto.payment.PaymentFailedRequest;
 import com.api.batterymantra.dto.payment.PaymentVerificationResponse;
 import com.api.batterymantra.dto.payment.QrCodeResponse;
 import com.api.batterymantra.dto.payment.RazorpayOrderResponse;
@@ -9,15 +11,21 @@ import com.api.batterymantra.dto.payment.VerifyPaymentRequest;
 import com.api.batterymantra.entity.*;
 import com.api.batterymantra.entity.enums.DeliveryMethod;
 import com.api.batterymantra.entity.enums.OrderStatus;
+import com.api.batterymantra.entity.enums.PaymentCheckoutStatus;
 import com.api.batterymantra.entity.enums.PaymentMethod;
 import com.api.batterymantra.entity.enums.PaymentStatus;
+import com.api.batterymantra.entity.enums.UserRole;
 import com.api.batterymantra.repository.*;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.razorpay.Order;
 import com.razorpay.QrCode;
 import com.razorpay.RazorpayClient;
 import com.razorpay.RazorpayException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,10 +35,14 @@ import org.springframework.web.server.ResponseStatusException;
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 
 @Service
@@ -38,20 +50,32 @@ import java.util.UUID;
 @Slf4j
 public class RazorpayService {
 
+    private static final int CHECKOUT_EXPIRY_MINUTES = 30;
+    private static final int MAX_FAILURE_REASON_LENGTH = 500;
+
     private final RazorpayClient razorpayClient;
     private final RazorpayConfig razorpayConfig;
     private final CartRepository cartRepository;
     private final AddressRepository addressRepository;
     private final OrderRepository orderRepository;
+    private final PendingPaymentCheckoutRepository pendingPaymentCheckoutRepository;
     private final ProductRepository productRepository;
     private final PartnerProfileRepository partnerProfileRepository;
     private final PincodeRepository pincodeRepository;
     private final CityRepository cityRepository;
+    private final UserRepository userRepository;
     private final SmsService smsService;
+    private final NotificationService notificationService;
     private final CampaignService campaignService;
     private final CouponService couponService;
     private final CentralInventoryService centralInventoryService;
+    private final ObjectMapper objectMapper;
 
+    /**
+     * Initiates a Razorpay payment order WITHOUT creating a real row in `orders` or deducting stock.
+     * Stores a checkout snapshot in `pending_payment_checkouts`. The real order is only created
+     * once payment is verified (/verify) or captured (Razorpay webhook).
+     */
     @Transactional
     public RazorpayOrderResponse createOrder(UUID customerId, CreateRazorpayOrderRequest request) {
         // 1. Fetch the cart
@@ -65,7 +89,7 @@ public class RazorpayService {
                     "Cart is empty for user: " + customerId);
         }
 
-        // 2. Validate stock availability
+        // 2. Validate stock availability (do NOT deduct stock until payment succeeds)
         for (CartItem cartItem : cartItemList) {
             Product product = cartItem.getProduct();
             if (product.getProductStock() < cartItem.getQuantity()) {
@@ -99,21 +123,18 @@ public class RazorpayService {
 
         // Resolve Target City for Dynamic Pricing
         UUID targetCityId = null;
-        // 1. Pehle request.getSelectedCity() se check karo
         if (request.getSelectedCity() != null && !request.getSelectedCity().isBlank()) {
             var cityOpt = cityRepository.findByCityNameIgnoreCase(request.getSelectedCity().trim());
             if (cityOpt.isPresent()) {
                 targetCityId = cityOpt.get().getCityId();
             }
         }
-        // 2. Fallback: Shipping address ke Pincode se city resolve karo
         if (targetCityId == null && address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
             var pincodeOpt = pincodeRepository.findByCode(address.getPostalCode().trim());
             if (pincodeOpt.isPresent() && pincodeOpt.get().getCity() != null) {
                 targetCityId = pincodeOpt.get().getCity().getCityId();
             }
         }
-        // 3. Fallback: Shipping address ke City Name se
         if (targetCityId == null && address.getCity() != null && !address.getCity().isBlank()) {
             var cityOpt = cityRepository.findByCityNameIgnoreCase(address.getCity().trim());
             if (cityOpt.isPresent()) {
@@ -121,58 +142,55 @@ public class RazorpayService {
             }
         }
 
-        // 5. Calculate total amount
-        List<OrderItems> orderItems = new ArrayList<>();
+        // 5. Build item snapshots and calculate total amount
+        List<CheckoutItemSnapshot> itemSnapshots = new ArrayList<>();
         boolean shouldAutoAssign = false;
+        BigDecimal subTotal = BigDecimal.ZERO;
+        BigDecimal exchangeDiscount = BigDecimal.ZERO;
 
         for (CartItem cartItem : cartItemList) {
-            BigDecimal itemPrice = cartItem.getProduct().getProductPrice();
-            if (targetCityId != null && cartItem.getProduct().getCityPrices() != null) {
+            Product product = cartItem.getProduct();
+            BigDecimal itemPrice = product.getProductPrice();
+            BigDecimal unitExchangeDisc = product.getExchangeDiscount() != null
+                    ? product.getExchangeDiscount()
+                    : BigDecimal.ZERO;
+
+            if (targetCityId != null && product.getCityPrices() != null) {
                 final UUID finalCityId = targetCityId;
-                var cpOpt = cartItem.getProduct().getCityPrices().stream()
+                var cpOpt = product.getCityPrices().stream()
                         .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
                         .findFirst();
-                if (cpOpt.isPresent() && cpOpt.get().getPrice() != null) {
-                    itemPrice = cpOpt.get().getPrice();
-                }
-            }
-
-            OrderItems items = OrderItems.builder()
-                    .product(cartItem.getProduct())
-                    .quantity(cartItem.getQuantity())
-                    .priceAtPurchase(itemPrice)
-                    .build();
-
-            if (cartItem.getProduct().isAutoAssignToPartner()) {
-                shouldAutoAssign = true;
-            }
-
-            orderItems.add(items);
-        }
-
-        BigDecimal subTotal = orderItems.stream()
-                .map(item -> item.getPriceAtPurchase()
-                        .multiply(BigDecimal.valueOf(item.getQuantity())))
-                .reduce(BigDecimal.ZERO, (a, b) -> a.add(b));
-
-        BigDecimal exchangeDiscount = BigDecimal.ZERO;
-        for (CartItem cartItem : cartItemList) {
-            if (cartItem.isExchangeOldBattery()) {
-                BigDecimal disc = cartItem.getProduct().getExchangeDiscount() != null
-                        ? cartItem.getProduct().getExchangeDiscount()
-                        : BigDecimal.ZERO;
-                if (targetCityId != null && cartItem.getProduct().getCityPrices() != null) {
-                    final UUID finalCityId = targetCityId;
-                    var cpOpt = cartItem.getProduct().getCityPrices().stream()
-                            .filter(cp -> cp.getCity() != null && cp.getCity().getCityId().equals(finalCityId))
-                            .findFirst();
-                    if (cpOpt.isPresent() && cpOpt.get().getExchangeDiscount() != null
+                if (cpOpt.isPresent()) {
+                    if (cpOpt.get().getPrice() != null) {
+                        itemPrice = cpOpt.get().getPrice();
+                    }
+                    if (cpOpt.get().getExchangeDiscount() != null
                             && cpOpt.get().getExchangeDiscount().compareTo(BigDecimal.ZERO) > 0) {
-                        disc = cpOpt.get().getExchangeDiscount();
+                        unitExchangeDisc = cpOpt.get().getExchangeDiscount();
                     }
                 }
+            }
+
+            BigDecimal appliedItemExchangeDisc = cartItem.isExchangeOldBattery()
+                    ? unitExchangeDisc
+                    : BigDecimal.ZERO;
+
+            itemSnapshots.add(CheckoutItemSnapshot.builder()
+                    .productId(product.getProductId())
+                    .quantity(cartItem.getQuantity())
+                    .priceAtPurchase(itemPrice)
+                    .exchangeOldBattery(cartItem.isExchangeOldBattery())
+                    .exchangeDiscount(appliedItemExchangeDisc)
+                    .build());
+
+            subTotal = subTotal.add(itemPrice.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            if (cartItem.isExchangeOldBattery()) {
                 exchangeDiscount = exchangeDiscount.add(
-                        disc.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+                        unitExchangeDisc.multiply(BigDecimal.valueOf(cartItem.getQuantity())));
+            }
+
+            if (product.isAutoAssignToPartner()) {
+                shouldAutoAssign = true;
             }
         }
 
@@ -200,15 +218,14 @@ public class RazorpayService {
 
         // If couponCode was passed but not claimed by a campaign, check traditional CouponService
         if (couponCode != null && !couponCode.isBlank() && appliedCampaignId == null) {
-            List<com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto> couponCartItems = (cartItemList != null)
-                    ? cartItemList.stream().map(ci -> com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto.builder()
+            List<com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto> couponCartItems =
+                    cartItemList.stream().map(ci -> com.api.batterymantra.dto.coupon.ApplyCouponRequest.ApplyCouponCartItemDto.builder()
                             .productId(ci.getProduct() != null && ci.getProduct().getProductId() != null ? ci.getProduct().getProductId().toString() : null)
                             .categoryId(ci.getProduct() != null && ci.getProduct().getProductCategory() != null && ci.getProduct().getProductCategory().getCategoryId() != null ? ci.getProduct().getProductCategory().getCategoryId().toString() : null)
                             .brandId(ci.getProduct() != null && ci.getProduct().getBrand() != null && ci.getProduct().getBrand().getBrandId() != null ? ci.getProduct().getBrand().getBrandId().toString() : null)
                             .productPrice(ci.getProduct() != null && ci.getProduct().getProductPrice() != null ? ci.getProduct().getProductPrice().doubleValue() : 0.0)
                             .quantity(ci.getQuantity())
-                            .build()).toList()
-                    : List.of();
+                            .build()).toList();
 
             var couponResponse = couponService.applyCoupon(com.api.batterymantra.dto.coupon.ApplyCouponRequest.builder()
                     .code(couponCode)
@@ -228,49 +245,9 @@ public class RazorpayService {
             total = BigDecimal.ZERO;
         }
 
-        // 6. Create Razorpay order
-        long amountInPaise = total.multiply(BigDecimal.valueOf(100)).longValue();
-
-        JSONObject razorpayOrderRequest = new JSONObject();
-        razorpayOrderRequest.put("amount", amountInPaise);
-        razorpayOrderRequest.put("currency", "INR");
-        razorpayOrderRequest.put("receipt", "bm_" + UUID.randomUUID().toString().substring(0, 8));
-
-        Order razorpayOrder;
-        try {
-            razorpayOrder = razorpayClient.orders.create(razorpayOrderRequest);
-        } catch (RazorpayException e) {
-            log.error("Failed to create Razorpay order: {}", e.getMessage(), e);
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to create payment order: " + e.getMessage());
-        }
-
-        String razorpayOrderId = razorpayOrder.get("id");
-
-        // 7. Create internal order with PENDING status
-        Orders orders = Orders.builder()
-                .customer(cart.getCustomer())
-                .shippingAddress(address)
-                .paymentStatus(PaymentStatus.PENDING)
-                .orderStatus(OrderStatus.PENDING)
-                .deliveryMethod(deliveryMethod)
-                .paymentMethod(PaymentMethod.ONLINE)
-                .installationDate(request.getInstallationDate())
-                .razorpayOrderId(razorpayOrderId)
-                .totalAmount(total)
-                .exchangeDiscount(exchangeDiscount)
-                .selectedCity(request.getSelectedCity())
-                .appliedCampaignId(appliedCampaignId)
-                .campaignName(campaignName)
-                .campaignDiscountAmount(campaignDiscountAmount)
-                .discountAmount(totalDiscount)
-                .couponCode(couponCode)
-                .build();
-
-        // 8. Auto-assign partner (same logic as COD checkout)
+        // 6. Resolve auto-assign partner (persisted in pending checkout, applied when order is created)
+        PartnerProfile matchedPartner = null;
         if (shouldAutoAssign) {
-            PartnerProfile matchedPartner = null;
-
             if (address.getPostalCode() != null && !address.getPostalCode().isBlank()) {
                 String cleanPincode = address.getPostalCode().trim();
                 var pincodeOpt = pincodeRepository.findByCode(cleanPincode);
@@ -289,105 +266,526 @@ public class RazorpayService {
                         .findFirstByIsActiveTrueAndOperatingCities_CityNameIgnoreCase(cleanCity)
                         .orElse(null);
             }
-
-            if (matchedPartner != null) {
-                orders.setAssignedPartner(matchedPartner);
-            }
         }
 
-        // 9. Link order items
-        for (int i = 0; i < orderItems.size(); i++) {
-            orderItems.get(i).setOrder(orders);
+        // 7. Create Razorpay order
+        long amountInPaise = total.multiply(BigDecimal.valueOf(100)).longValue();
+
+        JSONObject razorpayOrderRequest = new JSONObject();
+        razorpayOrderRequest.put("amount", amountInPaise);
+        razorpayOrderRequest.put("currency", "INR");
+        razorpayOrderRequest.put("receipt", "bm_" + UUID.randomUUID().toString().substring(0, 8));
+
+        Order razorpayOrder;
+        try {
+            razorpayOrder = razorpayClient.orders.create(razorpayOrderRequest);
+        } catch (RazorpayException e) {
+            log.error("Failed to create Razorpay order: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to create payment order: " + e.getMessage());
         }
-        orders.setOrderItems(orderItems);
 
-        // 10. Save the order — DO NOT clear cart yet
-        Orders savedOrder = orderRepository.save(orders);
+        String razorpayOrderId = razorpayOrder.get("id");
 
-        // Concurrency-safe stock auto-deduction (Pessimistic Write Lock)
-        centralInventoryService.deductStockForOrder(savedOrder, "CUSTOMER");
+        // 8. Persist PendingPaymentCheckout snapshot ONLY — NO row in `orders`, NO stock deduction
+        String itemsSnapshotJson;
+        try {
+            itemsSnapshotJson = objectMapper.writeValueAsString(itemSnapshots);
+        } catch (JsonProcessingException e) {
+            log.error("Failed to serialize checkout items snapshot: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to prepare payment checkout session");
+        }
 
-        log.info("Razorpay order created: {} for internal order: {}",
-                razorpayOrderId, savedOrder.getOrderId());
+        PendingPaymentCheckout pendingCheckout = PendingPaymentCheckout.builder()
+                .razorpayOrderId(razorpayOrderId)
+                .customer(cart.getCustomer())
+                .shippingAddress(address)
+                .deliveryMethod(deliveryMethod)
+                .installationDate(request.getInstallationDate())
+                .totalAmount(total)
+                .exchangeDiscount(exchangeDiscount)
+                .selectedCity(request.getSelectedCity())
+                .appliedCampaignId(appliedCampaignId)
+                .campaignName(campaignName)
+                .campaignDiscountAmount(campaignDiscountAmount)
+                .discountAmount(totalDiscount)
+                .couponCode(couponCode)
+                .assignedPartner(matchedPartner)
+                .itemsSnapshotJson(itemsSnapshotJson)
+                .status(PaymentCheckoutStatus.PENDING)
+                .expiresAt(LocalDateTime.now().plusMinutes(CHECKOUT_EXPIRY_MINUTES))
+                .build();
+
+        pendingPaymentCheckoutRepository.save(pendingCheckout);
+
+        log.info("Razorpay payment intent created: {} (pending checkout id: {}) — order deferred until payment succeeds",
+                razorpayOrderId, pendingCheckout.getId());
 
         return new RazorpayOrderResponse(
                 razorpayOrderId,
                 amountInPaise,
                 "INR",
                 razorpayConfig.getKeyId(),
-                savedOrder.getOrderId()
+                null
         );
     }
 
+    /**
+     * Verifies Razorpay HMAC-SHA256 signature and creates the real order (idempotently).
+     * If signature is invalid, no order is created.
+     */
     @Transactional
     public PaymentVerificationResponse verifyPayment(UUID customerId,
-                                                      VerifyPaymentRequest request) {
-        // 1. Fetch the order by Razorpay order ID
-        Orders order = orderRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
+                                                     VerifyPaymentRequest request) {
+        // 1. Verify HMAC-SHA256 signature first (constant-time)
+        String payload = request.getRazorpayOrderId() + "|" + request.getRazorpayPaymentId();
+        if (!verifySignature(payload, razorpayConfig.getKeySecret(), request.getRazorpaySignature())) {
+            log.warn("Payment verification failed (invalid signature) for Razorpay order ID: {}",
+                    request.getRazorpayOrderId());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Payment verification failed. Invalid signature.");
+        }
+
+        // 2. Look up PendingPaymentCheckout with pessimistic write lock (prevents race with webhook)
+        Optional<PendingPaymentCheckout> checkoutOpt =
+                pendingPaymentCheckoutRepository.findByRazorpayOrderIdForUpdate(request.getRazorpayOrderId());
+
+        if (checkoutOpt.isPresent()) {
+            PendingPaymentCheckout checkout = checkoutOpt.get();
+
+            if (!checkout.getCustomer().getUserId().equals(customerId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                        "You are not authorized to verify this payment");
+            }
+
+            Orders confirmedOrder = finalizePaidCheckout(checkout, request.getRazorpayPaymentId(), "CUSTOMER");
+
+            return new PaymentVerificationResponse(
+                    confirmedOrder.getOrderId(),
+                    confirmedOrder.getOrderStatus().name(),
+                    confirmedOrder.getPaymentStatus().name(),
+                    "Payment verified successfully"
+            );
+        }
+
+        // 3. Legacy fallback for any in-flight order created before deferred order creation rollout
+        Orders legacyOrder = orderRepository.findByRazorpayOrderId(request.getRazorpayOrderId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Order not found for Razorpay order ID: "
+                        "Payment checkout session not found for Razorpay order ID: "
                                 + request.getRazorpayOrderId()));
 
-        // 2. Validate ownership
-        if (!order.getCustomer().getUserId().equals(customerId)) {
+        if (!legacyOrder.getCustomer().getUserId().equals(customerId)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
                     "You are not authorized to verify this payment");
         }
 
-        // 3. Verify HMAC-SHA256 signature
-        String payload = request.getRazorpayOrderId() + "|"
-                + request.getRazorpayPaymentId();
-        String expectedSignature = calculateHmacSha256(payload,
-                razorpayConfig.getKeySecret());
+        Orders confirmedLegacy = confirmLegacyOrder(legacyOrder);
 
-        if (expectedSignature != null
-                && expectedSignature.equals(request.getRazorpaySignature())) {
-            // Payment verified successfully
-            order.setOrderStatus(OrderStatus.CONFIRMED);
-            order.setPaymentStatus(PaymentStatus.PAID);
-            orderRepository.save(order);
+        return new PaymentVerificationResponse(
+                confirmedLegacy.getOrderId(),
+                confirmedLegacy.getOrderStatus().name(),
+                confirmedLegacy.getPaymentStatus().name(),
+                "Payment verified successfully"
+        );
+    }
 
-            // Clear the user's cart
-            Cart cart = cartRepository.findByUserId(customerId).orElse(null);
-            if (cart != null) {
-                cart.getCartItems().clear();
-                cartRepository.save(cart);
-            }
+    /**
+     * Records a payment failure / customer dismissal reported by the frontend.
+     * No order exists and no stock was deducted; simply marks the pending checkout as FAILED
+     * unless it has already been COMPLETED.
+     */
+    @Transactional
+    public Map<String, Object> markPaymentFailed(UUID customerId, PaymentFailedRequest request) {
+        PendingPaymentCheckout checkout = pendingPaymentCheckoutRepository
+                .findByRazorpayOrderIdForUpdate(request.getRazorpayOrderId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Payment checkout session not found for Razorpay order ID: "
+                                + request.getRazorpayOrderId()));
 
-            if (order.getCouponCode() != null && !order.getCouponCode().isBlank()
-                    && order.getDiscountAmount() != null && order.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
-                    && order.getAppliedCampaignId() == null) {
-                couponService.incrementCouponUsage(order.getCouponCode());
-            }
-
-            // Send SMS notifications
-            String customerPhone = order.getCustomer().getPhoneNumber();
-            String customerName = order.getCustomer().getUsername();
-            String orderIdStr = order.getOrderId().toString();
-
-            if (customerPhone != null && !customerPhone.isBlank()) {
-                smsService.sendOrderPlacedSms(customerPhone, customerName, orderIdStr, String.valueOf(order.getTotalAmount()), order.getPlacedAt() != null ? order.getPlacedAt().toString() : "", "Your Product", "Online");
-            }
-            // smsService.sendAdminOrderAlert("ADMIN", orderIdStr);
-
-            log.info("Payment verified for order: {}", order.getOrderId());
-
-            return new PaymentVerificationResponse(
-                    order.getOrderId(),
-                    order.getOrderStatus().name(),
-                    order.getPaymentStatus().name(),
-                    "Payment verified successfully"
-            );
-        } else {
-            // Invalid signature — payment failed
-            order.setPaymentStatus(PaymentStatus.FAILED);
-            orderRepository.save(order);
-
-            log.warn("Payment verification failed for order: {}", order.getOrderId());
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Payment verification failed. Invalid signature.");
+        if (!checkout.getCustomer().getUserId().equals(customerId)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "You are not authorized to update this payment session");
         }
+
+        if (checkout.getStatus() == PaymentCheckoutStatus.COMPLETED) {
+            return Map.of(
+                    "razorpayOrderId", checkout.getRazorpayOrderId(),
+                    "status", PaymentCheckoutStatus.COMPLETED.name(),
+                    "orderId", checkout.getCreatedOrderId() != null ? checkout.getCreatedOrderId().toString() : "",
+                    "message", "Payment was already completed."
+            );
+        }
+
+        String reason = (request.getReason() != null && !request.getReason().isBlank())
+                ? truncate(request.getReason().trim(), MAX_FAILURE_REASON_LENGTH)
+                : "Payment failed or cancelled by customer";
+
+        checkout.setStatus(PaymentCheckoutStatus.FAILED);
+        if (request.getRazorpayPaymentId() != null && !request.getRazorpayPaymentId().isBlank()) {
+            checkout.setRazorpayPaymentId(request.getRazorpayPaymentId().trim());
+        }
+        checkout.setFailureReason(reason);
+        pendingPaymentCheckoutRepository.save(checkout);
+
+        log.info("Marked pending payment checkout {} (rzpOrder={}) as FAILED. Reason: {}. No order created.",
+                checkout.getId(), checkout.getRazorpayOrderId(), reason);
+
+        return Map.of(
+                "razorpayOrderId", checkout.getRazorpayOrderId(),
+                "status", PaymentCheckoutStatus.FAILED.name(),
+                "message", "Payment failure recorded. No order was created."
+        );
+    }
+
+    /**
+     * Handles server-to-server Razorpay webhooks (payment.captured, order.paid, payment.failed).
+     * Verifies X-Razorpay-Signature against razorpay.webhook-secret before processing.
+     */
+    @Transactional
+    public Map<String, Object> handleWebhook(String rawPayload, String signature) {
+        String webhookSecret = razorpayConfig.getWebhookSecret();
+        if (webhookSecret == null || webhookSecret.isBlank()) {
+            log.error("Razorpay webhook received but razorpay.webhook-secret is not configured!");
+            throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE,
+                    "Webhook secret is not configured.");
+        }
+
+        if (!verifySignature(rawPayload, webhookSecret, signature)) {
+            log.warn("Rejected Razorpay webhook due to invalid X-Razorpay-Signature.");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Invalid webhook signature.");
+        }
+
+        JSONObject root;
+        try {
+            root = new JSONObject(rawPayload);
+        } catch (JSONException e) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid webhook JSON payload.");
+        }
+
+        String event = root.optString("event", "");
+        JSONObject payload = root.optJSONObject("payload");
+
+        if ("payment.captured".equals(event) || "order.paid".equals(event)) {
+            JSONObject paymentEntity = extractEntity(payload, "payment");
+            JSONObject orderEntity = extractEntity(payload, "order");
+
+            String razorpayOrderId = paymentEntity != null ? paymentEntity.optString("order_id", "") : "";
+            if (razorpayOrderId.isBlank() && orderEntity != null) {
+                razorpayOrderId = orderEntity.optString("id", "");
+            }
+            String razorpayPaymentId = paymentEntity != null ? paymentEntity.optString("id", "") : "";
+
+            if (razorpayOrderId.isBlank()) {
+                log.info("Ignoring Razorpay webhook event '{}' without order_id (paymentId={})", event, razorpayPaymentId);
+                return Map.of("status", "ignored", "event", event);
+            }
+
+            Optional<PendingPaymentCheckout> checkoutOpt =
+                    pendingPaymentCheckoutRepository.findByRazorpayOrderIdForUpdate(razorpayOrderId);
+
+            if (checkoutOpt.isPresent()) {
+                Orders confirmedOrder = finalizePaidCheckout(checkoutOpt.get(), razorpayPaymentId, "RAZORPAY_WEBHOOK");
+                return Map.of(
+                        "status", "processed",
+                        "event", event,
+                        "orderId", confirmedOrder.getOrderId().toString()
+                );
+            }
+
+            Optional<Orders> legacyOrderOpt = orderRepository.findByRazorpayOrderId(razorpayOrderId);
+            if (legacyOrderOpt.isPresent()) {
+                Orders confirmedLegacy = confirmLegacyOrder(legacyOrderOpt.get());
+                return Map.of(
+                        "status", "processed",
+                        "event", event,
+                        "orderId", confirmedLegacy.getOrderId().toString()
+                );
+            }
+
+            log.warn("Razorpay webhook '{}' received for unknown razorpayOrderId={}", event, razorpayOrderId);
+            return Map.of("status", "ignored", "event", event, "message", "No matching checkout found");
+        }
+
+        if ("payment.failed".equals(event)) {
+            JSONObject paymentEntity = extractEntity(payload, "payment");
+            String razorpayOrderId = paymentEntity != null ? paymentEntity.optString("order_id", "") : "";
+            String razorpayPaymentId = paymentEntity != null ? paymentEntity.optString("id", "") : "";
+
+            if (razorpayOrderId.isBlank()) {
+                return Map.of("status", "ignored", "event", event);
+            }
+
+            String reason = extractFailureReason(paymentEntity);
+
+            Optional<PendingPaymentCheckout> checkoutOpt =
+                    pendingPaymentCheckoutRepository.findByRazorpayOrderIdForUpdate(razorpayOrderId);
+
+            if (checkoutOpt.isPresent()) {
+                PendingPaymentCheckout checkout = checkoutOpt.get();
+                if (checkout.getStatus() == PaymentCheckoutStatus.PENDING) {
+                    checkout.setStatus(PaymentCheckoutStatus.FAILED);
+                    if (!razorpayPaymentId.isBlank()) {
+                        checkout.setRazorpayPaymentId(razorpayPaymentId);
+                    }
+                    checkout.setFailureReason(reason);
+                    pendingPaymentCheckoutRepository.save(checkout);
+                    log.info("Webhook payment.failed recorded for rzpOrder={}: {}. No order created.",
+                            razorpayOrderId, reason);
+                } else {
+                    log.info("Webhook payment.failed ignored for rzpOrder={} because checkout status is already {}",
+                            razorpayOrderId, checkout.getStatus());
+                }
+            }
+
+            return Map.of("status", "recorded", "event", event);
+        }
+
+        log.debug("Ignoring unhandled Razorpay webhook event: {}", event);
+        return Map.of("status", "ignored", "event", event);
+    }
+
+    /**
+     * Idempotently converts a verified/captured PendingPaymentCheckout into a real CONFIRMED/PAID order.
+     * Safe to invoke concurrently from both /verify and Razorpay webhook (caller holds pessimistic lock).
+     */
+    private Orders finalizePaidCheckout(PendingPaymentCheckout checkout,
+                                        String razorpayPaymentId,
+                                        String performedBy) {
+        // Idempotency guard #1: already finalized via createdOrderId
+        if (checkout.getStatus() == PaymentCheckoutStatus.COMPLETED && checkout.getCreatedOrderId() != null) {
+            Optional<Orders> existing = orderRepository.findById(checkout.getCreatedOrderId());
+            if (existing.isPresent()) {
+                log.info("Checkout {} already finalized to order {}, returning idempotently.",
+                        checkout.getId(), existing.get().getOrderId());
+                return existing.get();
+            }
+        }
+
+        // Idempotency guard #2: order already exists by razorpayOrderId
+        Optional<Orders> existingByRzp = orderRepository.findByRazorpayOrderId(checkout.getRazorpayOrderId());
+        if (existingByRzp.isPresent()) {
+            Orders existingOrder = existingByRzp.get();
+            checkout.setStatus(PaymentCheckoutStatus.COMPLETED);
+            checkout.setCreatedOrderId(existingOrder.getOrderId());
+            if (razorpayPaymentId != null && !razorpayPaymentId.isBlank()) {
+                checkout.setRazorpayPaymentId(razorpayPaymentId);
+            }
+            pendingPaymentCheckoutRepository.save(checkout);
+            log.info("Order {} already existed for rzpOrder={}, reconciled checkout {}.",
+                    existingOrder.getOrderId(), checkout.getRazorpayOrderId(), checkout.getId());
+            return existingOrder;
+        }
+
+        // Reconstruct order items from the persisted checkout snapshot
+        List<CheckoutItemSnapshot> snapshots = deserializeItemSnapshots(checkout.getItemsSnapshotJson());
+        List<OrderItems> orderItems = new ArrayList<>();
+
+        Orders order = Orders.builder()
+                .customer(checkout.getCustomer())
+                .shippingAddress(checkout.getShippingAddress())
+                .paymentStatus(PaymentStatus.PAID)
+                .orderStatus(OrderStatus.CONFIRMED)
+                .deliveryMethod(checkout.getDeliveryMethod())
+                .paymentMethod(PaymentMethod.ONLINE)
+                .installationDate(checkout.getInstallationDate())
+                .razorpayOrderId(checkout.getRazorpayOrderId())
+                .totalAmount(checkout.getTotalAmount())
+                .exchangeDiscount(checkout.getExchangeDiscount())
+                .selectedCity(checkout.getSelectedCity())
+                .appliedCampaignId(checkout.getAppliedCampaignId())
+                .campaignName(checkout.getCampaignName())
+                .campaignDiscountAmount(checkout.getCampaignDiscountAmount())
+                .discountAmount(checkout.getDiscountAmount())
+                .couponCode(checkout.getCouponCode())
+                .assignedPartner(checkout.getAssignedPartner())
+                .build();
+
+        for (CheckoutItemSnapshot snap : snapshots) {
+            Product product = productRepository.findById(snap.getProductId())
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                            "Product not found while finalizing paid order: " + snap.getProductId()));
+            OrderItems item = OrderItems.builder()
+                    .order(order)
+                    .product(product)
+                    .quantity(snap.getQuantity())
+                    .priceAtPurchase(snap.getPriceAtPurchase())
+                    .exchangeOldBattery(snap.isExchangeOldBattery())
+                    .exchangeDiscount(snap.getExchangeDiscount())
+                    .build();
+            orderItems.add(item);
+        }
+        order.setOrderItems(orderItems);
+
+        Orders savedOrder = orderRepository.save(order);
+
+        // Concurrency-safe stock deduction on payment success (never rolls back a paid order on shortage)
+        boolean stockDeducted = centralInventoryService.deductStockForPaidOrder(savedOrder, performedBy);
+        if (!stockDeducted) {
+            String shortageNote = "[STOCK SHORTAGE ALERT] Online payment captured"
+                    + (razorpayPaymentId != null && !razorpayPaymentId.isBlank() ? " (" + razorpayPaymentId + ")" : "")
+                    + ", but stock was insufficient at payment confirmation. Admin resolution required.";
+            savedOrder.setEngineerNotes(shortageNote);
+            savedOrder = orderRepository.save(savedOrder);
+        }
+
+        // Mark checkout COMPLETED
+        checkout.setStatus(PaymentCheckoutStatus.COMPLETED);
+        checkout.setCreatedOrderId(savedOrder.getOrderId());
+        if (razorpayPaymentId != null && !razorpayPaymentId.isBlank()) {
+            checkout.setRazorpayPaymentId(razorpayPaymentId);
+        }
+        checkout.setFailureReason(null);
+        pendingPaymentCheckoutRepository.save(checkout);
+
+        // Clear the user's cart
+        UUID customerId = checkout.getCustomer().getUserId();
+        Cart cart = cartRepository.findByUserId(customerId).orElse(null);
+        if (cart != null) {
+            cart.getCartItems().clear();
+            cartRepository.save(cart);
+        }
+
+        // Increment coupon usage if traditional coupon was used
+        if (savedOrder.getCouponCode() != null && !savedOrder.getCouponCode().isBlank()
+                && savedOrder.getDiscountAmount() != null && savedOrder.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+                && savedOrder.getAppliedCampaignId() == null) {
+            couponService.incrementCouponUsage(savedOrder.getCouponCode());
+        }
+
+        // Send customer SMS notification
+        String customerPhone = savedOrder.getCustomer().getPhoneNumber();
+        String customerName = savedOrder.getCustomer().getUsername();
+        String orderIdStr = savedOrder.getOrderId().toString();
+
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderPlacedSms(
+                    customerPhone,
+                    customerName,
+                    orderIdStr,
+                    String.valueOf(savedOrder.getTotalAmount()),
+                    savedOrder.getPlacedAt() != null ? savedOrder.getPlacedAt().toString() : "",
+                    "Your Product",
+                    "Online"
+            );
+        }
+
+        // Notify Admins
+        notifyAdminsOnOnlineOrder(savedOrder, stockDeducted);
+
+        log.info("Paid online order {} created & confirmed via {} (rzpOrder={}, rzpPayment={}, stockDeducted={})",
+                savedOrder.getOrderId(), performedBy, checkout.getRazorpayOrderId(), razorpayPaymentId, stockDeducted);
+
+        return savedOrder;
+    }
+
+    private Orders confirmLegacyOrder(Orders order) {
+        if (order.getPaymentStatus() == PaymentStatus.PAID && order.getOrderStatus() == OrderStatus.CONFIRMED) {
+            return order;
+        }
+
+        order.setOrderStatus(OrderStatus.CONFIRMED);
+        order.setPaymentStatus(PaymentStatus.PAID);
+        Orders savedOrder = orderRepository.save(order);
+
+        UUID customerId = savedOrder.getCustomer().getUserId();
+        Cart cart = cartRepository.findByUserId(customerId).orElse(null);
+        if (cart != null) {
+            cart.getCartItems().clear();
+            cartRepository.save(cart);
+        }
+
+        if (savedOrder.getCouponCode() != null && !savedOrder.getCouponCode().isBlank()
+                && savedOrder.getDiscountAmount() != null && savedOrder.getDiscountAmount().compareTo(BigDecimal.ZERO) > 0
+                && savedOrder.getAppliedCampaignId() == null) {
+            couponService.incrementCouponUsage(savedOrder.getCouponCode());
+        }
+
+        String customerPhone = savedOrder.getCustomer().getPhoneNumber();
+        String customerName = savedOrder.getCustomer().getUsername();
+        String orderIdStr = savedOrder.getOrderId().toString();
+
+        if (customerPhone != null && !customerPhone.isBlank()) {
+            smsService.sendOrderPlacedSms(
+                    customerPhone,
+                    customerName,
+                    orderIdStr,
+                    String.valueOf(savedOrder.getTotalAmount()),
+                    savedOrder.getPlacedAt() != null ? savedOrder.getPlacedAt().toString() : "",
+                    "Your Product",
+                    "Online"
+            );
+        }
+
+        log.info("Legacy online order verified & confirmed: {}", savedOrder.getOrderId());
+        return savedOrder;
+    }
+
+    private void notifyAdminsOnOnlineOrder(Orders order, boolean stockDeducted) {
+        try {
+            List<User> admins = userRepository.findAllByRole(UserRole.ADMIN);
+            if (admins == null || admins.isEmpty()) {
+                return;
+            }
+            String orderIdStr = order.getOrderId().toString();
+            String shortId = orderIdStr.length() > 8 ? orderIdStr.substring(0, 8) : orderIdStr;
+            String title = stockDeducted ? "New Online Order Paid" : "URGENT: Paid Order Stock Shortage";
+            String message = stockDeducted
+                    ? "Online Order #" + shortId + "... has been paid and confirmed."
+                    : "Online Order #" + shortId + "... was PAID but stock was insufficient! Please resolve immediately.";
+
+            for (User admin : admins) {
+                notificationService.sendPushNotification(admin.getUserId(), title, message, null);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to send admin notification for online order {}: {}", order.getOrderId(), e.getMessage());
+        }
+    }
+
+    private List<CheckoutItemSnapshot> deserializeItemSnapshots(String json) {
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<CheckoutItemSnapshot>>() {});
+        } catch (JsonProcessingException e) {
+            log.error("Failed to deserialize checkout item snapshots: {}", e.getMessage(), e);
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Corrupted checkout snapshot data");
+        }
+    }
+
+    private JSONObject extractEntity(JSONObject payload, String key) {
+        if (payload == null) {
+            return null;
+        }
+        JSONObject wrapper = payload.optJSONObject(key);
+        return wrapper != null ? wrapper.optJSONObject("entity") : null;
+    }
+
+    private String extractFailureReason(JSONObject paymentEntity) {
+        if (paymentEntity == null) {
+            return "Payment failed";
+        }
+        String description = paymentEntity.optString("error_description", "").trim();
+        String reason = paymentEntity.optString("error_reason", "").trim();
+        String source = paymentEntity.optString("error_source", "").trim();
+
+        if (!description.isBlank()) {
+            return truncate(description, MAX_FAILURE_REASON_LENGTH);
+        }
+        if (!source.isBlank() && !reason.isBlank()) {
+            return truncate(source + " - " + reason, MAX_FAILURE_REASON_LENGTH);
+        }
+        if (!reason.isBlank()) {
+            return truncate(reason, MAX_FAILURE_REASON_LENGTH);
+        }
+        return "Payment failed";
+    }
+
+    private String truncate(String value, int maxLength) {
+        if (value == null || value.length() <= maxLength) {
+            return value;
+        }
+        return value.substring(0, maxLength);
     }
 
     /**
@@ -527,13 +925,28 @@ public class RazorpayService {
         );
     }
 
+    private boolean verifySignature(String data, String secret, String actualSignature) {
+        if (data == null || secret == null || secret.isBlank()
+                || actualSignature == null || actualSignature.isBlank()) {
+            return false;
+        }
+        String expectedSignature = calculateHmacSha256(data, secret);
+        if (expectedSignature == null) {
+            return false;
+        }
+        return MessageDigest.isEqual(
+                expectedSignature.getBytes(StandardCharsets.UTF_8),
+                actualSignature.getBytes(StandardCharsets.UTF_8)
+        );
+    }
+
     private String calculateHmacSha256(String data, String secret) {
         try {
             Mac mac = Mac.getInstance("HmacSHA256");
             SecretKeySpec secretKeySpec = new SecretKeySpec(
-                    secret.getBytes(), "HmacSHA256");
+                    secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
             mac.init(secretKeySpec);
-            byte[] hash = mac.doFinal(data.getBytes());
+            byte[] hash = mac.doFinal(data.getBytes(StandardCharsets.UTF_8));
 
             StringBuilder hexString = new StringBuilder();
             for (byte b : hash) {
@@ -550,4 +963,3 @@ public class RazorpayService {
         }
     }
 }
-

@@ -192,6 +192,72 @@ public class CentralInventoryService {
     }
 
     /**
+     * Concurrency-safe stock deduction for an already-paid online order.
+     * Locks products in deterministic ID order to avoid deadlocks and validates all quantities atomically.
+     * If stock became insufficient while the customer was paying, does NOT throw (so the paid order
+     * is never rolled back or lost); instead marks stockRestored = true to prevent phantom restocking
+     * on cancellation and returns false so the caller can alert admins.
+     */
+    @Transactional
+    @CacheEvict(value = "products", allEntries = true)
+    public boolean deductStockForPaidOrder(Orders order, String performedBy) {
+        if (order == null || order.getOrderItems() == null || order.getOrderItems().isEmpty()) {
+            return true;
+        }
+
+        if (order.getOrderId() != null
+                && stockAuditLogRepository.existsByOrderIdAndChangeType(order.getOrderId(), "ORDER_DEDUCT")) {
+            log.warn("Stock already deducted for order: {}, skipping duplicate deduction.", order.getOrderId());
+            return true;
+        }
+
+        // Aggregate requested quantities per productId in deterministic sorted order to prevent deadlocks
+        Map<UUID, Integer> requestedByProduct = new TreeMap<>();
+        for (OrderItems item : order.getOrderItems()) {
+            if (item.getProduct() != null && item.getProduct().getProductId() != null) {
+                requestedByProduct.merge(item.getProduct().getProductId(), item.getQuantity(), Integer::sum);
+            }
+        }
+
+        Map<UUID, Product> lockedProducts = new LinkedHashMap<>();
+        for (Map.Entry<UUID, Integer> entry : requestedByProduct.entrySet()) {
+            UUID productId = entry.getKey();
+            int totalRequested = entry.getValue();
+
+            Product lockedProduct = productRepository.findByIdWithLock(productId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Product not found: " + productId));
+            lockedProducts.put(productId, lockedProduct);
+
+            if (lockedProduct.getProductStock() < totalRequested) {
+                log.error("CRITICAL: Paid online order {} has insufficient stock for product '{}' ({}): available={}, requested={}. Order preserved without stock deduction for admin resolution.",
+                        order.getOrderId(), lockedProduct.getProductName(), productId,
+                        lockedProduct.getProductStock(), totalRequested);
+                // Mark stockRestored = true since stock was never deducted (prevents phantom restock if cancelled)
+                order.setStockRestored(true);
+                return false;
+            }
+        }
+
+        for (Map.Entry<UUID, Integer> entry : requestedByProduct.entrySet()) {
+            UUID productId = entry.getKey();
+            int totalRequested = entry.getValue();
+            Product lockedProduct = lockedProducts.get(productId);
+
+            int availableStock = lockedProduct.getProductStock();
+            int newStock = availableStock - totalRequested;
+            lockedProduct.setProductStock(newStock);
+            productRepository.save(lockedProduct);
+
+            recordAuditLog(lockedProduct, "ORDER_DEDUCT", -totalRequested, availableStock, newStock,
+                    order.getOrderId(), performedBy != null ? performedBy : "SYSTEM",
+                    "Paid online order confirmed: " + order.getOrderId());
+        }
+
+        order.setStockRestored(false);
+        return true;
+    }
+
+    /**
      * Idempotent stock auto-restoration on order cancellation or return.
      */
     @Transactional

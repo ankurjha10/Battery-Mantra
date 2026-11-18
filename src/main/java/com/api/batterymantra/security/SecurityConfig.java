@@ -127,7 +127,8 @@ public class SecurityConfig {
                         // Address — CUSTOMER only
                         .requestMatchers("/api/address/**").hasRole("CUSTOMER")
 
-                        // Payments — CUSTOMER and ENGINEER
+                        // Payments — Razorpay webhook is public (verified via HMAC signature); other payment APIs require CUSTOMER/ENGINEER
+                        .requestMatchers(HttpMethod.POST, "/api/payments/razorpay/webhook").permitAll()
                         .requestMatchers("/api/payments/**").hasAnyRole("CUSTOMER", "ENGINEER")
 
                         // Orders — CUSTOMER endpoints + ADMIN endpoints (fine-grained via @PreAuthorize)

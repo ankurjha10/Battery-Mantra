@@ -17,6 +17,9 @@ public class RazorpayConfig {
     @Value("${razorpay.key-secret}")
     private String keySecret;
 
+    @Value("${razorpay.webhook-secret:}")
+    private String webhookSecret;
+
     @Bean
     public RazorpayClient razorpayClient() throws RazorpayException {
         return new RazorpayClient(keyId, keySecret);

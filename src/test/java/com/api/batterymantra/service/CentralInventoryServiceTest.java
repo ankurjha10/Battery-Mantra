@@ -213,5 +213,48 @@ class CentralInventoryServiceTest {
         verify(productRepository, never()).findByIdWithLock(any());
         verify(productRepository, never()).save(any());
     }
+
+    @Test
+    void shouldDeductStockForPaidOrderWhenSufficient() {
+        Orders order = new Orders();
+        order.setOrderId(UUID.randomUUID());
+
+        OrderItems item = new OrderItems();
+        item.setProduct(product);
+        item.setQuantity(4);
+        order.setOrderItems(List.of(item));
+
+        when(stockAuditLogRepository.existsByOrderIdAndChangeType(order.getOrderId(), "ORDER_DEDUCT")).thenReturn(false);
+        when(productRepository.findByIdWithLock(productId)).thenReturn(Optional.of(product));
+
+        boolean deducted = inventoryService.deductStockForPaidOrder(order, "CUSTOMER");
+
+        assertTrue(deducted);
+        assertEquals(11, product.getProductStock());
+        assertFalse(order.isStockRestored());
+        verify(productRepository).save(product);
+        verify(stockAuditLogRepository).save(any(StockAuditLog.class));
+    }
+
+    @Test
+    void shouldReturnFalseWithoutThrowingForPaidOrderWhenStockIsInsufficient() {
+        Orders order = new Orders();
+        order.setOrderId(UUID.randomUUID());
+
+        OrderItems item = new OrderItems();
+        item.setProduct(product);
+        item.setQuantity(25); // only 15 available
+        order.setOrderItems(List.of(item));
+
+        when(stockAuditLogRepository.existsByOrderIdAndChangeType(order.getOrderId(), "ORDER_DEDUCT")).thenReturn(false);
+        when(productRepository.findByIdWithLock(productId)).thenReturn(Optional.of(product));
+
+        boolean deducted = inventoryService.deductStockForPaidOrder(order, "RAZORPAY_WEBHOOK");
+
+        assertFalse(deducted);
+        assertEquals(15, product.getProductStock());
+        assertTrue(order.isStockRestored());
+        verify(productRepository, never()).save(any());
+    }
 }
 
